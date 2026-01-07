@@ -56,56 +56,52 @@
 
     document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
 
-    async function loadStudents() {
+    // ... (Keep your existing Firebase init code above)
+
+    // Function to collect and save attendance
+    async function saveAttendanceData() {
         const listContainer = document.getElementById('studentList');
+        const rows = listContainer.querySelectorAll('.student-row');
+        const saveBtn = document.getElementById('saveAttendance');
         
+        saveBtn.innerText = "Saving...";
+        saveBtn.disabled = true;
+
+        const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
         try {
-            console.log("Fetching students...");
-            const querySnapshot = await getDocs(collection(db, "students"));
-            console.log("Found " + querySnapshot.size + " students");
+            for (let row of rows) {
+                const studentName = row.querySelector('span').innerText.split(' (')[0];
+                const isPresent = row.querySelector('.p-btn').classList.contains('present');
+                const isAbsent = row.querySelector('.a-btn').classList.contains('absent');
+                
+                let status = "Not Marked";
+                if (isPresent) status = "Present";
+                if (isAbsent) status = "Absent";
 
-            listContainer.innerHTML = "";
-
-            if (querySnapshot.empty) {
-                listContainer.innerHTML = "<p>No students found. Verify collection name is 'students' (lowercase).</p>";
-                return;
+                // Save to 'attendance_logs' collection
+                await addDoc(collection(db, "attendance_logs"), {
+                    studentName: studentName,
+                    date: today,
+                    status: status,
+                    timestamp: new Date()
+                });
             }
 
-            querySnapshot.forEach((doc) => {
-                const student = doc.data();
-                const div = document.createElement('div');
-                div.className = 'student-row';
-                div.innerHTML = `
-                    <span><strong>${student.name}</strong> (${student.level || 'No Level'})</span>
-                    <div class="btn-group">
-                        <button class="status-btn p-btn">Present</button>
-                        <button class="status-btn a-btn">Absent</button>
-                    </div>
-                `;
-
-                // Add click logic to buttons
-                const pBtn = div.querySelector('.p-btn');
-                const aBtn = div.querySelector('.a-btn');
-
-                pBtn.addEventListener('click', () => {
-                    pBtn.classList.toggle('present');
-                    aBtn.classList.remove('absent');
-                });
-
-                aBtn.addEventListener('click', () => {
-                    aBtn.classList.toggle('absent');
-                    pBtn.classList.remove('present');
-                });
-
-                listContainer.appendChild(div);
-            });
+            alert("Attendance for " + today + " saved successfully!");
+            saveBtn.innerText = "Save Attendance";
+            saveBtn.disabled = false;
         } catch (error) {
-            console.error("Database Error:", error);
-            listContainer.innerHTML = "<p style='color:red'>Connection Error: " + error.message + "</p>";
+            console.error("Error saving attendance:", error);
+            alert("Failed to save: " + error.message);
+            saveBtn.disabled = false;
         }
     }
 
-    loadStudents();
+    // Attach the function to your button
+    document.getElementById('saveAttendance').addEventListener('click', saveAttendanceData);
+
+    loadStudents(); // Run your existing load function
 </script>
 </body>
 </html>
