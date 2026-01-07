@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Panel | Makki Masjid Gakuin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .teacher-container { padding: 20px; max-width: 900px; margin: auto; }
+        .attendance-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .student-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .status-btn { padding: 5px 15px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; }
+        .present { background-color: #2e7d32; color: white; border: none; }
+        .absent { background-color: #c62828; color: white; border: none; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; background: #004d40; color: white; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="teacher-container">
+        <header class="nav-header">
+            <h2>Teacher Dashboard</h2>
+            <button onclick="window.location.href='index.html'" style="background:none; border:1px solid white; color:white; cursor:pointer; padding:5px 10px;">Logout</button>
+        </header>
+
+        <section class="attendance-card">
+            <h3>Daily Attendance - <span id="currentDate"></span></h3>
+            <div id="studentList">
+                <p>Loading students...</p>
+            </div>
+            <button id="saveAttendance" class="login-btn" style="margin-top: 20px;">Save Attendance</button>
+        </section>
+
+        <section class="attendance-card" style="margin-top:20px;">
+            <h3>Update Lessons (Sabaq)</h3>
+            <p>Select a student to update their current Para/Surah.</p>
+            </section>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Display Current Date
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
+
+        // Load Students from Firestore
+        async function loadStudents() {
+            const querySnapshot = await getDocs(collection(db, "students"));
+            const listContainer = document.getElementById('studentList');
+            listContainer.innerHTML = "";
+
+            if (querySnapshot.empty) {
+                listContainer.innerHTML = "<p>No students found. Please ask Admin to add students.</p>";
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const student = doc.data();
+                const div = document.createElement('div');
+                div.className = 'student-row';
+                div.innerHTML = `
+                    <span>${student.name}</span>
+                    <div>
+                        <button class="status-btn" onclick="this.classList.toggle('present')">Present</button>
+                        <button class="status-btn" onclick="this.classList.toggle('absent')">Absent</button>
+                    </div>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        loadStudents();
+    </script>
+</body>
+</html>
