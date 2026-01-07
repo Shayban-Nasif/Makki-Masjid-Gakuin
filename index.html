@@ -39,6 +39,36 @@
         <p>&copy; 2026 Makki Masjid Gakuin. All Rights Reserved.</p>
     </footer>
 
-    <script src="app.js"></script>
+    <script type="module">
+      // Import the Firebase functions
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+      // IMPORTANT: Replace these values with your own from Firebase Console
+      const firebaseConfig = {
+        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+        authDomain: "makki-masjid-gakuin.firebaseapp.com",
+        projectId: "makki-masjid-gakuin",
+        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+        messagingSenderId: "376596641128",
+        appId: "1:376596641128:web:b49c1233aaed64ae6552dd",
+        measurementId: "G-EN2DN4DN4M"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      // Make these available globally for your app.js file
+      window.auth = auth;
+      window.db = db;
+      window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+      window.doc = doc;
+      window.getDoc = getDoc;
+    </script>
+
+    <script src="app.js" type="module"></script>
 </body>
 </html>
