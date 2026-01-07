@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Makki Masjid Gakuin | Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Makki Masjid <span>Gakuin</span></div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Maktab Management System</h1>
+            <p>Connecting Teachers, Parents, and Administration for a better future.</p>
+            
+            <div class="login-container">
+                <h2>Portal Login</h2>
+                <form id="loginForm">
+                    <input type="email" id="email" placeholder="Email Address" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <select id="role">
+                        <option value="parent">Parent</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <button type="submit" class="login-btn">Login to Dashboard</button>
+                </form>
+                <p id="message"></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Makki Masjid Gakuin. All Rights Reserved.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
