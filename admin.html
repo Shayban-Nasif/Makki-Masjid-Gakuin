@@ -114,10 +114,26 @@
                 <ul id="teachersList">
                     </ul>
             </div>
+            
+            <div class="action-section" style="margin-top: 20px;">
+                <h3>Add New Student</h3>
+                <form id="addStudentForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" id="studentName" placeholder="Student Full Name" required>
+                    <input type="text" id="studentLevel" placeholder="Level (e.g., Level 1, Qaida, Juz Amma)" required>
+                    <input type="email" id="parentEmail" placeholder="Parent's Email (for login)" required>
+                    <button type="submit" class="login-btn" style="grid-column: span 2; background-color: #d4af37;">Register Student</button>
+                </form>
+                <p id="studentMsg"></p>
+            </div>
+            
         </div>
     </div>
 
     <script type="module">
+
+    // Add these variables at the top of your script
+    const studentForm = document.getElementById('addStudentForm');
+    const studentMsg = document.getElementById('studentMsg');
   // Import Firebase tools again for this page
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getFirestore, collection, addDoc, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -139,6 +155,39 @@
   const teacherForm = document.getElementById('addTeacherForm');
   const adminMsg = document.getElementById('adminMsg');
 
+// Handle Adding a Student
+studentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('studentName').value;
+    const level = document.getElementById('studentLevel').value;
+    const pEmail = document.getElementById('parentEmail').value;
+
+    try {
+        // Add to the "students" collection
+        await addDoc(collection(db, "students"), {
+            name: name,
+            level: level,
+            parentEmail: pEmail,
+            joinedDate: new Date().toLocaleDateString()
+        });
+
+        // Also add to "users" so the parent can login later
+        await setDoc(doc(db, "users", pEmail), {
+            email: pEmail,
+            role: "parent",
+            childName: name
+        });
+
+        studentMsg.style.color = "green";
+        studentMsg.innerText = "Student & Parent profile created!";
+        studentForm.reset();
+    } catch (error) {
+        studentMsg.style.color = "red";
+        studentMsg.innerText = "Error: " + error.message;
+    }
+});
+        
   // Handle Adding a Teacher
   teacherForm.addEventListener('submit', async (e) => {
     e.preventDefault();
