@@ -77,3 +77,51 @@ footer {
     color: #777;
     padding: 10px 0;
 }
+
+/* Attendance Button Styles */
+.btn-group {
+    display: flex;
+    gap: 10px;
+}
+
+.status-btn {
+    padding: 8px 15px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+/* These classes are applied by JavaScript when clicked */
+.present {
+    background-color: #2e7d32 !important;
+    color: white !important;
+    border-color: #1b5e20 !important;
+}
+
+.absent {
+    background-color: #c62828 !important;
+    color: white !important;
+    border-color: #b71c1c !important;
+}
+
+/* Dashboard Row Styling */
+.student-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+}
+
+.student-row:hover {
+    background-color: #f9f9f9;
+}
+
+/* Make buttons feel "clickable" */
+.status-btn:active {
+    transform: scale(0.95);
+}
