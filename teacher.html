@@ -112,35 +112,41 @@
     }
 
     async function saveAttendanceData() {
-        const rows = document.querySelectorAll('.student-row');
-        const saveBtn = document.getElementById('saveAttendance');
-        const today = new Date().toISOString().split('T')[0];
+    const rows = document.querySelectorAll('.student-row');
+    const saveBtn = document.getElementById('saveAttendance');
+    
+    // This gets the local date in YYYY-MM-DD format based on the user's computer
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const localDate = `${year}-${month}-${day}`; 
 
-        saveBtn.innerText = "Saving...";
-        saveBtn.disabled = true;
+    saveBtn.innerText = "Saving...";
+    saveBtn.disabled = true;
 
-        try {
-            for (let row of rows) {
-                const name = row.querySelector('span').innerText;
-                const isPresent = row.querySelector('.p-btn').classList.contains('present');
-                const isAbsent = row.querySelector('.a-btn').classList.contains('absent');
-                const status = isPresent ? "Present" : (isAbsent ? "Absent" : "Not Marked");
+    try {
+        for (let row of rows) {
+            const name = row.querySelector('span').innerText;
+            const isPresent = row.querySelector('.p-btn').classList.contains('present');
+            const isAbsent = row.querySelector('.a-btn').classList.contains('absent');
+            const status = isPresent ? "Present" : (isAbsent ? "Absent" : "Not Marked");
 
-                await addDoc(collection(db, "attendance_logs"), {
-                    studentName: name,
-                    status: status,
-                    date: today,
-                    timestamp: new Date()
-                });
-            }
-            alert("Attendance saved successfully!");
-        } catch (error) {
-            alert("Error saving: " + error.message);
-        } finally {
-            saveBtn.innerText = "Save Attendance";
-            saveBtn.disabled = false;
+            await addDoc(collection(db, "attendance_logs"), {
+                studentName: name,
+                status: status,
+                date: localDate, // Saved as the actual local day
+                timestamp: new Date() // Keeps the exact record time
+            });
         }
+        alert("Attendance for " + localDate + " saved successfully!");
+    } catch (error) {
+        alert("Error saving: " + error.message);
+    } finally {
+        saveBtn.innerText = "Save Attendance";
+        saveBtn.disabled = false;
     }
+}
 </script>
 </body>
 </html>
