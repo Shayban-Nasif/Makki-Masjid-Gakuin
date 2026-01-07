@@ -98,17 +98,86 @@
             </div>
 
             <div class="action-section">
-                <h3>Recent Announcements</h3>
-                <p>No new announcements. Use the Documents tab to upload the Annual Calendar.</p>
+                <h3>Add New Teacher</h3>
+                <form id="addTeacherForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="text" id="teacherName" placeholder="Full Name" required>
+                    <input type="email" id="teacherEmail" placeholder="Email Address" required>
+                    <input type="text" id="teacherSubject" placeholder="Subject (e.g., Quran, Tajweed)">
+                    <input type="password" id="teacherPassword" placeholder="Temporary Password" required>
+                    <button type="submit" class="login-btn" style="grid-column: span 2;">Register Teacher</button>
+                </form>
+                <p id="adminMsg"></p>
+            </div>
+
+            <div class="action-section" style="margin-top: 20px;">
+                <h3>Existing Teachers</h3>
+                <ul id="teachersList">
+                    </ul>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // Basic Logout Logic
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            window.location.href = "index.html";
+  // Import Firebase tools again for this page
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // Use the same config you used in index.html
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const teacherForm = document.getElementById('addTeacherForm');
+  const adminMsg = document.getElementById('adminMsg');
+
+  // Handle Adding a Teacher
+  teacherForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('teacherEmail').value;
+    const name = document.getElementById('teacherName').value;
+    const subject = document.getElementById('teacherSubject').value;
+
+    try {
+        // 1. Add to the "users" collection so they can log in
+        await setDoc(doc(db, "users", email), {
+            name: name,
+            email: email,
+            role: "teacher",
+            subject: subject
         });
-    </script>
+
+        adminMsg.style.color = "green";
+        adminMsg.innerText = "Teacher registered successfully!";
+        teacherForm.reset();
+        loadTeachers(); // Refresh the list
+    } catch (error) {
+        adminMsg.style.color = "red";
+        adminMsg.innerText = "Error: " + error.message;
+    }
+  });
+
+  // Function to show the list of teachers
+  async function loadTeachers() {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    const list = document.getElementById('teachersList');
+    list.innerHTML = "";
+    querySnapshot.forEach((doc) => {
+        if(doc.data().role === "teacher") {
+            list.innerHTML += `<li>${doc.data().name} - ${doc.data().subject} (${doc.data().email})</li>`;
+        }
+    });
+  }
+
+  loadTeachers(); // Run this when page loads
+</script>
 </body>
 </html>
