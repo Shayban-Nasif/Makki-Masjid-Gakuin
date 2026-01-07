@@ -39,7 +39,7 @@
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -54,54 +54,93 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
-
-    // ... (Keep your existing Firebase init code above)
-
-    // Function to collect and save attendance
-    async function saveAttendanceData() {
-        const listContainer = document.getElementById('studentList');
-        const rows = listContainer.querySelectorAll('.student-row');
-        const saveBtn = document.getElementById('saveAttendance');
+    // Run code only after the HTML is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
+        loadStudents();
         
-        saveBtn.innerText = "Saving...";
-        saveBtn.disabled = true;
+        // Attach the Save button listener
+        document.getElementById('saveAttendance').addEventListener('click', saveAttendanceData);
+    });
 
-        const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-
+    async function loadStudents() {
+        const listContainer = document.getElementById('studentList');
+        
         try {
-            for (let row of rows) {
-                const studentName = row.querySelector('span').innerText.split(' (')[0];
-                const isPresent = row.querySelector('.p-btn').classList.contains('present');
-                const isAbsent = row.querySelector('.a-btn').classList.contains('absent');
-                
-                let status = "Not Marked";
-                if (isPresent) status = "Present";
-                if (isAbsent) status = "Absent";
+            console.log("Attempting to fetch students...");
+            const querySnapshot = await getDocs(collection(db, "students"));
+            
+            listContainer.innerHTML = ""; // Clear the "Loading..." message
 
-                // Save to 'attendance_logs' collection
-                await addDoc(collection(db, "attendance_logs"), {
-                    studentName: studentName,
-                    date: today,
-                    status: status,
-                    timestamp: new Date()
-                });
+            if (querySnapshot.empty) {
+                listContainer.innerHTML = "<p>No students found in database.</p>";
+                return;
             }
 
-            alert("Attendance for " + today + " saved successfully!");
-            saveBtn.innerText = "Save Attendance";
-            saveBtn.disabled = false;
+            querySnapshot.forEach((doc) => {
+                const student = doc.data();
+                const div = document.createElement('div');
+                div.className = 'student-row';
+                div.innerHTML = `
+                    <span><strong>${student.name}</strong></span>
+                    <div class="btn-group">
+                        <button class="status-btn p-btn" data-id="${doc.id}">Present</button>
+                        <button class="status-btn a-btn" data-id="${doc.id}">Absent</button>
+                    </div>
+                `;
+
+                // Logic for toggling colors
+                const pBtn = div.querySelector('.p-btn');
+                const aBtn = div.querySelector('.a-btn');
+
+                pBtn.onclick = () => {
+                    pBtn.classList.toggle('present');
+                    aBtn.classList.remove('absent');
+                };
+                aBtn.onclick = () => {
+                    aBtn.classList.toggle('absent');
+                    pBtn.classList.remove('present');
+                };
+
+                listContainer.appendChild(div);
+            });
+            console.log("Successfully loaded students.");
         } catch (error) {
-            console.error("Error saving attendance:", error);
-            alert("Failed to save: " + error.message);
-            saveBtn.disabled = false;
+            console.error("Error:", error);
+            listContainer.innerHTML = `<p style="color:red">Error loading students: ${error.message}</p>`;
         }
     }
 
-    // Attach the function to your button
-    document.getElementById('saveAttendance').addEventListener('click', saveAttendanceData);
+    async function saveAttendanceData() {
+        const rows = document.querySelectorAll('.student-row');
+        const saveBtn = document.getElementById('saveAttendance');
+        const today = new Date().toISOString().split('T')[0];
 
-    loadStudents(); // Run your existing load function
+        saveBtn.innerText = "Saving...";
+        saveBtn.disabled = true;
+
+        try {
+            for (let row of rows) {
+                const name = row.querySelector('span').innerText;
+                const isPresent = row.querySelector('.p-btn').classList.contains('present');
+                const isAbsent = row.querySelector('.a-btn').classList.contains('absent');
+                const status = isPresent ? "Present" : (isAbsent ? "Absent" : "Not Marked");
+
+                await addDoc(collection(db, "attendance_logs"), {
+                    studentName: name,
+                    status: status,
+                    date: today,
+                    timestamp: new Date()
+                });
+            }
+            alert("Attendance saved successfully!");
+        } catch (error) {
+            alert("Error saving: " + error.message);
+        } finally {
+            saveBtn.innerText = "Save Attendance";
+            saveBtn.disabled = false;
+        }
+    }
 </script>
 </body>
 </html>
