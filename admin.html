@@ -1,170 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:,">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .dashboard-container { display: flex; min-height: 100vh; }
-        .sidebar { width: 250px; background: #004d40; color: white; padding: 20px; }
-        .sidebar h2 { color: #d4af37; font-size: 1.2rem; margin-bottom: 30px; }
-        .sidebar-menu { list-style: none; padding: 0; }
-        .sidebar-menu li { padding: 15px 0; border-bottom: 1px solid #00695c; cursor: pointer; }
-        .sidebar-menu li:hover { color: #d4af37; }
-        .main-content { flex: 1; padding: 40px; background: #f4f7f6; overflow-y: auto; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #004d40; }
-        .stat-card h3 { margin: 0; color: #777; font-size: 0.85rem; text-transform: uppercase; }
-        .stat-card p { font-size: 1.5rem; font-weight: bold; margin: 10px 0; color: #004d40; }
-        .action-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .logout-btn { background: #c62828; color: white; border: none; padding: 10px; width: 100%; margin-top: 50px; cursor: pointer; border-radius: 5px; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        
-        /* Table Styles */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th { background: #f8f9fa; color: #555; text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
-        td { padding: 10px; border-bottom: 1px solid #eee; }
-        .div-header { background: #e0f2f1; color: #004d40; padding: 10px; margin-top: 20px; border-radius: 4px; font-weight: bold; }
-        
-        /* Buttons */
-        .btn-edit { background: #0288d1; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        .btn-view { background: #455a64; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        .btn-delete { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        
-        /* Modal Styles */
-        #editModal, #progressModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 450px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        
-        /* Goal Progress Mini Bar in Table */
-        .mini-progress-bg { background: #eee; height: 8px; border-radius: 4px; width: 60px; display: inline-block; overflow: hidden; }
-        .mini-progress-fill { background: #004d40; height: 100%; }
+        .admin-container { max-width: 1000px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .header { background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f4f4f4; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .btn-primary { background: #004d40; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .status-paid { color: #2e7d32; font-weight: bold; }
+        .status-unpaid { color: #c62828; font-weight: bold; }
     </style>
 </head>
-<body>
-    <div id="editModal">
-        <div class="modal-content" style="width: 500px;">
-            <h3 id="modalTitle">Edit Student Profile</h3>
-            <input type="hidden" id="editStudentId">
+<body style="background: #f4f7f6;">
+
+    <div class="admin-container">
+        <div class="header">
+            <h1>Admin Management</h1>
+            <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
+        </div>
+
+        <div class="section">
+            <h3>Add New Teacher</h3>
+            <div class="admin-grid">
+                <input type="text" id="tName" placeholder="Full Name">
+                <input type="email" id="tEmail" placeholder="Email Address">
+                <select id="tDivision">
+                    <option value="Maktab">Maktab Division</option>
+                    <option value="Nazera">Nazera Division</option>
+                    <option value="Hifz">Hifz Division</option>
+                </select>
+                <button onclick="addTeacher()" class="btn-primary">Register Teacher</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Student Enrollment & Goals</h3>
+            <div class="admin-grid" style="grid-template-columns: 2fr 1fr 1fr;">
+                <input type="text" id="sName" placeholder="Student Full Name">
+                <select id="sDivision">
+                    <option value="Maktab">Maktab</option>
+                    <option value="Nazera">Nazera</option>
+                    <option value="Hifz">Hifz</option>
+                </select>
+                <input type="number" id="sFee" placeholder="Monthly Fee (¥)">
+            </div>
             
-            <label>Full Name</label>
-            <input type="text" id="editStudentName">
-            
-            <label>Division</label>
-            <select id="editStudentDivision" onchange="updateEditLabels()">
-                <option value="Maktab">Maktab</option>
-                <option value="Nazera">Nazera</option>
-                <option value="Hifz">Hifz</option>
-            </select>
-
-            <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #ddd;">
-                <h4 style="margin:0 0 10px 0; font-size: 0.9rem; color: #004d40;">Set Total Lesson Goals</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label id="editLbl1" style="font-size: 0.8rem;">Goal 1</label>
-                        <input type="number" id="editGoal1">
-                    </div>
-                    <div>
-                        <label id="editLbl2" style="font-size: 0.8rem;">Goal 2</label>
-                        <input type="number" id="editGoal2">
-                    </div>
-                    <div style="grid-column: span 2;">
-                        <label id="editLbl3" style="font-size: 0.8rem;">Goal 3</label>
-                        <input type="number" id="editGoal3">
-                    </div>
-                </div>
+            <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <input type="number" id="g1" placeholder="Goal 1 (e.g. 30)">
+                <input type="number" id="g2" placeholder="Goal 2 (e.g. 40)">
+                <input type="number" id="g3" placeholder="Goal 3 (e.g. 15)">
+                <input type="date" id="sEta" title="Target Completion Date">
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label>Monthly Donation (¥)</label>
-                    <input type="number" id="editStudentFee">
-                </div>
-                <div>
-                    <label>Completion ETA</label>
-                    <input type="text" id="editStudentETA">
-                </div>
-            </div>
-
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button id="saveEditBtn" style="flex:2; padding: 12px; background: #004d40; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
-                <button onclick="closeModal()" style="flex:1; padding: 12px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="progressModal">
-        <div class="modal-content" style="width: 600px;">
-            <h3 id="progressTitle">Student Progress History</h3>
-            <hr>
-            <div id="progressList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;"></div>
-            <button onclick="document.getElementById('progressModal').style.display='none'" style="width: 100%; padding: 10px; margin-top: 15px; background: #455a64; color: white; border: none; border-radius: 4px; cursor: pointer;">Close History</button>
-        </div>
-    </div>
-
-    <div class="dashboard-container">
-        <div class="sidebar">
-            <h2>MMG Admin</h2>
-            <ul class="sidebar-menu">
-                <li>Teachers</li>
-                <li>Students</li>
-                <li>Finance</li>
-            </ul>
-            <button class="logout-btn" id="logoutBtn">Logout</button>
+            <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
         </div>
 
-        <div class="main-content">
-            <header>
-                <h1>Administrator Control</h1>
-                <p>Makki Masjid Gakuin Management</p>
-            </header>
-
-            <div class="stats-grid" id="statsContainer">
-                <div class="stat-card"><h3>Total Students</h3><p id="totalStudents">0</p></div>
-                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Maktab</h3><p id="countMaktab">0</p></div>
-                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Nazera</h3><p id="countNazera">0</p></div>
-                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Hifz</h3><p id="countHifz">0</p></div>
-            </div>
-
-            <div class="action-section">
-                <h3>Register New Student</h3>
-                <form id="addStudentForm" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                    <input type="text" id="studentName" placeholder="Full Name" required style="grid-column: span 2;">
-                    <select id="studentDivision" onchange="updateAddLabels()" required>
-                        <option value="">Select Division</option>
-                        <option value="Maktab">Maktab</option>
-                        <option value="Nazera">Nazera</option>
-                        <option value="Hifz">Hifz</option>
-                    </select>
-                    
-                    <input type="email" id="parentEmail" placeholder="Parent Email" required>
-                    <input type="number" id="monthlyFee" placeholder="Monthly Donation (¥)" required>
-                    <input type="text" id="initialETA" placeholder="ETA (e.g. Dec 2026)">
-
-                    <div style="grid-column: span 3; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; background: #f0f4f3; padding: 10px; border-radius: 4px;">
-                        <input type="number" id="g1" placeholder="Goal 1 (Lessons)" value="30">
-                        <input type="number" id="g2" placeholder="Goal 2 (Lessons)" value="30">
-                        <input type="number" id="g3" placeholder="Goal 3 (Lessons)" value="30">
-                    </div>
-
-                    <button type="submit" style="grid-column: span 3; padding: 12px; background-color: #d4af37; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Register Student & Create Parent Account</button>
-                </form>
-            </div>
-
-            <div class="action-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h3>Student Registry</h3>
-                    <input type="text" id="studentSearch" placeholder="Search name..." style="width: 200px; margin:0;">
-                </div>
-                <div id="divisionWiseContainer"></div>
+        <div class="section">
+            <h3>Active Students & Payments</h3>
+            <div id="studentListContainer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Division</th>
+                            <th>Goals (C1/C2/C3)</th>
+                            <th>Monthly Fee</th>
+                            <th>Jan 2026 Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -178,153 +99,100 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const divisionLabels = {
-            "Maktab": ["Qaida", "Dua", "Islamic Studies"],
-            "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
-            "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-        };
+        const currentMonthYear = "January 2026"; // Dynamic logic can be used here
 
-        // UI Label Handlers
-        window.updateAddLabels = () => {
-            const div = document.getElementById('studentDivision').value;
-            if(!div) return;
-            const labels = divisionLabels[div];
-            document.getElementById('g1').placeholder = labels[0] + " Goal";
-            document.getElementById('g2').placeholder = labels[1] + " Goal";
-            document.getElementById('g3').placeholder = labels[2] + " Goal";
-        };
+        // --- Teacher Logic ---
+        window.addTeacher = async () => {
+            const name = document.getElementById('tName').value;
+            const email = document.getElementById('tEmail').value.toLowerCase();
+            const div = document.getElementById('tDivision').value;
 
-        window.updateEditLabels = () => {
-            const div = document.getElementById('editStudentDivision').value;
-            const labels = divisionLabels[div];
-            document.getElementById('editLbl1').innerText = labels[0] + " Goal";
-            document.getElementById('editLbl2').innerText = labels[1] + " Goal";
-            document.getElementById('editLbl3').innerText = labels[2] + " Goal";
-        };
+            if(!name || !email) return alert("Fill all fields");
 
-        async function loadData() {
-            const sSnap = await getDocs(collection(db, "students"));
-            const tSnap = await getDocs(collection(db, "users"));
-            
-            let students = [];
-            sSnap.forEach(doc => students.push({id: doc.id, ...doc.data()}));
-            
-            // Stats calculation
-            let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            students.forEach(s => counts[s.division]++);
-            document.getElementById('totalStudents').innerText = students.length;
-            document.getElementById('countMaktab').innerText = counts.Maktab;
-            document.getElementById('countNazera').innerText = counts.Nazera;
-            document.getElementById('countHifz').innerText = counts.Hifz;
-
-            renderTables(students);
-        }
-
-        function renderTables(students) {
-            const container = document.getElementById('divisionWiseContainer');
-            container.innerHTML = "";
-            const groups = ["Maktab", "Nazera", "Hifz"];
-
-            groups.forEach(div => {
-                const filtered = students.filter(s => s.division === div);
-                if(filtered.length === 0) return;
-
-                let html = `<div class="div-header">${div} Division</div>
-                <table><thead><tr><th>Student</th><th>Fee</th><th>Prog. C1</th><th>Prog. C2</th><th>Prog. C3</th><th>Actions</th></tr></thead><tbody>`;
-                
-                filtered.forEach(s => {
-                    const g = s.goals || {c1:30, c2:30, c3:30};
-                    const l = s.levels || {c1:0, c2:0, c3:0};
-                    
-                    html += `<tr>
-                        <td><strong>${s.name}</strong><br><small>${s.parentEmail}</small></td>
-                        <td>¥${s.monthlyFee || 0}</td>
-                        <td>${l.c1}/${g.c1}</td>
-                        <td>${l.c2}/${g.c2}</td>
-                        <td>${l.c3}/${g.c3}</td>
-                        <td>
-                            <button class="btn-view" onclick="viewProgress('${s.id}', '${s.name}')">Log</button>
-                            <button class="btn-edit" onclick="prepEdit('${s.id}')">Edit</button>
-                        </td>
-                    </tr>`;
+            try {
+                await setDoc(doc(db, "users", email), {
+                    name: name,
+                    email: email,
+                    division: div,
+                    role: 'teacher'
                 });
-                html += `</tbody></table>`;
-                container.innerHTML += html;
+                alert("Teacher Registered!");
+                location.reload();
+            } catch(e) { alert(e.message); }
+        };
+
+        // --- Student Logic ---
+        window.addStudent = async () => {
+            const name = document.getElementById('sName').value;
+            const div = document.getElementById('sDivision').value;
+            const fee = document.getElementById('sFee').value;
+            const goals = {
+                c1: parseInt(document.getElementById('g1').value) || 0,
+                c2: parseInt(document.getElementById('g2').value) || 0,
+                c3: parseInt(document.getElementById('g3').value) || 0
+            };
+            const eta = document.getElementById('sEta').value;
+
+            try {
+                await addDoc(collection(db, "students"), {
+                    name: name,
+                    division: div,
+                    monthlyFee: fee,
+                    goals: goals,
+                    levels: { c1: 0, c2: 0, c3: 0 },
+                    eta: eta
+                });
+                alert("Student Enrolled!");
+                loadStudents();
+            } catch(e) { alert(e.message); }
+        };
+
+        // --- Payment Logic ---
+        window.markAsPaid = async (sid, name) => {
+            try {
+                await addDoc(collection(db, "payments"), {
+                    studentId: sid,
+                    studentName: name,
+                    month: currentMonthYear,
+                    date: new Date().toISOString()
+                });
+                alert(`Payment recorded for ${name}`);
+                loadStudents();
+            } catch(e) { alert(e.message); }
+        };
+
+        async function loadStudents() {
+            const snap = await getDocs(collection(db, "students"));
+            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+            
+            const paidIds = paySnap.docs.map(d => d.data().studentId);
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = "";
+
+            snap.forEach(docSnap => {
+                const s = docSnap.data();
+                const id = docSnap.id;
+                const isPaid = paidIds.includes(id);
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${s.name}</td>
+                        <td>${s.division}</td>
+                        <td>${s.goals.c1}/${s.goals.c2}/${s.goals.c3}</td>
+                        <td>¥${s.monthlyFee}</td>
+                        <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">
+                            ${isPaid ? 'PAID' : 'UNPAID'}
+                        </td>
+                        <td>
+                            ${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${id}', '${s.name}')">Mark Paid</button>` : '✅'}
+                        </td>
+                    </tr>
+                `;
             });
         }
 
-        window.prepEdit = async (id) => {
-            const sSnap = await getDocs(collection(db, "students"));
-            const s = sSnap.docs.find(d => d.id === id).data();
-            
-            document.getElementById('editStudentId').value = id;
-            document.getElementById('editStudentName').value = s.name;
-            document.getElementById('editStudentDivision').value = s.division;
-            document.getElementById('editStudentFee').value = s.monthlyFee || 0;
-            document.getElementById('editStudentETA').value = s.eta || "";
-            
-            const g = s.goals || {c1:30, c2:30, c3:30};
-            document.getElementById('editGoal1').value = g.c1;
-            document.getElementById('editGoal2').value = g.c2;
-            document.getElementById('editGoal3').value = g.c3;
-            
-            updateEditLabels();
-            document.getElementById('editModal').style.display = 'block';
-        };
-
-        document.getElementById('saveEditBtn').addEventListener('click', async () => {
-            const id = document.getElementById('editStudentId').value;
-            const updated = {
-                name: document.getElementById('editStudentName').value,
-                division: document.getElementById('editStudentDivision').value,
-                monthlyFee: parseInt(document.getElementById('editStudentFee').value),
-                eta: document.getElementById('editStudentETA').value,
-                goals: {
-                    c1: parseInt(document.getElementById('editGoal1').value),
-                    c2: parseInt(document.getElementById('editGoal2').value),
-                    c3: parseInt(document.getElementById('editGoal3').value)
-                }
-            };
-            await updateDoc(doc(db, "students", id), updated);
-            document.getElementById('editModal').style.display = 'none';
-            loadData();
-        });
-
-        document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('parentEmail').value;
-            const name = document.getElementById('studentName').value;
-            
-            const newStudent = {
-                name: name,
-                parentEmail: email,
-                division: document.getElementById('studentDivision').value,
-                monthlyFee: parseInt(document.getElementById('monthlyFee').value),
-                eta: document.getElementById('initialETA').value,
-                goals: {
-                    c1: parseInt(document.getElementById('g1').value),
-                    c2: parseInt(document.getElementById('g2').value),
-                    c3: parseInt(document.getElementById('g3').value)
-                },
-                levels: { c1: 0, c2: 0, c3: 0 }
-            };
-
-            await addDoc(collection(db, "students"), newStudent);
-            await setDoc(doc(db, "users", email), { 
-                role: "parent", 
-                email: email, 
-                name: "Parent of " + name,
-                children: arrayUnion(name) 
-            }, { merge: true });
-
-            document.getElementById('addStudentForm').reset();
-            loadData();
-        });
-
-        window.closeModal = () => document.getElementById('editModal').style.display = 'none';
-        window.logout = () => window.location.href = 'index.html';
-        
-        loadData();
+        window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
+        loadStudents();
     </script>
 </body>
 </html>
