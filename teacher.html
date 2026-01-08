@@ -3,49 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Panel | Makki Masjid Gakuin</title>
+    <title>Teacher Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .teacher-container { padding: 20px; max-width: 1000px; margin: auto; }
-        .nav-header { display: flex; justify-content: space-between; align-items: center; background: #004d40; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
-        .division-badge { background: var(--gold); color: #000; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; }
+        .teacher-container { max-width: 900px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; }
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; }
+        select, input, textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .btn-log { background: #d4af37; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .btn-submit { background: #004d40; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 10px; }
         
-        .student-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; border-left: 5px solid #004d40; }
-        .student-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        
-        .lesson-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        .lesson-field label { display: block; font-size: 0.75rem; color: #666; margin-bottom: 5px; font-weight: bold; }
-        
-        .attendance-toggle { display: flex; gap: 5px; }
-        .status-btn { border: 1px solid #ddd; padding: 8px 12px; cursor: pointer; border-radius: 4px; background: #fff; font-weight: bold; }
-        
-        .save-bar { position: sticky; bottom: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        /* Modal */
+        #logModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; width: 450px; border-radius: 8px; }
     </style>
 </head>
-<body>
+<body style="background: #f4f7f6;">
 
     <div class="teacher-container">
-        <header class="nav-header">
+        <div class="header">
             <div>
-                <h2 id="teacherWelcome">Teacher Dashboard</h2>
-                <span class="division-badge" id="displayDivision">Loading Division...</span>
+                <h1 id="teacherGreeting">Welcome, Teacher</h1>
+                <p id="divisionInfo">Division: Loading...</p>
             </div>
-            <button onclick="window.location.href='index.html'" class="status-btn">Logout</button>
-        </header>
+            <button onclick="logout()" style="background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Logout</button>
+        </div>
 
-        <section id="studentList">
-            <p>Loading your students...</p>
-        </section>
+        <div class="section">
+            <h3>My Students</h3>
+            <div id="studentTableContainer">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Level</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myStudentList">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-        <div class="save-bar">
-            <span>Date: <strong id="currentDate"></strong></span>
-            <button id="saveAllBtn" class="login-btn" style="width: 200px;">Save All Progress</button>
+    <div id="logModal">
+        <div class="modal-content">
+            <h3 id="modalStudentName">Log Progress</h3>
+            <form id="progressForm">
+                <input type="hidden" id="logStudentId">
+                <label>Date</label>
+                <input type="date" id="logDate" required>
+                
+                <label>Attendance</label>
+                <select id="logAttendance">
+                    <option value="Present">Present</option>
+                    <option value="Absent">Absent</option>
+                    <option value="Late">Late</option>
+                </select>
+
+                <label>Sabaq (Lesson Details)</label>
+                <textarea id="logSabaq" rows="2" placeholder="e.g. Surah Al-Fatiha Ayat 1-4"></textarea>
+
+                <label>Performance</label>
+                <select id="logPerformance">
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Needs Practice">Needs Practice</option>
+                </select>
+
+                <button type="submit" class="btn-submit">Save Daily Record</button>
+                <button type="button" onclick="closeModal()" style="width:100%; background:#999; color:white; border:none; padding:10px; margin-top:5px; border-radius:4px; cursor:pointer;">Cancel</button>
+            </form>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -59,133 +98,76 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // CONFIGURATION PER DIVISION
-        const divisionBlueprints = {
-            "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
-            "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
-            "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-        };
+        // 1. Check Login Session
+        const teacherEmail = localStorage.getItem('userEmail');
+        if (!teacherEmail) { window.location.href = 'index.html'; }
 
-        // 1. GET LOGGED-IN TEACHER DATA FROM STORAGE
-            const teacherDivision = localStorage.getItem('userDivision'); 
-            const teacherName = localStorage.getItem('userName') || "Teacher";
-            
-            // Safety check: If someone tries to access this page without logging in
-            if (!teacherDivision) {
-                alert("Session expired. Please log in again.");
-                window.location.href = "index.html";
-            }
-            
-            async function initDashboard() {
-                // Update the UI with the correct Teacher Name and Division
-                document.getElementById('teacherWelcome').innerText = `Assalamu Alaikum, ${teacherName}`;
-                document.getElementById('displayDivision').innerText = teacherDivision + " Division";
-                document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
-                
-                // Load students specifically for THIS teacher's division
-                await loadStudents();
-            }
+        let teacherData = null;
 
-        async function loadStudents() {
-            const listContainer = document.getElementById('studentList');
-            const labels = divisionBlueprints[teacherDivision];
-
-            try {
-                // Fetch only students in THIS division
-                const q = query(collection(db, "students"), where("division", "==", teacherDivision));
-                const querySnapshot = await getDocs(q);
-                
-                listContainer.innerHTML = "";
-
-                if (querySnapshot.empty) {
-                    listContainer.innerHTML = `<p>No students found for ${teacherDivision}.</p>`;
-                    return;
-                }
-
-                querySnapshot.forEach((docSnap) => {
-                    const student = docSnap.data();
-                    const card = document.createElement('div');
-                    card.className = 'student-card';
-                    card.setAttribute('data-id', docSnap.id);
-                    card.setAttribute('data-name', student.name);
-
-                    card.innerHTML = `
-                        <div class="student-header">
-                            <strong>${student.name}</strong>
-                            <div class="attendance-toggle">
-                                <button class="status-btn p-btn" onclick="markAttendance(this, 'present')">P</button>
-                                <button class="status-btn a-btn" onclick="markAttendance(this, 'absent')">A</button>
-                            </div>
-                        </div>
-                        <div class="lesson-grid">
-                            <div class="lesson-field">
-                                <label>${labels[0]}</label>
-                                <input type="text" class="input-1" placeholder="Enter progress">
-                            </div>
-                            <div class="lesson-field">
-                                <label>${labels[1]}</label>
-                                <input type="text" class="input-2" placeholder="Enter progress">
-                            </div>
-                            <div class="lesson-field">
-                                <label>${labels[2]}</label>
-                                <input type="text" class="input-3" placeholder="Enter progress">
-                            </div>
-                        </div>
-                    `;
-                    listContainer.appendChild(card);
-                });
-            } catch (err) {
-                listContainer.innerHTML = "Error: " + err.message;
+        async function init() {
+            // Get Teacher Profile
+            const tDoc = await getDoc(doc(db, "users", teacherEmail));
+            if (tDoc.exists()) {
+                teacherData = tDoc.data();
+                document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + teacherData.name;
+                document.getElementById('divisionInfo').innerText = "Division: " + teacherData.division;
+                loadStudents(teacherData.division);
             }
         }
 
-        // Attendance Toggle Logic
-        window.markAttendance = (btn, status) => {
-            const parent = btn.parentElement;
-            parent.querySelectorAll('button').forEach(b => b.classList.remove('present', 'absent'));
-            btn.classList.add(status === 'present' ? 'present' : 'absent');
+        async function loadStudents(division) {
+            const q = query(collection(db, "students"), where("division", "==", division));
+            const snap = await getDocs(q);
+            const list = document.getElementById('myStudentList');
+            list.innerHTML = "";
+
+            snap.forEach(doc => {
+                const s = doc.data();
+                list.innerHTML += `
+                    <tr>
+                        <td>${s.name}</td>
+                        <td>${s.level || 'N/A'}</td>
+                        <td><button class="btn-log" onclick="openLogModal('${doc.id}', '${s.name}')">Log Progress</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.openLogModal = (id, name) => {
+            document.getElementById('logStudentId').value = id;
+            document.getElementById('modalStudentName').innerText = "Daily Record: " + name;
+            document.getElementById('logDate').valueAsDate = new Date();
+            document.getElementById('logModal').style.display = 'block';
         };
 
-        // SAVE ALL DATA
-        document.getElementById('saveAllBtn').onclick = async () => {
-            const cards = document.querySelectorAll('.student-card');
-            const today = new Date().toISOString().split('T')[0];
-            const saveBtn = document.getElementById('saveAllBtn');
-            
-            saveBtn.innerText = "Processing...";
-            saveBtn.disabled = true;
+        window.closeModal = () => { document.getElementById('logModal').style.display = 'none'; };
+
+        document.getElementById('progressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const logData = {
+                studentId: document.getElementById('logStudentId').value,
+                date: document.getElementById('logDate').value,
+                attendance: document.getElementById('logAttendance').value,
+                sabaq: document.getElementById('logSabaq').value,
+                performance: document.getElementById('logPerformance').value,
+                teacherName: teacherData.name,
+                timestamp: new Date()
+            };
 
             try {
-                for (let card of cards) {
-                    const name = card.getAttribute('data-name');
-                    const isP = card.querySelector('.p-btn').classList.contains('present');
-                    const isA = card.querySelector('.a-btn').classList.contains('absent');
-                    const status = isP ? "Present" : (isA ? "Absent" : "Not Marked");
+                await addDoc(collection(db, "progress_reports"), logData);
+                alert("Report saved!");
+                closeModal();
+                document.getElementById('progressForm').reset();
+            } catch (err) { alert(err.message); }
+        });
 
-                    const lesson1 = card.querySelector('.input-1').value;
-                    const lesson2 = card.querySelector('.input-2').value;
-                    const lesson3 = card.querySelector('.input-3').value;
-
-                    // Save to Daily Logs
-                    await addDoc(collection(db, "daily_logs"), {
-                        studentName: name,
-                        division: teacherDivision,
-                        date: today,
-                        attendance: status,
-                        lessons: [lesson1, lesson2, lesson3],
-                        timestamp: new Date()
-                    });
-                }
-                alert("All records saved successfully!");
-            } catch (err) {
-                alert("Save failed: " + err.message);
-            } finally {
-                saveBtn.innerText = "Save All Progress";
-                saveBtn.disabled = false;
-            }
+        window.logout = () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
         };
 
-        initDashboard();
+        init();
     </script>
 </body>
 </html>
