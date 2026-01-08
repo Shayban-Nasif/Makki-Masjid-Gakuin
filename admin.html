@@ -20,8 +20,34 @@
         .status-unpaid { color: #c62828; font-weight: bold; }
     </style>
 </head>
-<body style="background: #f4f7f6;">
 
+    
+<body style="background: #f4f7f6;">
+<div class="stats-grid" id="statsContainer">
+    <div class="stat-card">
+        <div class="stat-val" id="count-teachers">0</div>
+        <div class="stat-label">Teachers</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-val" id="count-maktab">0</div>
+        <div class="stat-label">Maktab Students</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-val" id="count-nazera">0</div>
+        <div class="stat-label">Nazera Students</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-val" id="count-hifz">0</div>
+        <div class="stat-label">Hifz Students</div>
+    </div>
+</div>
+
+<style>
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
+    .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
+    .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
+</style>
     <div class="admin-container">
         <div class="header">
             <h1>Admin Management</h1>
@@ -162,35 +188,53 @@
         };
 
         async function loadStudents() {
-            const snap = await getDocs(collection(db, "students"));
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            
-            const paidIds = paySnap.docs.map(d => d.data().studentId);
-            const tbody = document.getElementById('studentTableBody');
-            tbody.innerHTML = "";
+    // Fetch all students and teachers for stats
+    const studentSnap = await getDocs(collection(db, "students"));
+    const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
+    const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+    
+    const paidIds = paySnap.docs.map(d => d.data().studentId);
+    
+    // Counters
+    let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+    
+    const tbody = document.getElementById('studentTableBody');
+    tbody.innerHTML = "";
 
-            snap.forEach(docSnap => {
-                const s = docSnap.data();
-                const id = docSnap.id;
-                const isPaid = paidIds.includes(id);
+    studentSnap.forEach(docSnap => {
+        const s = docSnap.data();
+        const id = docSnap.id;
+        
+        // Stats counting
+        if(stats[s.division] !== undefined) stats[s.division]++;
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${s.name}</td>
-                        <td>${s.division}</td>
-                        <td>${s.goals.c1}/${s.goals.c2}/${s.goals.c3}</td>
-                        <td>¥${s.monthlyFee}</td>
-                        <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">
-                            ${isPaid ? 'PAID' : 'UNPAID'}
-                        </td>
-                        <td>
-                            ${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${id}', '${s.name}')">Mark Paid</button>` : '✅'}
-                        </td>
-                    </tr>
-                `;
-            });
-        }
+        // RECOVERY LOGIC: Use default values if old data is missing new fields
+        const goals = s.goals || { c1: 0, c2: 0, c3: 0 };
+        const fee = s.monthlyFee || "Not Set";
+        const isPaid = paidIds.includes(id);
 
+        tbody.innerHTML += `
+            <tr>
+                <td>${s.name}</td>
+                <td>${s.division}</td>
+                <td>${goals.c1}/${goals.c2}/${goals.c3}</td>
+                <td>¥${fee}</td>
+                <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">
+                    ${isPaid ? 'PAID' : 'UNPAID'}
+                </td>
+                <td>
+                    ${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${id}', '${s.name}')">Mark Paid</button>` : '✅'}
+                </td>
+            </tr>
+        `;
+    });
+
+    // Update the UI Counters
+    document.getElementById('count-teachers').innerText = teacherSnap.size;
+    document.getElementById('count-maktab').innerText = stats.Maktab;
+    document.getElementById('count-nazera').innerText = stats.Nazera;
+    document.getElementById('count-hifz').innerText = stats.Hifz;
+}
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
         loadStudents();
     </script>
