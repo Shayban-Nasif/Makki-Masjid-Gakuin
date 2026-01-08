@@ -27,6 +27,7 @@
         .status-paid { color: #2e7d32; font-weight: bold; font-size: 0.85rem; }
         .status-unpaid { color: #c62828; font-weight: bold; font-size: 0.85rem; }
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; }
+        .due-amount { color: #c62828; font-weight: bold; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -37,69 +38,34 @@
             <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
 
-        <div class="stats-grid" id="statsContainer">
-            <div class="stat-card">
-                <div class="stat-val" id="count-teachers">0</div>
-                <div class="stat-label">Teachers</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-val" id="count-maktab">0</div>
-                <div class="stat-label">Maktab</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-val" id="count-nazera">0</div>
-                <div class="stat-label">Nazera</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-val" id="count-hifz">0</div>
-                <div class="stat-label">Hifz</div>
-            </div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-val" id="count-teachers">0</div><div class="stat-label">Teachers</div></div>
+            <div class="stat-card"><div class="stat-val" id="count-maktab">0</div><div class="stat-label">Maktab</div></div>
+            <div class="stat-card"><div class="stat-val" id="count-nazera">0</div><div class="stat-label">Nazera</div></div>
+            <div class="stat-card"><div class="stat-val" id="count-hifz">0</div><div class="stat-label">Hifz</div></div>
         </div>
 
         <div class="section">
-            <h3>Register Teacher</h3>
-            <div class="admin-grid">
-                <input type="text" id="tName" placeholder="Teacher Name">
-                <input type="email" id="tEmail" placeholder="Email Address">
-                <select id="tDivision">
+            <h3>Student Enrollment</h3>
+            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
+                <input type="text" id="sName" placeholder="Student Name">
+                <input type="email" id="sParentEmail" placeholder="Parent Email">
+                <select id="sDivision">
                     <option value="Maktab">Maktab</option>
                     <option value="Nazera">Nazera</option>
                     <option value="Hifz">Hifz</option>
                 </select>
-                <button onclick="addTeacher()" class="btn-primary">Add Teacher</button>
+                <input type="number" id="sFee" placeholder="Monthly Fee (¥)">
+                <input type="number" id="sDues" placeholder="Prev. Dues (¥)" value="0">
             </div>
+            <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <input type="number" id="g1" placeholder="Goal 1">
+                <input type="number" id="g2" placeholder="Goal 2">
+                <input type="number" id="g3" placeholder="Goal 3">
+                <input type="date" id="sEta">
+            </div>
+            <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
         </div>
-
-       <div class="section">
-    <h3>Student Enrollment</h3>
-    <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
-        <input type="text" id="sName" placeholder="Student Name">
-        <input type="email" id="sParentEmail" placeholder="Parent Email">
-        <select id="sDivision">
-            <option value="Maktab">Maktab</option>
-            <option value="Nazera">Nazera</option>
-            <option value="Hifz">Hifz</option>
-        </select>
-        <input type="number" id="sFee" placeholder="Fee (¥)">
-        <input type="number" id="sDues" placeholder="Prev. Dues (¥)" value="0">
-    </div>
-    <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
-</div>
-
-<table>
-    <thead>
-        <tr>
-            <th>Student Details</th>
-            <th>Division</th>
-            <th>Fee + Dues</th>
-            <th>Total Owed</th>
-            <th>Status</th>
-            <th>Pay</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody id="studentTableBody"></tbody>
-</table>
 
         <div class="section">
             <h3>Active Students & Payments</h3>
@@ -109,8 +75,8 @@
                         <tr>
                             <th>Student Details</th>
                             <th>Division</th>
-                            <th>Goals</th>
-                            <th>Fee</th>
+                            <th>Fee + Dues</th>
+                            <th>Total Owed</th>
                             <th>Jan 2026</th>
                             <th>Pay</th>
                             <th>Actions</th>
@@ -139,12 +105,12 @@
         const db = getFirestore(app);
         const currentMonthYear = "January 2026";
 
-        // --- Add Teacher ---
+        // --- Teacher Logic ---
         window.addTeacher = async () => {
             const name = document.getElementById('tName').value;
             const email = document.getElementById('tEmail').value.toLowerCase().trim();
             const div = document.getElementById('tDivision').value;
-            if(!name || !email) return alert("Please enter name and email");
+            if(!name || !email) return alert("Fill all fields");
             try {
                 await setDoc(doc(db, "users", email), { name, email, division: div, role: 'teacher' });
                 alert("Teacher Registered!");
@@ -152,34 +118,34 @@
             } catch(e) { alert(e.message); }
         };
 
-        // --- Updated Add Student with Dues ---
-window.addStudent = async () => {
-    const name = document.getElementById('sName').value;
-    const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
-    const div = document.getElementById('sDivision').value;
-    const fee = parseInt(document.getElementById('sFee').value) || 0;
-    const dues = parseInt(document.getElementById('sDues').value) || 0;
-    const goals = {
-        c1: parseInt(document.getElementById('g1').value) || 0,
-        c2: parseInt(document.getElementById('g2').value) || 0,
-        c3: parseInt(document.getElementById('g3').value) || 0
-    };
-    const eta = document.getElementById('sEta').value;
+        // --- Enrollment Logic ---
+        window.addStudent = async () => {
+            const name = document.getElementById('sName').value;
+            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
+            const div = document.getElementById('sDivision').value;
+            const fee = parseInt(document.getElementById('sFee').value) || 0;
+            const dues = parseInt(document.getElementById('sDues').value) || 0;
+            const goals = {
+                c1: parseInt(document.getElementById('g1').value) || 0,
+                c2: parseInt(document.getElementById('g2').value) || 0,
+                c3: parseInt(document.getElementById('g3').value) || 0
+            };
+            const eta = document.getElementById('sEta').value;
 
-    if(!name || !pEmail) return alert("Name and Parent Email are required");
+            if(!name || !pEmail) return alert("Name and Email are required");
 
-    try {
-        await addDoc(collection(db, "students"), {
-            name, parentEmail: pEmail, division: div, 
-            monthlyFee: fee, previousDues: dues,
-            goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
-        });
-        alert("Student Enrolled!");
-        loadStudents();
-    } catch(e) { alert(e.message); }
-};
+            try {
+                await addDoc(collection(db, "students"), {
+                    name, parentEmail: pEmail, division: div, 
+                    monthlyFee: fee, previousDues: dues,
+                    goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
+                });
+                alert("Student Enrolled!");
+                loadStudents();
+            } catch(e) { alert(e.message); }
+        };
 
-        // --- Mark Payment ---
+        // --- Payment Logic ---
         window.markAsPaid = async (sid, name) => {
             try {
                 await addDoc(collection(db, "payments"), {
@@ -190,81 +156,48 @@ window.addStudent = async () => {
             } catch(e) { alert(e.message); }
         };
 
-        // --- Updated Load Students with Dues Calculation ---
-async function loadStudents() {
-    const studentSnap = await getDocs(collection(db, "students"));
-    const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
-    const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-    
-    const paidIds = paySnap.docs.map(d => d.data().studentId);
-    const tbody = document.getElementById('studentTableBody');
-    tbody.innerHTML = "";
+        // --- Core Load Function ---
+        async function loadStudents() {
+            const studentSnap = await getDocs(collection(db, "students"));
+            const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
+            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+            
+            const paidIds = paySnap.docs.map(d => d.data().studentId);
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = "";
 
-    let groups = { Maktab: [], Nazera: [], Hifz: [] };
-    studentSnap.forEach(docSnap => {
-        const s = docSnap.data();
-        if(groups[s.division]) groups[s.division].push({ id: docSnap.id, ...s });
-    });
+            let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+            let groups = { Maktab: [], Nazera: [], Hifz: [] };
 
-    for (const div in groups) {
-        if (groups[div].length > 0) {
-            tbody.innerHTML += `<tr style="background:#e0f2f1; font-weight:bold;"><td colspan="7">${div}</td></tr>`;
-            groups[div].forEach(s => {
-                const isPaid = paidIds.includes(s.id);
-                const monthlyFee = parseInt(s.monthlyFee) || 0;
-                const prevDues = parseInt(s.previousDues) || 0;
-                
-                // Logic: If they haven't paid this month, they owe (Fee + Dues). 
-                // If they HAVE paid, they only owe the remaining Dues (if any).
-                const totalOwed = isPaid ? prevDues : (monthlyFee + prevDues);
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${s.name}</strong><br><small>${s.parentEmail}</small></td>
-                        <td>${s.division}</td>
-                        <td>¥${monthlyFee} + ¥${prevDues}</td>
-                        <td style="color:${totalOwed > 0 ? '#c62828' : '#2e7d32'}; font-weight:bold;">
-                            ¥${totalOwed}
-                        </td>
-                        <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">${isPaid ? 'PAID' : 'UNPAID'}</td>
-                        <td>${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>` : '✅'}</td>
-                        <td>
-                            <button class="action-btn" onclick="viewLogs('${s.id}', '${s.name}')">📋</button>
-                            <button class="action-btn" onclick="editDues('${s.id}', '${s.previousDues}')" title="Adjust Dues">💰</button>
-                            <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
-                        </td>
-                    </tr>`;
+            studentSnap.forEach(docSnap => {
+                const s = docSnap.data();
+                if(groups[s.division]) {
+                    groups[s.division].push({ id: docSnap.id, ...s });
+                    stats[s.division]++;
+                }
             });
-        }
-    }
-    // Update stats... (same as before)
-}
-
-// --- Function to Adjust Dues Manually ---
-window.editDues = async (sid, oldDues) => {
-    const newDues = prompt("Update Previous Dues Balance (¥):", oldDues);
-    if(newDues !== null) {
-        await updateDoc(doc(db, "students", sid), { previousDues: parseInt(newDues) || 0 });
-        loadStudents();
-    }
-};
 
             for (const div in groups) {
                 if (groups[div].length > 0) {
-                    tbody.innerHTML += `<tr style="background:#e0f2f1; font-weight:bold;"><td colspan="7">${div} (${groups[div].length} Students)</td></tr>`;
+                    tbody.innerHTML += `<tr style="background:#e0f2f1; font-weight:bold;"><td colspan="7">${div} (${groups[div].length})</td></tr>`;
+                    
                     groups[div].forEach(s => {
                         const isPaid = paidIds.includes(s.id);
+                        const fee = parseInt(s.monthlyFee) || 0;
+                        const dues = parseInt(s.previousDues) || 0;
+                        const total = isPaid ? dues : (fee + dues);
+
                         tbody.innerHTML += `
                             <tr>
-                                <td><strong>${s.name}</strong><br><small>${s.parentEmail || 'No Email'}</small></td>
+                                <td><strong>${s.name}</strong><br><small>${s.parentEmail}</small></td>
                                 <td>${s.division}</td>
-                                <td>${s.goals?.c1||0}/${s.goals?.c2||0}/${s.goals?.c3||0}</td>
-                                <td>¥${s.monthlyFee || 0}</td>
+                                <td>¥${fee} + ¥${dues}</td>
+                                <td class="due-amount" style="color:${total > 0 ? '#c62828' : '#2e7d32'}">¥${total}</td>
                                 <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">${isPaid ? 'PAID' : 'UNPAID'}</td>
                                 <td>${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>` : '✅'}</td>
                                 <td>
                                     <button class="action-btn" onclick="viewLogs('${s.id}', '${s.name}')">📋</button>
-                                    <button class="action-btn" onclick="editFee('${s.id}', '${s.monthlyFee}')">¥</button>
+                                    <button class="action-btn" onclick="editDues('${s.id}', '${dues}')" title="Adjust Dues">💰</button>
                                     <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
                                 </td>
                             </tr>`;
@@ -277,27 +210,25 @@ window.editDues = async (sid, oldDues) => {
             document.getElementById('count-hifz').innerText = stats.Hifz;
         }
 
-        // --- View Logs ---
+        // --- Helper Actions ---
         window.viewLogs = async (sid, name) => {
             const q = query(collection(db, "progress_reports"), where("studentId", "==", sid), orderBy("date", "desc"));
             const snap = await getDocs(q);
-            let logs = `Recent logs for ${name}:\n\n`;
-            snap.forEach(doc => { logs += `${doc.data().date}: ${doc.data().sabaq} (${doc.data().performance})\n`; });
-            alert(snap.empty ? "No logs found." : logs);
+            let logs = `Logs for ${name}:\n\n`;
+            snap.forEach(doc => { logs += `${doc.data().date}: ${doc.data().sabaq}\n`; });
+            alert(snap.empty ? "No logs." : logs);
         };
 
-        // --- Edit Fee ---
-        window.editFee = async (sid, oldFee) => {
-            const newFee = prompt("Enter new Monthly Fee:", oldFee);
-            if(newFee) {
-                await updateDoc(doc(db, "students", sid), { monthlyFee: newFee });
+        window.editDues = async (sid, oldDues) => {
+            const val = prompt("Enter new Previous Dues balance (¥):", oldDues);
+            if(val !== null) {
+                await updateDoc(doc(db, "students", sid), { previousDues: parseInt(val) || 0 });
                 loadStudents();
             }
         };
 
-        // --- Delete ---
         window.deleteStudent = async (sid) => {
-            if(confirm("Delete this student permanently?")) {
+            if(confirm("Permanently delete student?")) {
                 await deleteDoc(doc(db, "students", sid));
                 loadStudents();
             }
