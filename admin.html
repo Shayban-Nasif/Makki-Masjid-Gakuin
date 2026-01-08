@@ -134,30 +134,44 @@
 
         // --- Enrollment Logic ---
         window.addStudent = async () => {
-            const name = document.getElementById('sName').value;
-            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
-            const div = document.getElementById('sDivision').value;
-            const fee = parseInt(document.getElementById('sFee').value) || 0;
-            const dues = parseInt(document.getElementById('sDues').value) || 0;
-            const goals = {
-                c1: parseInt(document.getElementById('g1').value) || 0,
-                c2: parseInt(document.getElementById('g2').value) || 0,
-                c3: parseInt(document.getElementById('g3').value) || 0
-            };
-            const eta = document.getElementById('sEta').value;
+    const name = document.getElementById('sName').value;
+    const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
+    const div = document.getElementById('sDivision').value;
+    const fee = parseInt(document.getElementById('sFee').value) || 0;
+    const dues = parseInt(document.getElementById('sDues').value) || 0;
+    const goals = {
+        c1: parseInt(document.getElementById('g1').value) || 0,
+        c2: parseInt(document.getElementById('g2').value) || 0,
+        c3: parseInt(document.getElementById('g3').value) || 0
+    };
+    const eta = document.getElementById('sEta').value;
 
-            if(!name || !pEmail) return alert("Name and Email are required");
+    if(!name || !pEmail) return alert("Name and Parent Email are required");
 
-            try {
-                await addDoc(collection(db, "students"), {
-                    name, parentEmail: pEmail, division: div, 
-                    monthlyFee: fee, previousDues: dues,
-                    goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
-                });
-                alert("Student Enrolled!");
-                loadStudents();
-            } catch(e) { alert(e.message); }
-        };
+    try {
+        // STEP 1: Create the Student record
+        await addDoc(collection(db, "students"), {
+            name, parentEmail: pEmail, division: div, 
+            monthlyFee: fee, previousDues: dues,
+            goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
+        });
+
+        // STEP 2: Automatically create/update the Parent User account
+        // We use setDoc with {merge: true} so we don't overwrite other kids 
+        // if the parent already exists.
+        await setDoc(doc(db, "users", pEmail), {
+            email: pEmail,
+            role: 'parent',
+            name: "Parent of " + name // Initial name, parent can change it later
+        }, { merge: true });
+
+        alert("Student Enrolled and Parent Account Created!");
+        loadStudents();
+    } catch(e) { 
+        console.error(e);
+        alert("Error: " + e.message); 
+    }
+};
 
         // --- Payment Logic ---
         window.markAsPaid = async (sid, name) => {
