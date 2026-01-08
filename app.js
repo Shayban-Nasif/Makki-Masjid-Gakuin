@@ -13,7 +13,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         const userCredential = await window.signInWithEmailAndPassword(window.auth, email, password);
         const user = userCredential.user;
 
-        // 2. Fetch the user's details from the 'users' collection
+        // 2. Fetch user details
         const userDocRef = window.doc(window.db, "users", email);
         const userDoc = await window.getDoc(userDocRef);
 
@@ -21,10 +21,10 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             const userData = userDoc.data();
             const role = userData.role;
 
-            // 3. Clear old session data first
+            // 3. Clear old session data
             localStorage.clear();
 
-            // 4. Store universal info in LocalStorage
+            // 4. Store Universal Info
             localStorage.setItem('userEmail', email);
             localStorage.setItem('userRole', role);
             localStorage.setItem('userName', userData.name || "User");
@@ -35,14 +35,24 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
             } 
             
             if (role === 'parent') {
-                // IMPORTANT: This 'childName' must match the field name in your Firestore 'users' doc
-                localStorage.setItem('childName', userData.childName || "Student");
+                // SIBLING LOGIC: 
+                // We check for the 'children' array first. 
+                // If it doesn't exist, we put the old 'childName' into an array format.
+                let childrenArray = [];
+                if (userData.children && Array.isArray(userData.children)) {
+                    childrenArray = userData.children;
+                } else if (userData.childName) {
+                    childrenArray = [userData.childName];
+                }
+
+                // We save the array as a string so the Parent page can parse it
+                localStorage.setItem('childrenList', JSON.stringify(childrenArray));
             }
 
             message.style.color = "green";
             message.innerText = `Welcome ${userData.name || ''}! Redirecting...`;
 
-            // 6. Redirect based on role
+            // 6. Redirect
             setTimeout(() => {
                 if (role === 'admin') {
                     window.location.href = "admin.html";
@@ -55,7 +65,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
         } else {
             message.style.color = "red";
-            message.innerText = "Error: User profile not found in database.";
+            message.innerText = "Error: User profile not found.";
         }
 
     } catch (error) {
