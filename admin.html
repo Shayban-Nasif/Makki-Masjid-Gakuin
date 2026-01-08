@@ -191,55 +191,97 @@
         };
 
         async function loadStudents() {
-    // Fetch all students and teachers for stats
+    // 1. Fetch Data
     const studentSnap = await getDocs(collection(db, "students"));
     const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
     const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
     
     const paidIds = paySnap.docs.map(d => d.data().studentId);
-    
-    // Counters
-    let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-    
     const tbody = document.getElementById('studentTableBody');
     tbody.innerHTML = "";
+
+    // 2. Setup Counters & Groups
+    let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+    let groups = { Maktab: [], Nazera: [], Hifz: [] };
 
     studentSnap.forEach(docSnap => {
         const s = docSnap.data();
         const id = docSnap.id;
-        
-        // Stats counting
-        if(stats[s.division] !== undefined) stats[s.division]++;
-
-        // RECOVERY LOGIC: Use default values if old data is missing new fields
-        const goals = s.goals || { c1: 0, c2: 0, c3: 0 };
-        const fee = s.monthlyFee || "Not Set";
-        const isPaid = paidIds.includes(id);
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${s.name}</td>
-                <td>${s.division}</td>
-                <td>${goals.c1}/${goals.c2}/${goals.c3}</td>
-                <td>¥${fee}</td>
-                <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">
-                    ${isPaid ? 'PAID' : 'UNPAID'}
-                </td>
-                <td>
-                    ${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${id}', '${s.name}')">Mark Paid</button>` : '✅'}
-                </td>
-            </tr>
-        `;
+        if(groups[s.division]) {
+            groups[s.division].push({ id, ...s });
+            stats[s.division]++;
+        }
     });
 
-    // Update the UI Counters
+    // 3. Render Groups (Division Wise)
+    for (const div in groups) {
+        if (groups[div].length > 0) {
+            // Add a Division Header Row
+            tbody.innerHTML += `
+                <tr style="background:#e0f2f1; font-weight:bold;">
+                    <td colspan="7" style="color:#004d40;">${div} Division (${groups[div].length})</td>
+                </tr>
+            `;
+
+            groups[div].forEach(s => {
+                const goals = s.goals || { c1: 0, c2: 0, c3: 0 };
+                const isPaid = paidIds.includes(s.id);
+                const parentEmail = s.parentEmail || "N/A";
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong>${s.name}</strong><br>
+                            <small style="color:#666;">Parent: ${parentEmail}</small>
+                        </td>
+                        <td>${div}</td>
+                        <td>${goals.c1}/${goals.c2}/${goals.c3}</td>
+                        <td>¥${s.monthlyFee || 0}</td>
+                        <td class="${isPaid ? 'status-paid' : 'status-unpaid'}">
+                            ${isPaid ? 'PAID' : 'UNPAID'}
+                        </td>
+                        <td>
+                            ${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Mark Paid</button>` : '✅'}
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:5px;">
+                                <button onclick="viewLogs('${s.id}')" title="View Logs" style="background:#eee; border:1px solid #ccc; cursor:pointer;">📋</button>
+                                <button onclick="editStudent('${s.id}')" title="Edit" style="background:#eee; border:1px solid #ccc; cursor:pointer;">✏️</button>
+                                <button onclick="deleteStudent('${s.id}')" title="Delete" style="background:#ffebee; border:1px solid #ffcdd2; color:#c62828; cursor:pointer;">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    // 4. Update Stats Cards
     document.getElementById('count-teachers').innerText = teacherSnap.size;
     document.getElementById('count-maktab').innerText = stats.Maktab;
     document.getElementById('count-nazera').innerText = stats.Nazera;
     document.getElementById('count-hifz').innerText = stats.Hifz;
 }
-        window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
-        loadStudents();
+
+// Helper Functions for Actions
+window.viewLogs = (sid) => {
+    // You can redirect to a logs page or open a modal
+    alert("Opening logs for Student ID: " + sid);
+};
+
+window.editStudent = (sid) => {
+    alert("Edit feature for: " + sid);
+};
+
+window.deleteStudent = async (sid) => {
+    if(confirm("Are you sure you want to remove this student?")) {
+        try {
+            await deleteDoc(doc(db, "students", sid));
+            alert("Student deleted.");
+            loadStudents();
+        } catch(e) { alert(e.message); }
+    }
+};
     </script>
 </body>
 </html>
