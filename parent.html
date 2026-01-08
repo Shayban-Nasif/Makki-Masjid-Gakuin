@@ -60,7 +60,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const parentEmail = localStorage.getItem('userEmail');
+        const currentMonthYear = "January 2026"; // Matches Admin Panel Logic
         const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
         document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + (localStorage.getItem('userName') || "Parent");
 
@@ -121,7 +121,7 @@
                             <div class="fee-amount">¥${s.monthlyFee || 0}</div>
                         </div>
                         <div style="text-align:right;">
-                            <span class="status-badge" style="background:#e8f5e9; color:#2e7d32;">Active Plan</span>
+                            <div id="payStatus-${sid}">Checking status...</div>
                             <p style="font-size:0.8rem; color:#888; margin:5px 0 0 0;">Payable at the Office</p>
                         </div>
                     </div>
@@ -129,6 +129,7 @@
             `;
             container.appendChild(section);
             fetchLogs(sid);
+            fetchPaymentStatus(sid);
         }
 
         function renderProgressBar(label, current, total) {
@@ -152,7 +153,7 @@
             const snap = await getDocs(q);
             
             let html = "";
-            if (snap.empty) html = "<p>No recent logs.</p>";
+            if (snap.empty) html = "<p>No recent logs found.</p>";
             snap.forEach(doc => {
                 const d = doc.data();
                 html += `
@@ -166,6 +167,25 @@
                 `;
             });
             logDiv.innerHTML = html;
+        }
+
+        async function fetchPaymentStatus(sid) {
+            const statusDiv = document.getElementById(`payStatus-${sid}`);
+            try {
+                const q = query(collection(db, "payments"), 
+                          where("studentId", "==", sid), 
+                          where("month", "==", currentMonthYear));
+                
+                const snap = await getDocs(q);
+                
+                if (!snap.empty) {
+                    statusDiv.innerHTML = `<span class="status-badge" style="background:#e8f5e9; color:#2e7d32; font-size:0.9rem;">${currentMonthYear}: PAID ✅</span>`;
+                } else {
+                    statusDiv.innerHTML = `<span class="status-badge" style="background:#ffebee; color:#c62828; font-size:0.9rem;">${currentMonthYear}: UNPAID ❌</span>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = "Status Unavailable";
+            }
         }
 
         window.switchTab = (btn, targetId) => {
