@@ -10,20 +10,20 @@
         .header { background: #004d40; color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .child-section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 25px; }
         
-        /* Tabs for Academic vs Finance */
         .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
         .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
         .tab-btn.active { color: #d4af37; border-bottom: 3px solid #d4af37; }
 
-        /* Triple Progress Bars */
         .academic-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
         .subject-progress-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
         .progress-container { background: #e0e0e0; border-radius: 10px; height: 12px; width: 100%; margin: 10px 0; overflow: hidden; }
         .progress-bar { background: #d4af37; height: 100%; width: 0%; transition: width 1s ease-in-out; }
         
-        /* Finance Styles */
-        .finance-card { background: #fff8e1; border: 1px solid #ffe082; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .fee-amount { font-size: 1.5rem; font-weight: bold; color: #004d40; }
+        /* Updated Finance Styles */
+        .finance-card { background: #fff8e1; border: 1px solid #ffe082; padding: 20px; border-radius: 8px; }
+        .finance-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ffe082; }
+        .total-row { display: flex; justify-content: space-between; padding: 12px 0; font-weight: bold; font-size: 1.2rem; color: #004d40; }
+        .due-warning { color: #c62828; }
 
         .report-card { border-left: 4px solid #004d40; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
         .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
@@ -60,7 +60,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const currentMonthYear = "January 2026"; // Matches Admin Panel Logic
+        const currentMonthYear = "January 2026";
         const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
         document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + (localStorage.getItem('userName') || "Parent");
 
@@ -116,24 +116,31 @@
 
                 <div id="finance-${sid}" class="tab-content" style="display:none;">
                     <div class="finance-card">
-                        <div>
-                            <p style="margin:0; color:#666;">Monthly Donation</p>
-                            <div class="fee-amount">¥${s.monthlyFee || 0}</div>
+                        <div id="payStatus-${sid}">Checking payment status...</div>
+                        <hr style="border:0; border-top:1px solid #ffe082; margin:15px 0;">
+                        <div class="finance-row">
+                            <span>Monthly Fee</span>
+                            <span>¥${s.monthlyFee || 0}</span>
                         </div>
-                        <div style="text-align:right;">
-                            <div id="payStatus-${sid}">Checking status...</div>
-                            <p style="font-size:0.8rem; color:#888; margin:5px 0 0 0;">Payable at the Office</p>
+                        <div class="finance-row">
+                            <span>Previous Dues</span>
+                            <span class="${s.previousDues > 0 ? 'due-warning' : ''}">¥${s.previousDues || 0}</span>
                         </div>
+                        <div class="total-row" id="totalOwedRow-${sid}">
+                            <span>Total Outstanding</span>
+                            <span>Calculating...</span>
+                        </div>
+                        <p style="font-size:0.8rem; color:#888; margin-top:10px; text-align:center;">Please settle all dues at the main office.</p>
                     </div>
                 </div>
             `;
             container.appendChild(section);
             fetchLogs(sid);
-            fetchPaymentStatus(sid);
+            fetchFinanceDetails(sid, s.monthlyFee, s.previousDues);
         }
 
         function renderProgressBar(label, current, total) {
-            const percent = Math.min((current / total) * 100, 100);
+            const percent = Math.min((current / (total || 1)) * 100, 100);
             return `
                 <div class="subject-progress-card">
                     <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
@@ -169,20 +176,29 @@
             logDiv.innerHTML = html;
         }
 
-        async function fetchPaymentStatus(sid) {
+        async function fetchFinanceDetails(sid, monthlyFee, prevDues) {
             const statusDiv = document.getElementById(`payStatus-${sid}`);
+            const totalRow = document.getElementById(`totalOwedRow-${sid}`);
+            
             try {
                 const q = query(collection(db, "payments"), 
                           where("studentId", "==", sid), 
                           where("month", "==", currentMonthYear));
                 
                 const snap = await getDocs(q);
-                
-                if (!snap.empty) {
-                    statusDiv.innerHTML = `<span class="status-badge" style="background:#e8f5e9; color:#2e7d32; font-size:0.9rem;">${currentMonthYear}: PAID ✅</span>`;
+                const isPaid = !snap.empty;
+                const total = isPaid ? (parseInt(prevDues) || 0) : ((parseInt(monthlyFee) || 0) + (parseInt(prevDues) || 0));
+
+                if (isPaid) {
+                    statusDiv.innerHTML = `<span class="status-badge" style="background:#e8f5e9; color:#2e7d32; font-size:1rem; width:100%; text-align:center;">${currentMonthYear}: PAID ✅</span>`;
                 } else {
-                    statusDiv.innerHTML = `<span class="status-badge" style="background:#ffebee; color:#c62828; font-size:0.9rem;">${currentMonthYear}: UNPAID ❌</span>`;
+                    statusDiv.innerHTML = `<span class="status-badge" style="background:#ffebee; color:#c62828; font-size:1rem; width:100%; text-align:center;">${currentMonthYear}: UNPAID ❌</span>`;
                 }
+
+                totalRow.innerHTML = `
+                    <span>Total Outstanding</span>
+                    <span style="color:${total > 0 ? '#c62828' : '#2e7d32'}">¥${total}</span>
+                `;
             } catch (err) {
                 statusDiv.innerHTML = "Status Unavailable";
             }
