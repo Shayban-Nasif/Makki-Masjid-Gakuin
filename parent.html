@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Portal | Makki Masjid Gakuin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .parent-container { padding: 20px; max-width: 600px; margin: auto; }
+        .info-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .child-header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 10px; margin-bottom: 20px; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-top: 5px; }
+        .present { background: #e8f5e9; color: #2e7d32; }
+        .absent { background: #ffebee; color: #c62828; }
+        .lesson-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid var(--primary-green); }
+        .label { font-size: 0.8rem; color: #666; font-weight: bold; display: block; }
+        .value { font-size: 1.1rem; color: #004d40; }
+    </style>
+</head>
+<body>
+
+    <div class="parent-container">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="color: var(--primary-green);">Parent Portal</h2>
+            <button onclick="window.location.href='index.html'" class="status-btn">Logout</button>
+        </header>
+
+        <div id="loading" style="text-align: center;">Retrieving child's records...</div>
+
+        <div id="content" style="display: none;">
+            <div class="info-card">
+                <div class="child-header">
+                    <h1 id="childName" style="margin:0;">Student Name</h1>
+                    <p id="childDivision" style="color: #666; font-style: italic;"></p>
+                </div>
+                
+                <div style="text-align: center;">
+                    <span class="label">Today's Attendance</span>
+                    <div id="attendanceStatus" class="status-badge">Loading...</div>
+                </div>
+            </div>
+
+            <h3 style="color: var(--primary-green);">Latest Lesson Progress</h3>
+            <div class="info-card" id="lessonContainer">
+                </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+            authDomain: "makki-masjid-gakuin.firebaseapp.com",
+            projectId: "makki-masjid-gakuin",
+            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+            messagingSenderId: "376596641128",
+            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Get info from localStorage (Saved by app.js during login)
+        const childName = localStorage.getItem('childName');
+
+        if (!childName) {
+            alert("Please log in as a parent.");
+            window.location.href = "index.html";
+        }
+
+        async function loadChildProgress() {
+            try {
+                // Find the latest log for this child
+                const q = query(
+                    collection(db, "daily_logs"),
+                    where("studentName", "==", childName),
+                    orderBy("timestamp", "desc"),
+                    limit(1)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+                if (querySnapshot.empty) {
+                    document.getElementById('lessonContainer').innerHTML = "<p>No progress records found yet.</p>";
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    document.getElementById('childName').innerText = data.studentName;
+                    document.getElementById('childDivision').innerText = data.division + " Division";
+                    
+                    // Attendance Display
+                    const att = document.getElementById('attendanceStatus');
+                    att.innerText = data.attendance;
+                    att.className = "status-badge " + data.attendance.toLowerCase();
+
+                    // Lesson Display based on Division labels
+                    const labels = {
+                        "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
+                        "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
+                        "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
+                    }[data.division];
+
+                    let lessonHtml = "";
+                    data.lessons.forEach((val, index) => {
+                        lessonHtml += `
+                            <div class="lesson-box">
+                                <span class="label">${labels[index]}</span>
+                                <span class="value">${val || 'No update'}</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('lessonContainer').innerHTML = lessonHtml;
+                });
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerText = "Error loading data.";
+            }
+        }
+
+        loadChildProgress();
+    </script>
+</body>
+</html>
