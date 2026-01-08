@@ -29,7 +29,7 @@
         <div class="header">
             <div>
                 <h1 id="teacherGreeting">Welcome, Teacher</h1>
-                <p id="divisionInfo" style="color: #d4af37; font-weight: bold;"></p>
+                <p id="divisionInfo" style="color: #d4af37; font-weight: bold;">Loading division...</p>
             </div>
             <button onclick="logout()" style="background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Logout</button>
         </div>
@@ -76,7 +76,7 @@
                     <div class="subject-row">
                         <div>
                             <label class="label-text" id="lblS1">Subject 1 Detail</label>
-                            <input type="text" id="sabaq1" placeholder="e.g. Page 5, Line 2">
+                            <input type="text" id="sabaq1" placeholder="Lesson details...">
                         </div>
                         <div>
                             <label class="label-text">Current Level</label>
@@ -87,7 +87,7 @@
                     <div class="subject-row">
                         <div>
                             <label class="label-text" id="lblS2">Subject 2 Detail</label>
-                            <input type="text" id="sabaq2" placeholder="e.g. Dua for Sleeping">
+                            <input type="text" id="sabaq2" placeholder="Lesson details...">
                         </div>
                         <div>
                             <label class="label-text">Current Level</label>
@@ -98,7 +98,7 @@
                     <div class="subject-row">
                         <div>
                             <label class="label-text" id="lblS3">Subject 3 Detail</label>
-                            <input type="text" id="sabaq3" placeholder="e.g. Names of Allah">
+                            <input type="text" id="sabaq3" placeholder="Lesson details...">
                         </div>
                         <div>
                             <label class="label-text">Current Level</label>
@@ -151,20 +151,21 @@
         let teacherData = null;
 
         async function init() {
-            const tDoc = await getDoc(doc(db, "users", teacherEmail));
-            if (tDoc.exists()) {
-                teacherData = tDoc.data();
-                document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + teacherData.name;
-                document.getElementById('divisionInfo').innerText = "Assigned Division: " + teacherData.division;
-                
-                // Set Subject Labels based on Teacher's Division
-                const labels = divisionLabels[teacherData.division] || ["Subject 1", "Subject 2", "Subject 3"];
-                document.getElementById('lblS1').innerText = labels[0] + " (Progress)";
-                document.getElementById('lblS2').innerText = labels[1] + " (Progress)";
-                document.getElementById('lblS3').innerText = labels[2] + " (Progress)";
+            try {
+                const tDoc = await getDoc(doc(db, "users", teacherEmail));
+                if (tDoc.exists()) {
+                    teacherData = tDoc.data();
+                    document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + teacherData.name;
+                    document.getElementById('divisionInfo').innerText = "Assigned Division: " + teacherData.division;
+                    
+                    const labels = divisionLabels[teacherData.division] || ["Subject 1", "Subject 2", "Subject 3"];
+                    document.getElementById('lblS1').innerText = labels[0] + " (Today's Detail)";
+                    document.getElementById('lblS2').innerText = labels[1] + " (Today's Detail)";
+                    document.getElementById('lblS3').innerText = labels[2] + " (Today's Detail)";
 
-                loadStudents(teacherData.division);
-            }
+                    loadStudents(teacherData.division);
+                }
+            } catch (err) { console.error("Init Error:", err); }
         }
 
         async function loadStudents(division) {
@@ -173,20 +174,27 @@
             const list = document.getElementById('myStudentList');
             list.innerHTML = "";
 
-            snap.forEach(doc => {
-                const s = doc.data();
-                const l = s.levels || { c1: 0, c2: 0, c3: 0 };
-                const g = s.goals || { c1: 30, c2: 30, c3: 30 };
+            snap.forEach(docSnap => {
+                const s = docSnap.data();
+                const id = docSnap.id;
                 
-                list.innerHTML += `
-                    <tr>
-                        <td><strong>${s.name}</strong></td>
-                        <td style="font-size: 0.85rem; color: #555;">
-                            ${l.c1}/${g.c1} | ${l.c2}/${g.c2} | ${l.c3}/${g.c3}
-                        </td>
-                        <td><button class="btn-log" onclick="openLogModal('${doc.id}', '${s.name}', ${JSON.stringify(l)})">Daily Update</button></td>
-                    </tr>
+                // Ensure levels and goals exist to prevent UI crashes
+                const l = s.levels || { c1: 0, c2: 0, c3: 0 };
+                const g = s.goals || { c1: 0, c2: 0, c3: 0 };
+                
+                // Create row element
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${s.name}</strong></td>
+                    <td style="font-size: 0.85rem; color: #555;">
+                        C1: ${l.c1}/${g.c1} | C2: ${l.c2}/${g.c2} | C3: ${l.c3}/${g.c3}
+                    </td>
+                    <td><button class="btn-log">Daily Update</button></td>
                 `;
+
+                // Set event listener properly to avoid JSON.stringify issues
+                tr.querySelector('.btn-log').onclick = () => openLogModal(id, s.name, l);
+                list.appendChild(tr);
             });
         }
 
@@ -211,12 +219,12 @@
             const sid = document.getElementById('logStudentId').value;
             
             const newLevels = {
-                c1: parseInt(document.getElementById('level1').value),
-                c2: parseInt(document.getElementById('level2').value),
-                c3: parseInt(document.getElementById('level3').value)
+                c1: parseInt(document.getElementById('level1').value) || 0,
+                c2: parseInt(document.getElementById('level2').value) || 0,
+                c3: parseInt(document.getElementById('level3').value) || 0
             };
 
-            const labels = divisionLabels[teacherData.division];
+            const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
             const combinedSabaq = `${labels[0]}: ${document.getElementById('sabaq1').value} | ${labels[1]}: ${document.getElementById('sabaq2').value} | ${labels[2]}: ${document.getElementById('sabaq3').value}`;
 
             const logData = {
