@@ -21,14 +21,43 @@
         .logout-btn { background: #c62828; color: white; border: none; padding: 10px; width: 100%; margin-top: 50px; cursor: pointer; border-radius: 5px; }
         input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
         
-        /* Table Styles for Student Details */
+        /* Table Styles */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th { background: #f8f9fa; color: #555; text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
         td { padding: 10px; border-bottom: 1px solid #eee; }
         .div-header { background: #e0f2f1; color: #004d40; padding: 10px; margin-top: 20px; border-radius: 4px; font-weight: bold; }
+        
+        /* Buttons */
+        .btn-edit { background: #0288d1; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        
+        /* Modal Styles */
+        #editModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
+
+    <div id="editModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Edit Student</h3>
+            <input type="hidden" id="editStudentId">
+            <label>Name</label>
+            <input type="text" id="editStudentName">
+            <label>Division</label>
+            <select id="editStudentDivision">
+                <option value="Maktab">Maktab</option>
+                <option value="Nazera">Nazera</option>
+                <option value="Hifz">Hifz</option>
+            </select>
+            <label>Level</label>
+            <input type="text" id="editStudentLevel">
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button id="saveEditBtn" style="flex:1; padding: 10px; background: #004d40; color: white; border: none; border-radius: 4px;">Save Changes</button>
+                <button onclick="closeModal()" style="flex:1; padding: 10px; background: #999; color: white; border: none; border-radius: 4px;">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard-container">
         <div class="sidebar">
@@ -91,9 +120,11 @@
             </div>
 
             <div class="action-section">
-                <h3>Division-wise Student Details</h3>
-                <div id="divisionWiseContainer">
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>Student Details</h3>
+                    <input type="text" id="studentSearch" placeholder="Search by name..." style="width: 250px; margin:0;">
+                </div>
+                <div id="divisionWiseContainer"></div>
             </div>
 
             <div class="action-section">
@@ -105,7 +136,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -119,111 +150,21 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- ADD TEACHER LOGIC ---
-        const teacherForm = document.getElementById('addTeacherForm');
-        teacherForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('teacherEmail').value;
-            const name = document.getElementById('teacherName').value;
-            const divChoice = document.getElementById('teacherDivision').value;
+        let allStudents = [];
 
-            try {
-                await setDoc(doc(db, "users", email), {
-                    name: name,
-                    email: email,
-                    role: "teacher",
-                    division: divChoice
-                });
-                document.getElementById('adminMsg').innerText = "Teacher assigned to " + divChoice;
-                teacherForm.reset();
-                loadData();
-            } catch (err) { alert(err.message); }
-        });
-
-        // --- ADD STUDENT LOGIC ---
-        const studentForm = document.getElementById('addStudentForm');
-        studentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('studentName').value;
-            const divChoice = document.getElementById('studentDivision').value;
-            const pEmail = document.getElementById('parentEmail').value;
-            const level = document.getElementById('studentLevel').value;
-
-            try {
-                await addDoc(collection(db, "students"), {
-                    name: name,
-                    division: divChoice,
-                    level: level,
-                    parentEmail: pEmail
-                });
-
-                await setDoc(doc(db, "users", pEmail), { 
-                    role: "parent", 
-                    email: pEmail,
-                    children: arrayUnion(name) 
-                }, { merge: true });
-                
-                document.getElementById('studentMsg').innerText = "Successfully registered " + name;
-                studentForm.reset();
-                loadData();
-            } catch (err) { alert(err.message); }
-        });
-
-        // --- LOAD AND GROUP DATA ---
+        // --- LOAD DATA ---
         async function loadData() {
             const tSnap = await getDocs(collection(db, "users"));
             const sSnap = await getDocs(collection(db, "students"));
             
-            // Initial counts
-            let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            let divisionGroups = { Maktab: [], Nazera: [], Hifz: [] };
-
-            // Process Students
+            allStudents = [];
             sSnap.forEach(doc => {
-                const s = doc.data();
-                if (counts.hasOwnProperty(s.division)) {
-                    counts[s.division]++;
-                    divisionGroups[s.division].push(s);
-                }
+                allStudents.push({ id: doc.id, ...doc.data() });
             });
 
-            // Update Stat Cards
-            document.getElementById('totalStudents').innerText = sSnap.size;
-            document.getElementById('countMaktab').innerText = counts.Maktab;
-            document.getElementById('countNazera').innerText = counts.Nazera;
-            document.getElementById('countHifz').innerText = counts.Hifz;
+            renderTables(allStudents);
 
-            // Generate Division Tables
-            const container = document.getElementById('divisionWiseContainer');
-            container.innerHTML = "";
-
-            for (const [divName, students] of Object.entries(divisionGroups)) {
-                if (students.length > 0) {
-                    let html = `<div class="div-header">${divName} Division (${students.length})</div>`;
-                    html += `<table>
-                                <thead>
-                                    <tr>
-                                        <th>Student Name</th>
-                                        <th>Level</th>
-                                        <th>Parent Email</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-                    
-                    students.forEach(s => {
-                        html += `<tr>
-                                    <td>${s.name}</td>
-                                    <td>${s.level || '---'}</td>
-                                    <td>${s.parentEmail}</td>
-                                 </tr>`;
-                    });
-                    
-                    html += `</tbody></table>`;
-                    container.innerHTML += html;
-                }
-            }
-
-            // Update Teachers List
+            // Update Teachers
             let tList = document.getElementById('teachersList');
             tList.innerHTML = "";
             let tCount = 0;
@@ -235,7 +176,126 @@
                 }
             });
             document.getElementById('totalTeachers').innerText = tCount;
+            document.getElementById('totalStudents').innerText = sSnap.size;
         }
+
+        // --- RENDER TABLES ---
+        function renderTables(data) {
+            const container = document.getElementById('divisionWiseContainer');
+            container.innerHTML = "";
+            let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
+            let groups = { Maktab: [], Nazera: [], Hifz: [] };
+
+            data.forEach(s => {
+                if (groups[s.division]) {
+                    groups[s.division].push(s);
+                    counts[s.division]++;
+                }
+            });
+
+            // Update stats
+            document.getElementById('countMaktab').innerText = counts.Maktab;
+            document.getElementById('countNazera').innerText = counts.Nazera;
+            document.getElementById('countHifz').innerText = counts.Hifz;
+
+            for (const [div, students] of Object.entries(groups)) {
+                if (students.length > 0) {
+                    let html = `<div class="div-header">${div} Division</div><table><thead><tr><th>Name</th><th>Level</th><th>Parent</th><th>Actions</th></tr></thead><tbody>`;
+                    students.forEach(s => {
+                        html += `<tr>
+                            <td>${s.name}</td>
+                            <td>${s.level || 'N/A'}</td>
+                            <td>${s.parentEmail}</td>
+                            <td>
+                                <button class="btn-edit" onclick="openEditModal('${s.id}', '${s.name}', '${s.division}', '${s.level || ''}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteStudent('${s.id}')">Delete</button>
+                            </td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                    container.innerHTML += html;
+                }
+            }
+        }
+
+        // --- SEARCH LOGIC ---
+        document.getElementById('studentSearch').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+            renderTables(filtered);
+        });
+
+        // --- EDIT MODAL LOGIC ---
+        window.openEditModal = (id, name, division, level) => {
+            document.getElementById('editStudentId').value = id;
+            document.getElementById('editStudentName').value = name;
+            document.getElementById('editStudentDivision').value = division;
+            document.getElementById('editStudentLevel').value = level;
+            document.getElementById('editModal').style.display = 'block';
+        };
+
+        window.closeModal = () => {
+            document.getElementById('editModal').style.display = 'none';
+        };
+
+        document.getElementById('saveEditBtn').addEventListener('click', async () => {
+            const id = document.getElementById('editStudentId').value;
+            const updatedData = {
+                name: document.getElementById('editStudentName').value,
+                division: document.getElementById('editStudentDivision').value,
+                level: document.getElementById('editStudentLevel').value
+            };
+
+            try {
+                await updateDoc(doc(db, "students", id), updatedData);
+                alert("Student updated!");
+                closeModal();
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
+
+        // --- DELETE LOGIC ---
+        window.deleteStudent = async (id) => {
+            if(confirm("Are you sure you want to delete this student?")) {
+                await deleteDoc(doc(db, "students", id));
+                loadData();
+            }
+        };
+
+        // --- ADD TEACHER/STUDENT (Keep your existing submit logic here) ---
+        teacherForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('teacherEmail').value;
+            try {
+                await setDoc(doc(db, "users", email), {
+                    name: document.getElementById('teacherName').value,
+                    email: email,
+                    role: "teacher",
+                    division: document.getElementById('teacherDivision').value
+                });
+                teacherForm.reset();
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
+
+        studentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('studentName').value;
+            const pEmail = document.getElementById('parentEmail').value;
+            try {
+                await addDoc(collection(db, "students"), {
+                    name: name,
+                    division: document.getElementById('studentDivision').value,
+                    level: document.getElementById('studentLevel').value,
+                    parentEmail: pEmail
+                });
+                await setDoc(doc(db, "users", pEmail), { 
+                    role: "parent", email: pEmail, children: arrayUnion(name) 
+                }, { merge: true });
+                studentForm.reset();
+                loadData();
+            } catch (err) { alert(err.message); }
+        });
 
         document.getElementById('logoutBtn').addEventListener('click', () => window.location.href = 'index.html');
         loadData();
