@@ -47,85 +47,90 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-            authDomain: "makki-masjid-gakuin.firebaseapp.com",
-            projectId: "makki-masjid-gakuin",
-            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-            messagingSenderId: "376596641128",
-            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+        authDomain: "makki-masjid-gakuin.firebaseapp.com",
+        projectId: "makki-masjid-gakuin",
+        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+        messagingSenderId: "376596641128",
+        appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        // Get info from localStorage (Saved by app.js during login)
-        const childName = localStorage.getItem('childName');
+    const childName = localStorage.getItem('childName');
+    console.log("Looking for logs for student:", childName);
 
-        if (!childName) {
-            alert("Please log in as a parent.");
-            window.location.href = "index.html";
+    async function loadChildProgress() {
+        const loadingEl = document.getElementById('loading');
+        const lessonContainer = document.getElementById('lessonContainer');
+
+        if (!childName || childName === "Student") {
+            loadingEl.innerHTML = "<p style='color:red'>Error: No child linked to this parent account. Check Admin settings.</p>";
+            return;
         }
 
-        async function loadChildProgress() {
-            try {
-                // Find the latest log for this child
-                const q = query(
-                    collection(db, "daily_logs"),
-                    where("studentName", "==", childName),
-                    orderBy("timestamp", "desc"),
-                    limit(1)
-                );
+        try {
+            // First, let's try a simpler query without sorting to see if data exists
+            const q = query(
+                collection(db, "daily_logs"),
+                where("studentName", "==", childName)
+            );
 
-                const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(q);
 
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('content').style.display = 'block';
-
-                if (querySnapshot.empty) {
-                    document.getElementById('lessonContainer').innerHTML = "<p>No progress records found yet.</p>";
-                    return;
-                }
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    document.getElementById('childName').innerText = data.studentName;
-                    document.getElementById('childDivision').innerText = data.division + " Division";
-                    
-                    // Attendance Display
-                    const att = document.getElementById('attendanceStatus');
-                    att.innerText = data.attendance;
-                    att.className = "status-badge " + data.attendance.toLowerCase();
-
-                    // Lesson Display based on Division labels
-                    const labels = {
-                        "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
-                        "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
-                        "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-                    }[data.division];
-
-                    let lessonHtml = "";
-                    data.lessons.forEach((val, index) => {
-                        lessonHtml += `
-                            <div class="lesson-box">
-                                <span class="label">${labels[index]}</span>
-                                <span class="value">${val || 'No update'}</span>
-                            </div>
-                        `;
-                    });
-                    document.getElementById('lessonContainer').innerHTML = lessonHtml;
-                });
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('loading').innerText = "Error loading data.";
+            if (querySnapshot.empty) {
+                loadingEl.innerHTML = `<p>No records found for ${childName}. Has the teacher saved attendance yet?</p>`;
+                return;
             }
-        }
 
-        loadChildProgress();
-    </script>
+            // If we found data, let's sort them manually in JS for now to avoid Index errors
+            let logs = [];
+            querySnapshot.forEach(doc => logs.push(doc.data()));
+            
+            // Sort by timestamp (newest first)
+            logs.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+            const data = logs[0]; // Get the latest one
+
+            loadingEl.style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            document.getElementById('childName').innerText = data.studentName;
+            document.getElementById('childDivision').innerText = data.division + " Division";
+            
+            const att = document.getElementById('attendanceStatus');
+            att.innerText = data.attendance;
+            att.className = "status-badge " + data.attendance.toLowerCase();
+
+            const divisionLabels = {
+                "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
+                "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
+                "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
+            };
+
+            const labels = divisionLabels[data.division] || ["Lesson 1", "Lesson 2", "Lesson 3"];
+
+            let lessonHtml = "";
+            data.lessons.forEach((val, index) => {
+                lessonHtml += `
+                    <div class="lesson-box">
+                        <span class="label">${labels[index]}</span>
+                        <span class="value">${val || 'No update'}</span>
+                    </div>
+                `;
+            });
+            lessonContainer.innerHTML = lessonHtml;
+
+        } catch (err) {
+            console.error("Firebase Error:", err);
+            loadingEl.innerHTML = `<p style='color:red'>Error: ${err.message}</p>`;
+        }
+    }
+
+    loadChildProgress();
+</script>
 </body>
 </html>
