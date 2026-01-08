@@ -46,6 +46,20 @@
         </div>
 
         <div class="section">
+            <h3>Add New Teacher</h3>
+            <div class="admin-grid">
+                <input type="text" id="tName" placeholder="Teacher Name">
+                <input type="email" id="tEmail" placeholder="Teacher Email">
+                <select id="tDivision">
+                    <option value="Maktab">Maktab</option>
+                    <option value="Nazera">Nazera</option>
+                    <option value="Hifz">Hifz</option>
+                </select>
+                <button onclick="addTeacher()" class="btn-primary">Register Teacher</button>
+            </div>
+        </div>
+ 
+        <div class="section">
             <h3>Student Enrollment</h3>
             <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
                 <input type="text" id="sName" placeholder="Student Name">
