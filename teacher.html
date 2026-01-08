@@ -66,16 +66,25 @@
             "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
         };
 
-        // 1. Identify Teacher (In a real app, this comes from the Login session)
-        // For now, let's assume we are viewing the "Hifz" division. 
-        // Later, we can make this dynamic based on who logged in.
-        let teacherDivision = "Hifz"; 
-
-        async function initDashboard() {
-            document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
-            document.getElementById('displayDivision').innerText = teacherDivision + " Division";
-            await loadStudents();
-        }
+        // 1. GET LOGGED-IN TEACHER DATA FROM STORAGE
+            const teacherDivision = localStorage.getItem('userDivision'); 
+            const teacherName = localStorage.getItem('userName') || "Teacher";
+            
+            // Safety check: If someone tries to access this page without logging in
+            if (!teacherDivision) {
+                alert("Session expired. Please log in again.");
+                window.location.href = "index.html";
+            }
+            
+            async function initDashboard() {
+                // Update the UI with the correct Teacher Name and Division
+                document.getElementById('teacherWelcome').innerText = `Assalamu Alaikum, ${teacherName}`;
+                document.getElementById('displayDivision').innerText = teacherDivision + " Division";
+                document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
+                
+                // Load students specifically for THIS teacher's division
+                await loadStudents();
+            }
 
         async function loadStudents() {
             const listContainer = document.getElementById('studentList');
