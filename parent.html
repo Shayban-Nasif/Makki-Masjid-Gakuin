@@ -20,8 +20,11 @@
         /* History Styles */
         .history-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; }
         .report-card { border-left: 4px solid #d4af37; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
-        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 5px; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
         .btn-logout { background: #fff; color: #d4af37; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        .lesson-item { padding: 4px 0; border-bottom: 1px solid #f0f0f0; color: #444; }
+        .lesson-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -35,8 +38,7 @@
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
-        <div id="childrenContainer">
-            </div>
+        <div id="childrenContainer"></div>
     </div>
 
     <script type="module">
@@ -81,7 +83,6 @@
             const logDiv = document.getElementById(`logs-${name.replace(/\s/g, '')}`);
             
             try {
-                // 1. Get Student Data for Goals
                 const studentQuery = query(collection(db, "students"), where("name", "==", name));
                 const studentSnap = await getDocs(studentQuery);
                 if (studentSnap.empty) {
@@ -92,12 +93,10 @@
                 const s = studentSnap.docs[0].data();
                 const studentId = studentSnap.docs[0].id;
                 
-                // 2. Calculate Progress using data from Admin Panel
                 const current = parseInt(s.level) || 0;
                 const total = parseInt(s.goal) || 10;
                 const percent = Math.min((current / total) * 100, 100);
 
-                // 3. Get Recent Logs
                 const reportQuery = query(
                     collection(db, "progress_reports"), 
                     where("studentId", "==", studentId),
@@ -106,10 +105,9 @@
                 );
                 const reportSnap = await getDocs(reportQuery);
 
-                // 4. Render UI
                 let html = `
                     <div class="goal-card">
-                        <div class="latest-status">Current Progress: Lesson ${current}</div>
+                        <div class="latest-status">Current Progress: Level ${current}</div>
                         <p style="margin:0; color:#666; font-size:0.9rem;">Goal: Complete ${s.division} Level</p>
                         
                         <div class="progress-container">
@@ -118,7 +116,7 @@
                         
                         <div class="goal-info">
                             <span>${Math.round(percent)}% Complete</span>
-                            <span>Target: ${total} Lessons</span>
+                            <span>Target: Level ${total}</span>
                         </div>
                         
                         ${s.eta ? `
@@ -127,7 +125,7 @@
                         </div>` : ''}
                     </div>
 
-                    <div class="history-label">Recent Daily Logs</div>
+                    <div class="history-label">Detailed Daily Logs</div>
                 `;
 
                 if (reportSnap.empty) {
@@ -135,12 +133,23 @@
                 } else {
                     reportSnap.forEach(doc => {
                         const d = doc.data();
+                        
+                        // Parse the Triple Lesson format: "Qaida: X | Dua: Y | Studies: Z"
+                        const sabaqParts = d.sabaq ? d.sabaq.split(' | ') : ["N/A"];
+                        
                         html += `
                             <div class="report-card">
-                                <strong>${d.date}</strong> | Attendance: ${d.attendance}<br>
-                                <div style="margin-top:5px;">
-                                    <strong>Sabaq:</strong> ${d.sabaq || 'N/A'}<br>
-                                    <strong>Performance:</strong> <span style="color:#004d40; font-weight:bold;">${d.performance}</span>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <strong>${d.date}</strong>
+                                    <span class="status-badge" style="background:${d.performance === 'Excellent' ? '#e8f5e9' : '#fff3e0'}; color:${d.performance === 'Excellent' ? '#2e7d32' : '#ef6c00'};">
+                                        ${d.performance}
+                                    </span>
+                                </div>
+                                <div style="margin-bottom:8px;">
+                                    ${sabaqParts.map(part => `<div class="lesson-item"> ${part}</div>`).join('')}
+                                </div>
+                                <div style="font-size:0.8rem; color:#888;">
+                                    Attendance: <strong>${d.attendance}</strong>
                                 </div>
                             </div>
                         `;
@@ -150,7 +159,7 @@
 
             } catch (err) {
                 console.error(err);
-                logDiv.innerHTML = "Error loading reports. Check browser console for index link.";
+                logDiv.innerHTML = "Error loading records.";
             }
         }
 
