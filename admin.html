@@ -103,6 +103,11 @@
     </div>
 
     <script type="module">
+        import { 
+        getFirestore, doc, setDoc, addDoc, collection, 
+        getDocs, query, where, deleteDoc, updateDoc, 
+        orderBy, arrayUnion  // <--- Add this!
+        }
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -133,12 +138,17 @@
         };
 
         // --- Enrollment Logic ---
-        window.addStudent = async () => {
-    const name = document.getElementById('sName').value;
+       // Add this to your imports at the top of the script tag if not already there:
+// import { ..., arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+window.addStudent = async () => {
+    const name = document.getElementById('sName').value.trim();
     const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
     const div = document.getElementById('sDivision').value;
     const fee = parseInt(document.getElementById('sFee').value) || 0;
     const dues = parseInt(document.getElementById('sDues').value) || 0;
+    
+    // Goals & ETA
     const goals = {
         c1: parseInt(document.getElementById('g1').value) || 0,
         c2: parseInt(document.getElementById('g2').value) || 0,
@@ -149,26 +159,28 @@
     if(!name || !pEmail) return alert("Name and Parent Email are required");
 
     try {
-        // STEP 1: Create the Student record
+        // 1. Create Student Record
         await addDoc(collection(db, "students"), {
             name, parentEmail: pEmail, division: div, 
             monthlyFee: fee, previousDues: dues,
             goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
         });
 
-        // STEP 2: Automatically create/update the Parent User account
-        // We use setDoc with {merge: true} so we don't overwrite other kids 
-        // if the parent already exists.
+        // 2. Link student to Parent User account
+        // arrayUnion adds the name to the list ONLY if it's not already there
         await setDoc(doc(db, "users", pEmail), {
             email: pEmail,
             role: 'parent',
-            name: "Parent of " + name // Initial name, parent can change it later
+            name: "Parent Account", 
+            childrenList: arrayUnion(name) // This is the key fix!
         }, { merge: true });
 
-        alert("Student Enrolled and Parent Account Created!");
+        alert(`Enrolled ${name} and linked to parent ${pEmail}`);
         loadStudents();
+        
+        // Clear fields
+        document.getElementById('sName').value = "";
     } catch(e) { 
-        console.error(e);
         alert("Error: " + e.message); 
     }
 };
