@@ -135,25 +135,29 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-            authDomain: "makki-masjid-gakuin.firebaseapp.com",
-            projectId: "makki-masjid-gakuin",
-            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-            messagingSenderId: "376596641128",
-            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+        authDomain: "makki-masjid-gakuin.firebaseapp.com",
+        projectId: "makki-masjid-gakuin",
+        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+        messagingSenderId: "376596641128",
+        appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        let allStudents = [];
+    // --- 1. DEFINE FORM VARIABLES (This was the missing part) ---
+    const teacherForm = document.getElementById('addTeacherForm');
+    const studentForm = document.getElementById('addStudentForm');
+    let allStudents = [];
 
-        // --- LOAD DATA ---
-        async function loadData() {
+    // --- 2. LOAD DATA FUNCTION ---
+    async function loadData() {
+        try {
             const tSnap = await getDocs(collection(db, "users"));
             const sSnap = await getDocs(collection(db, "students"));
             
@@ -164,7 +168,6 @@
 
             renderTables(allStudents);
 
-            // Update Teachers
             let tList = document.getElementById('teachersList');
             tList.innerHTML = "";
             let tCount = 0;
@@ -177,128 +180,126 @@
             });
             document.getElementById('totalTeachers').innerText = tCount;
             document.getElementById('totalStudents').innerText = sSnap.size;
+        } catch (err) {
+            console.error("Load Error:", err);
         }
+    }
 
-        // --- RENDER TABLES ---
-        function renderTables(data) {
-            const container = document.getElementById('divisionWiseContainer');
-            container.innerHTML = "";
-            let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            let groups = { Maktab: [], Nazera: [], Hifz: [] };
+    // --- 3. RENDER TABLES ---
+    function renderTables(data) {
+        const container = document.getElementById('divisionWiseContainer');
+        container.innerHTML = "";
+        let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
+        let groups = { Maktab: [], Nazera: [], Hifz: [] };
 
-            data.forEach(s => {
-                if (groups[s.division]) {
-                    groups[s.division].push(s);
-                    counts[s.division]++;
-                }
+        data.forEach(s => {
+            if (groups[s.division]) {
+                groups[s.division].push(s);
+                counts[s.division]++;
+            }
+        });
+
+        document.getElementById('countMaktab').innerText = counts.Maktab;
+        document.getElementById('countNazera').innerText = counts.Nazera;
+        document.getElementById('countHifz').innerText = counts.Hifz;
+
+        for (const [div, students] of Object.entries(groups)) {
+            if (students.length > 0) {
+                let html = `<div class="div-header">${div} Division</div><table><thead><tr><th>Name</th><th>Level</th><th>Parent</th><th>Actions</th></tr></thead><tbody>`;
+                students.forEach(s => {
+                    html += `<tr>
+                        <td>${s.name}</td>
+                        <td>${s.level || 'N/A'}</td>
+                        <td>${s.parentEmail}</td>
+                        <td>
+                            <button class="btn-edit" onclick="openEditModal('${s.id}', '${s.name}', '${s.division}', '${s.level || ''}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteStudent('${s.id}')">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                container.innerHTML += html;
+            }
+        }
+    }
+
+    // --- 4. SEARCH & MODAL LOGIC (Global scope) ---
+    document.getElementById('studentSearch').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
+        renderTables(filtered);
+    });
+
+    window.openEditModal = (id, name, division, level) => {
+        document.getElementById('editStudentId').value = id;
+        document.getElementById('editStudentName').value = name;
+        document.getElementById('editStudentDivision').value = division;
+        document.getElementById('editStudentLevel').value = level;
+        document.getElementById('editModal').style.display = 'block';
+    };
+
+    window.closeModal = () => {
+        document.getElementById('editModal').style.display = 'none';
+    };
+
+    document.getElementById('saveEditBtn').addEventListener('click', async () => {
+        const id = document.getElementById('editStudentId').value;
+        const updatedData = {
+            name: document.getElementById('editStudentName').value,
+            division: document.getElementById('editStudentDivision').value,
+            level: document.getElementById('editStudentLevel').value
+        };
+        try {
+            await updateDoc(doc(db, "students", id), updatedData);
+            closeModal();
+            loadData();
+        } catch (err) { alert(err.message); }
+    });
+
+    window.deleteStudent = async (id) => {
+        if(confirm("Are you sure?")) {
+            await deleteDoc(doc(db, "students", id));
+            loadData();
+        }
+    };
+
+    // --- 5. SUBMIT HANDLERS ---
+    teacherForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('teacherEmail').value;
+        try {
+            await setDoc(doc(db, "users", email), {
+                name: document.getElementById('teacherName').value,
+                email: email,
+                role: "teacher",
+                division: document.getElementById('teacherDivision').value
             });
+            teacherForm.reset();
+            loadData();
+        } catch (err) { alert(err.message); }
+    });
 
-            // Update stats
-            document.getElementById('countMaktab').innerText = counts.Maktab;
-            document.getElementById('countNazera').innerText = counts.Nazera;
-            document.getElementById('countHifz').innerText = counts.Hifz;
+    studentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('studentName').value;
+        const pEmail = document.getElementById('parentEmail').value;
+        try {
+            await addDoc(collection(db, "students"), {
+                name: name,
+                division: document.getElementById('studentDivision').value,
+                level: document.getElementById('studentLevel').value,
+                parentEmail: pEmail
+            });
+            await setDoc(doc(db, "users", pEmail), { 
+                role: "parent", email: pEmail, children: arrayUnion(name) 
+            }, { merge: true });
+            studentForm.reset();
+            loadData();
+        } catch (err) { alert(err.message); }
+    });
 
-            for (const [div, students] of Object.entries(groups)) {
-                if (students.length > 0) {
-                    let html = `<div class="div-header">${div} Division</div><table><thead><tr><th>Name</th><th>Level</th><th>Parent</th><th>Actions</th></tr></thead><tbody>`;
-                    students.forEach(s => {
-                        html += `<tr>
-                            <td>${s.name}</td>
-                            <td>${s.level || 'N/A'}</td>
-                            <td>${s.parentEmail}</td>
-                            <td>
-                                <button class="btn-edit" onclick="openEditModal('${s.id}', '${s.name}', '${s.division}', '${s.level || ''}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteStudent('${s.id}')">Delete</button>
-                            </td>
-                        </tr>`;
-                    });
-                    html += `</tbody></table>`;
-                    container.innerHTML += html;
-                }
-            }
-        }
-
-        // --- SEARCH LOGIC ---
-        document.getElementById('studentSearch').addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
-            renderTables(filtered);
-        });
-
-        // --- EDIT MODAL LOGIC ---
-        window.openEditModal = (id, name, division, level) => {
-            document.getElementById('editStudentId').value = id;
-            document.getElementById('editStudentName').value = name;
-            document.getElementById('editStudentDivision').value = division;
-            document.getElementById('editStudentLevel').value = level;
-            document.getElementById('editModal').style.display = 'block';
-        };
-
-        window.closeModal = () => {
-            document.getElementById('editModal').style.display = 'none';
-        };
-
-        document.getElementById('saveEditBtn').addEventListener('click', async () => {
-            const id = document.getElementById('editStudentId').value;
-            const updatedData = {
-                name: document.getElementById('editStudentName').value,
-                division: document.getElementById('editStudentDivision').value,
-                level: document.getElementById('editStudentLevel').value
-            };
-
-            try {
-                await updateDoc(doc(db, "students", id), updatedData);
-                alert("Student updated!");
-                closeModal();
-                loadData();
-            } catch (err) { alert(err.message); }
-        });
-
-        // --- DELETE LOGIC ---
-        window.deleteStudent = async (id) => {
-            if(confirm("Are you sure you want to delete this student?")) {
-                await deleteDoc(doc(db, "students", id));
-                loadData();
-            }
-        };
-
-        // --- ADD TEACHER/STUDENT (Keep your existing submit logic here) ---
-        teacherForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('teacherEmail').value;
-            try {
-                await setDoc(doc(db, "users", email), {
-                    name: document.getElementById('teacherName').value,
-                    email: email,
-                    role: "teacher",
-                    division: document.getElementById('teacherDivision').value
-                });
-                teacherForm.reset();
-                loadData();
-            } catch (err) { alert(err.message); }
-        });
-
-        studentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('studentName').value;
-            const pEmail = document.getElementById('parentEmail').value;
-            try {
-                await addDoc(collection(db, "students"), {
-                    name: name,
-                    division: document.getElementById('studentDivision').value,
-                    level: document.getElementById('studentLevel').value,
-                    parentEmail: pEmail
-                });
-                await setDoc(doc(db, "users", pEmail), { 
-                    role: "parent", email: pEmail, children: arrayUnion(name) 
-                }, { merge: true });
-                studentForm.reset();
-                loadData();
-            } catch (err) { alert(err.message); }
-        });
-
-        document.getElementById('logoutBtn').addEventListener('click', () => window.location.href = 'index.html');
-        loadData();
-    </script>
+    document.getElementById('logoutBtn').addEventListener('click', () => window.location.href = 'index.html');
+    loadData();
+</script>
 </body>
 </html>
