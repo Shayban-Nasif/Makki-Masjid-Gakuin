@@ -9,12 +9,16 @@
         .parent-container { padding: 20px; max-width: 600px; margin: auto; }
         .info-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .child-header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 10px; margin-bottom: 20px; }
-        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-top: 5px; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-top: 5px; text-transform: capitalize; }
         .present { background: #e8f5e9; color: #2e7d32; }
         .absent { background: #ffebee; color: #c62828; }
         .lesson-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid var(--primary-green); }
         .label { font-size: 0.8rem; color: #666; font-weight: bold; display: block; }
         .value { font-size: 1.1rem; color: #004d40; }
+        
+        /* Sibling Selector Styles */
+        .selector-box { background: #004d40; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+        .selector-box select { padding: 8px; border-radius: 4px; border: none; font-size: 1rem; width: 60%; }
     </style>
 </head>
 <body>
@@ -25,7 +29,12 @@
             <button onclick="window.location.href='index.html'" class="status-btn">Logout</button>
         </header>
 
-        <div id="loading" style="text-align: center;">Retrieving child's records...</div>
+        <div id="siblingSelector" class="selector-box" style="display: none;">
+            <span>Viewing for:</span>
+            <select id="childDropdown"></select>
+        </div>
+
+        <div id="loading" style="text-align: center; margin-top: 50px;">Retrieving records...</div>
 
         <div id="content" style="display: none;">
             <div class="info-card">
@@ -41,96 +50,130 @@
             </div>
 
             <h3 style="color: var(--primary-green);">Latest Lesson Progress</h3>
-            <div class="info-card" id="lessonContainer">
-                </div>
+            <div class="info-card" id="lessonContainer"></div>
         </div>
     </div>
 
     <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-        authDomain: "makki-masjid-gakuin.firebaseapp.com",
-        projectId: "makki-masjid-gakuin",
-        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-        messagingSenderId: "376596641128",
-        appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+            authDomain: "makki-masjid-gakuin.firebaseapp.com",
+            projectId: "makki-masjid-gakuin",
+            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+            messagingSenderId: "376596641128",
+            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    const childName = localStorage.getItem('childName');
-    console.log("Looking for logs for student:", childName);
+        // 1. Get the list of siblings from localStorage
+        const childrenListRaw = localStorage.getItem('childrenList');
+        const children = JSON.parse(childrenListRaw || "[]");
 
-    async function loadChildProgress() {
-        const loadingEl = document.getElementById('loading');
-        const lessonContainer = document.getElementById('lessonContainer');
+        async function initPage() {
+            const dropdown = document.getElementById('childDropdown');
+            const selectorDiv = document.getElementById('siblingSelector');
 
-        if (!childName || childName === "Student") {
-            loadingEl.innerHTML = "<p style='color:red'>Error: No child linked to this parent account. Check Admin settings.</p>";
-            return;
-        }
-
-        try {
-            // First, let's try a simpler query without sorting to see if data exists
-            const q = query(
-                collection(db, "daily_logs"),
-                where("studentName", "==", childName)
-            );
-
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                loadingEl.innerHTML = `<p>No records found for ${childName}. Has the teacher saved attendance yet?</p>`;
+            if (children.length === 0) {
+                document.getElementById('loading').innerHTML = "<p style='color:red'>No children found linked to this account.</p>";
                 return;
             }
 
-            // If we found data, let's sort them manually in JS for now to avoid Index errors
-            let logs = [];
-            querySnapshot.forEach(doc => logs.push(doc.data()));
-            
-            // Sort by timestamp (newest first)
-            logs.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
-            const data = logs[0]; // Get the latest one
+            // If there's more than 1 child, show the dropdown
+            if (children.length > 1) {
+                selectorDiv.style.display = 'flex';
+                children.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.innerText = name;
+                    dropdown.appendChild(opt);
+                });
 
-            loadingEl.style.display = 'none';
-            document.getElementById('content').style.display = 'block';
-            document.getElementById('childName').innerText = data.studentName;
-            document.getElementById('childDivision').innerText = data.division + " Division";
-            
-            const att = document.getElementById('attendanceStatus');
-            att.innerText = data.attendance;
-            att.className = "status-badge " + data.attendance.toLowerCase();
+                dropdown.addEventListener('change', (e) => {
+                    loadChildProgress(e.target.value);
+                });
+            }
 
-            const divisionLabels = {
-                "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
-                "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
-                "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-            };
-
-            const labels = divisionLabels[data.division] || ["Lesson 1", "Lesson 2", "Lesson 3"];
-
-            let lessonHtml = "";
-            data.lessons.forEach((val, index) => {
-                lessonHtml += `
-                    <div class="lesson-box">
-                        <span class="label">${labels[index]}</span>
-                        <span class="value">${val || 'No update'}</span>
-                    </div>
-                `;
-            });
-            lessonContainer.innerHTML = lessonHtml;
-
-        } catch (err) {
-            console.error("Firebase Error:", err);
-            loadingEl.innerHTML = `<p style='color:red'>Error: ${err.message}</p>`;
+            // Always load the first child initially
+            loadChildProgress(children[0]);
         }
-    }
 
-    loadChildProgress();
-</script>
+        async function loadChildProgress(selectedChild) {
+            const loadingEl = document.getElementById('loading');
+            const contentEl = document.getElementById('content');
+            const lessonContainer = document.getElementById('lessonContainer');
+
+            // Reset UI
+            loadingEl.style.display = 'block';
+            contentEl.style.display = 'none';
+
+            try {
+                const q = query(
+                    collection(db, "daily_logs"),
+                    where("studentName", "==", selectedChild)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    loadingEl.innerHTML = `<p>No records found for <strong>${selectedChild}</strong>. Please check back later.</p>`;
+                    return;
+                }
+
+                let logs = [];
+                querySnapshot.forEach(doc => logs.push(doc.data()));
+                
+                // Sort by timestamp (manual sort to avoid Firebase Indexing delay)
+                logs.sort((a, b) => {
+                    const timeA = a.timestamp?.seconds || 0;
+                    const timeB = b.timestamp?.seconds || 0;
+                    return timeB - timeA;
+                });
+
+                const data = logs[0]; 
+
+                // Fill UI
+                document.getElementById('childName').innerText = data.studentName;
+                document.getElementById('childDivision').innerText = data.division + " Division";
+                
+                const att = document.getElementById('attendanceStatus');
+                att.innerText = data.attendance;
+                att.className = "status-badge " + data.attendance.toLowerCase();
+
+                const divisionLabels = {
+                    "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
+                    "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
+                    "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
+                };
+
+                const labels = divisionLabels[data.division] || ["Lesson 1", "Lesson 2", "Lesson 3"];
+
+                let lessonHtml = "";
+                data.lessons.forEach((val, index) => {
+                    lessonHtml += `
+                        <div class="lesson-box">
+                            <span class="label">${labels[index]}</span>
+                            <span class="value">${val || 'No update provided'}</span>
+                        </div>
+                    `;
+                });
+
+                lessonContainer.innerHTML = lessonHtml;
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                loadingEl.innerHTML = `<p style='color:red'>Error loading data: ${err.message}</p>`;
+            }
+        }
+
+        // Start the page
+        initPage();
+    </script>
 </body>
 </html>
