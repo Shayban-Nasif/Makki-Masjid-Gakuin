@@ -6,59 +6,20 @@
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Specific styles for the Dashboard layout */
         .dashboard-container { display: flex; min-height: 100vh; }
-        
-        .sidebar { 
-            width: 250px; 
-            background: #004d40; 
-            color: white; 
-            padding: 20px; 
-        }
-        
+        .sidebar { width: 250px; background: #004d40; color: white; padding: 20px; }
         .sidebar h2 { color: #d4af37; font-size: 1.2rem; margin-bottom: 30px; }
-        
         .sidebar-menu { list-style: none; padding: 0; }
         .sidebar-menu li { padding: 15px 0; border-bottom: 1px solid #00695c; cursor: pointer; }
         .sidebar-menu li:hover { color: #d4af37; }
-
-        .main-content { flex: 1; padding: 40px; background: #f4f7f6; }
-        
-        .stats-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 20px; 
-            margin-bottom: 30px; 
-        }
-
-        .stat-card { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            text-align: center;
-        }
-
+        .main-content { flex: 1; padding: 40px; background: #f4f7f6; overflow-y: auto; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
         .stat-card h3 { margin: 0; color: #777; font-size: 0.9rem; }
         .stat-card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0; color: #004d40; }
-
-        .action-section { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-        }
-
-        .logout-btn { 
-            background: #c62828; 
-            color: white; 
-            border: none; 
-            padding: 10px; 
-            width: 100%; 
-            margin-top: 50px; 
-            cursor: pointer; 
-            border-radius: 5px;
-        }
+        .action-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .logout-btn { background: #c62828; color: white; border: none; padding: 10px; width: 100%; margin-top: 50px; cursor: pointer; border-radius: 5px; }
+        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -67,34 +28,23 @@
         <div class="sidebar">
             <h2>MMG Admin</h2>
             <ul class="sidebar-menu">
-                <li onclick="alert('Going to Teachers Management...')">Teachers</li>
-                <li onclick="alert('Going to Students Management...')">Students</li>
-                <li onclick="alert('Going to Lessons...')">Lessons & Levels</li>
-                <li onclick="alert('Going to Finance...')">Payment Info</li>
-                <li onclick="alert('Going to Documents...')">Documents</li>
+                <li>Teachers</li>
+                <li>Students</li>
+                <li>Divisions</li>
+                <li>Finance</li>
             </ul>
             <button class="logout-btn" id="logoutBtn">Logout</button>
         </div>
 
         <div class="main-content">
             <header>
-                <h1>Welcome, Administrator</h1>
-                <p>Overview of Makki Masjid Gakuin</p>
+                <h1>Administrator Control</h1>
+                <p>Makki Masjid Gakuin Management</p>
             </header>
 
             <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Students</h3>
-                    <p id="totalStudents">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Teachers</h3>
-                    <p id="totalTeachers">0</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Divisions</h3>
-                    <p id="totalDivisions">0</p>
-                </div>
+                <div class="stat-card"><h3>Total Students</h3><p id="totalStudents">0</p></div>
+                <div class="stat-card"><h3>Total Teachers</h3><p id="totalTeachers">0</p></div>
             </div>
 
             <div class="action-section">
@@ -102,132 +52,126 @@
                 <form id="addTeacherForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <input type="text" id="teacherName" placeholder="Full Name" required>
                     <input type="email" id="teacherEmail" placeholder="Email Address" required>
-                    <input type="text" id="teacherSubject" placeholder="Subject (e.g., Quran, Tajweed)">
-                    <input type="password" id="teacherPassword" placeholder="Temporary Password" required>
+                    <select id="teacherDivision" required>
+                        <option value="">Assign Division</option>
+                        <option value="Maktab">Maktab</option>
+                        <option value="Nazera">Nazera</option>
+                        <option value="Hifz">Hifz</option>
+                    </select>
+                    <input type="password" id="teacherPassword" placeholder="Temp Password" required>
                     <button type="submit" class="login-btn" style="grid-column: span 2;">Register Teacher</button>
                 </form>
                 <p id="adminMsg"></p>
             </div>
 
-            <div class="action-section" style="margin-top: 20px;">
-                <h3>Existing Teachers</h3>
-                <ul id="teachersList">
-                    </ul>
-            </div>
-            
-            <div class="action-section" style="margin-top: 20px;">
+            <div class="action-section">
                 <h3>Add New Student</h3>
                 <form id="addStudentForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <input type="text" id="studentName" placeholder="Student Full Name" required>
-                    <input type="text" id="studentLevel" placeholder="Level (e.g., Level 1, Qaida, Juz Amma)" required>
-                    <input type="email" id="parentEmail" placeholder="Parent's Email (for login)" required>
+                    <input type="text" id="studentName" placeholder="Student Name" required>
+                    <select id="studentDivision" required>
+                        <option value="">Select Division</option>
+                        <option value="Maktab">Maktab</option>
+                        <option value="Nazera">Nazera</option>
+                        <option value="Hifz">Hifz</option>
+                    </select>
+                    <input type="text" id="studentLevel" placeholder="Current Level (e.g. Level 1)">
+                    <input type="email" id="parentEmail" placeholder="Parent Email" required>
                     <button type="submit" class="login-btn" style="grid-column: span 2; background-color: #d4af37;">Register Student</button>
                 </form>
                 <p id="studentMsg"></p>
             </div>
-            
+
+            <div class="action-section">
+                <h3>Existing Teachers</h3>
+                <ul id="teachersList"></ul>
+            </div>
         </div>
     </div>
 
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Add these variables at the top of your script
-    const studentForm = document.getElementById('addStudentForm');
-    const studentMsg = document.getElementById('studentMsg');
-  // Import Firebase tools again for this page
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+            authDomain: "makki-masjid-gakuin.firebaseapp.com",
+            projectId: "makki-masjid-gakuin",
+            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+            messagingSenderId: "376596641128",
+            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+        };
 
-  // Use the same config you used in index.html
-  const firebaseConfig = {
-        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-        authDomain: "makki-masjid-gakuin.firebaseapp.com",
-        projectId: "makki-masjid-gakuin",
-        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-        messagingSenderId: "376596641128",
-        appId: "1:376596641128:web:b49c1233aaed64ae6552dd",
-        measurementId: "G-EN2DN4DN4M"
-  };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+        // --- ADD TEACHER LOGIC ---
+        const teacherForm = document.getElementById('addTeacherForm');
+        teacherForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('teacherEmail').value;
+            const name = document.getElementById('teacherName').value;
+            const divChoice = document.getElementById('teacherDivision').value;
 
-  const teacherForm = document.getElementById('addTeacherForm');
-  const adminMsg = document.getElementById('adminMsg');
-
-// Handle Adding a Student
-studentForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const name = document.getElementById('studentName').value;
-    const level = document.getElementById('studentLevel').value;
-    const pEmail = document.getElementById('parentEmail').value;
-
-    try {
-        // Add to the "students" collection
-        await addDoc(collection(db, "students"), {
-            name: name,
-            level: level,
-            parentEmail: pEmail,
-            joinedDate: new Date().toLocaleDateString()
+            try {
+                await setDoc(doc(db, "users", email), {
+                    name: name,
+                    email: email,
+                    role: "teacher",
+                    division: divChoice
+                });
+                document.getElementById('adminMsg').innerText = "Teacher assigned to " + divChoice;
+                teacherForm.reset();
+                loadData();
+            } catch (err) { alert(err.message); }
         });
 
-        // Also add to "users" so the parent can login later
-        await setDoc(doc(db, "users", pEmail), {
-            email: pEmail,
-            role: "parent",
-            childName: name
+        // --- ADD STUDENT LOGIC ---
+        const studentForm = document.getElementById('addStudentForm');
+        studentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('studentName').value;
+            const divChoice = document.getElementById('studentDivision').value;
+            const pEmail = document.getElementById('parentEmail').value;
+
+            try {
+                await addDoc(collection(db, "students"), {
+                    name: name,
+                    division: divChoice,
+                    level: document.getElementById('studentLevel').value,
+                    parentEmail: pEmail
+                });
+                // Create parent user profile
+                await setDoc(doc(db, "users", pEmail), { role: "parent", childName: name });
+                
+                document.getElementById('studentMsg').innerText = "Student added to " + divChoice;
+                studentForm.reset();
+                loadData();
+            } catch (err) { alert(err.message); }
         });
 
-        studentMsg.style.color = "green";
-        studentMsg.innerText = "Student & Parent profile created!";
-        studentForm.reset();
-    } catch (error) {
-        studentMsg.style.color = "red";
-        studentMsg.innerText = "Error: " + error.message;
-    }
-});
-        
-  // Handle Adding a Teacher
-  teacherForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const email = document.getElementById('teacherEmail').value;
-    const name = document.getElementById('teacherName').value;
-    const subject = document.getElementById('teacherSubject').value;
-
-    try {
-        // 1. Add to the "users" collection so they can log in
-        await setDoc(doc(db, "users", email), {
-            name: name,
-            email: email,
-            role: "teacher",
-            subject: subject
-        });
-
-        adminMsg.style.color = "green";
-        adminMsg.innerText = "Teacher registered successfully!";
-        teacherForm.reset();
-        loadTeachers(); // Refresh the list
-    } catch (error) {
-        adminMsg.style.color = "red";
-        adminMsg.innerText = "Error: " + error.message;
-    }
-  });
-
-  // Function to show the list of teachers
-  async function loadTeachers() {
-    const querySnapshot = await getDocs(collection(db, "users"));
-    const list = document.getElementById('teachersList');
-    list.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-        if(doc.data().role === "teacher") {
-            list.innerHTML += `<li>${doc.data().name} - ${doc.data().subject} (${doc.data().email})</li>`;
+        // --- LOAD DATA FOR DASHBOARD ---
+        async function loadData() {
+            const tSnap = await getDocs(collection(db, "users"));
+            const sSnap = await getDocs(collection(db, "students"));
+            
+            document.getElementById('totalStudents').innerText = sSnap.size;
+            
+            let tList = document.getElementById('teachersList');
+            tList.innerHTML = "";
+            let tCount = 0;
+            
+            tSnap.forEach(doc => {
+                const u = doc.data();
+                if(u.role === 'teacher') {
+                    tCount++;
+                    tList.innerHTML += `<li>${u.name} - <strong>${u.division}</strong> (${u.email})</li>`;
+                }
+            });
+            document.getElementById('totalTeachers').innerText = tCount;
         }
-    });
-  }
 
-  loadTeachers(); // Run this when page loads
-</script>
+        document.getElementById('logoutBtn').addEventListener('click', () => window.location.href = 'index.html');
+        loadData();
+    </script>
 </body>
 </html>
