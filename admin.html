@@ -23,36 +23,39 @@
 
     
 <body style="background: #f4f7f6;">
-<div class="stats-grid" id="statsContainer">
-    <div class="stat-card">
-        <div class="stat-val" id="count-teachers">0</div>
-        <div class="stat-label">Teachers</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-val" id="count-maktab">0</div>
-        <div class="stat-label">Maktab Students</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-val" id="count-nazera">0</div>
-        <div class="stat-label">Nazera Students</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-val" id="count-hifz">0</div>
-        <div class="stat-label">Hifz Students</div>
-    </div>
-</div>
-
-<style>
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
-    .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
-    .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
-    .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
-</style>
-    <div class="admin-container">
+       
+ <div class="admin-container">
         <div class="header">
             <h1>Admin Management</h1>
             <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
+    
+    <div class="stats-grid" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-val" id="count-teachers">0</div>
+                <div class="stat-label">Teachers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="count-maktab">0</div>
+                <div class="stat-label">Maktab Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="count-nazera">0</div>
+                <div class="stat-label">Nazera Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" id="count-hifz">0</div>
+                <div class="stat-label">Hifz Students</div>
+            </div>
+        </div>
+        
+        <style>
+            .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+            .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
+            .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
+            .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
+        </style>
+   
 
         <div class="section">
             <h3>Add New Teacher</h3>
