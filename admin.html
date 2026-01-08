@@ -34,7 +34,7 @@
 
     <div class="admin-container">
         <div class="header">
-            <h1>Admin Management | Makki Masjid Gakuin</h1>
+            <h1>Admin Management</h1>
             <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
 
@@ -69,7 +69,7 @@
                     <option value="Nazera">Nazera</option>
                     <option value="Hifz">Hifz</option>
                 </select>
-                <input type="number" id="sFee" placeholder="Monthly Fee (¥)">
+                <input type="number" id="sFee" placeholder="Fee (¥)">
                 <input type="number" id="sDues" placeholder="Prev. Dues (¥)" value="0">
             </div>
             <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
@@ -103,13 +103,12 @@
     </div>
 
     <script type="module">
-        import { 
-        getFirestore, doc, setDoc, addDoc, collection, 
-        getDocs, query, where, deleteDoc, updateDoc, 
-        orderBy, arrayUnion  // <--- Add this!
-        }
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { 
+            getFirestore, doc, setDoc, addDoc, collection, 
+            getDocs, query, where, deleteDoc, updateDoc, 
+            orderBy, arrayUnion 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -133,57 +132,45 @@
             try {
                 await setDoc(doc(db, "users", email), { name, email, division: div, role: 'teacher' });
                 alert("Teacher Registered!");
-                location.reload();
+                loadStudents(); // Refresh data without full reload
             } catch(e) { alert(e.message); }
         };
 
         // --- Enrollment Logic ---
-       // Add this to your imports at the top of the script tag if not already there:
-// import { ..., arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        window.addStudent = async () => {
+            const name = document.getElementById('sName').value.trim();
+            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
+            const div = document.getElementById('sDivision').value;
+            const fee = parseInt(document.getElementById('sFee').value) || 0;
+            const dues = parseInt(document.getElementById('sDues').value) || 0;
+            const goals = {
+                c1: parseInt(document.getElementById('g1').value) || 0,
+                c2: parseInt(document.getElementById('g2').value) || 0,
+                c3: parseInt(document.getElementById('g3').value) || 0
+            };
+            const eta = document.getElementById('sEta').value;
 
-window.addStudent = async () => {
-    const name = document.getElementById('sName').value.trim();
-    const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
-    const div = document.getElementById('sDivision').value;
-    const fee = parseInt(document.getElementById('sFee').value) || 0;
-    const dues = parseInt(document.getElementById('sDues').value) || 0;
-    
-    // Goals & ETA
-    const goals = {
-        c1: parseInt(document.getElementById('g1').value) || 0,
-        c2: parseInt(document.getElementById('g2').value) || 0,
-        c3: parseInt(document.getElementById('g3').value) || 0
-    };
-    const eta = document.getElementById('sEta').value;
+            if(!name || !pEmail) return alert("Name and Parent Email are required");
 
-    if(!name || !pEmail) return alert("Name and Parent Email are required");
+            try {
+                await addDoc(collection(db, "students"), {
+                    name, parentEmail: pEmail, division: div, 
+                    monthlyFee: fee, previousDues: dues,
+                    goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
+                });
 
-    try {
-        // 1. Create Student Record
-        await addDoc(collection(db, "students"), {
-            name, parentEmail: pEmail, division: div, 
-            monthlyFee: fee, previousDues: dues,
-            goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
-        });
+                await setDoc(doc(db, "users", pEmail), {
+                    email: pEmail,
+                    role: 'parent',
+                    name: "Parent Account", 
+                    childrenList: arrayUnion(name)
+                }, { merge: true });
 
-        // 2. Link student to Parent User account
-        // arrayUnion adds the name to the list ONLY if it's not already there
-        await setDoc(doc(db, "users", pEmail), {
-            email: pEmail,
-            role: 'parent',
-            name: "Parent Account", 
-            childrenList: arrayUnion(name) // This is the key fix!
-        }, { merge: true });
-
-        alert(`Enrolled ${name} and linked to parent ${pEmail}`);
-        loadStudents();
-        
-        // Clear fields
-        document.getElementById('sName').value = "";
-    } catch(e) { 
-        alert("Error: " + e.message); 
-    }
-};
+                alert(`Enrolled ${name} successfully!`);
+                loadStudents();
+                document.getElementById('sName').value = "";
+            } catch(e) { alert("Error: " + e.message); }
+        };
 
         // --- Payment Logic ---
         window.markAsPaid = async (sid, name) => {
@@ -237,7 +224,7 @@ window.addStudent = async () => {
                                 <td>${!isPaid ? `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>` : '✅'}</td>
                                 <td>
                                     <button class="action-btn" onclick="viewLogs('${s.id}', '${s.name}')">📋</button>
-                                    <button class="action-btn" onclick="editDues('${s.id}', '${dues}')" title="Adjust Dues">💰</button>
+                                    <button class="action-btn" onclick="editDues('${s.id}', '${dues}')">💰</button>
                                     <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
                                 </td>
                             </tr>`;
