@@ -29,11 +29,16 @@
         
         /* Buttons */
         .btn-edit { background: #0288d1; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .btn-view { background: #455a64; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
         .btn-delete { background: #d32f2f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
         
         /* Modal Styles */
-        #editModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        #editModal, #progressModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { background: white; margin: 5% auto; padding: 20px; width: 450px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        
+        /* Progress Log Styles */
+        .progress-entry { border-left: 4px solid #d4af37; background: #fafafa; padding: 10px; margin-bottom: 10px; border-radius: 0 4px 4px 0; }
+        .progress-entry small { color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -53,9 +58,19 @@
             <label>Level</label>
             <input type="text" id="editStudentLevel">
             <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button id="saveEditBtn" style="flex:1; padding: 10px; background: #004d40; color: white; border: none; border-radius: 4px;">Save Changes</button>
-                <button onclick="closeModal()" style="flex:1; padding: 10px; background: #999; color: white; border: none; border-radius: 4px;">Cancel</button>
+                <button id="saveEditBtn" style="flex:1; padding: 10px; background: #004d40; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
+                <button onclick="closeModal()" style="flex:1; padding: 10px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <div id="progressModal">
+        <div class="modal-content" style="width: 600px;">
+            <h3 id="progressTitle">Student Progress History</h3>
+            <hr>
+            <div id="progressList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                </div>
+            <button onclick="document.getElementById('progressModal').style.display='none'" style="width: 100%; padding: 10px; margin-top: 15px; background: #455a64; color: white; border: none; border-radius: 4px; cursor: pointer;">Close History</button>
         </div>
     </div>
 
@@ -97,7 +112,7 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                     <input type="password" id="teacherPassword" placeholder="Temp Password" required>
-                    <button type="submit" class="login-btn" style="grid-column: span 2; padding: 12px; background: #004d40; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Teacher</button>
+                    <button type="submit" style="grid-column: span 2; padding: 12px; background: #004d40; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Teacher</button>
                 </form>
                 <p id="adminMsg"></p>
             </div>
@@ -114,7 +129,7 @@
                     </select>
                     <input type="text" id="studentLevel" placeholder="Current Level (e.g. Level 1)">
                     <input type="email" id="parentEmail" placeholder="Parent Email" required>
-                    <button type="submit" class="login-btn" style="grid-column: span 2; padding: 12px; background-color: #d4af37; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Student</button>
+                    <button type="submit" style="grid-column: span 2; padding: 12px; background-color: #d4af37; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Student</button>
                 </form>
                 <p id="studentMsg"></p>
             </div>
@@ -136,7 +151,7 @@
 
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, deleteDoc, arrayUnion, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -150,12 +165,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // --- 1. DEFINE FORM VARIABLES (This was the missing part) ---
     const teacherForm = document.getElementById('addTeacherForm');
     const studentForm = document.getElementById('addStudentForm');
     let allStudents = [];
 
-    // --- 2. LOAD DATA FUNCTION ---
     async function loadData() {
         try {
             const tSnap = await getDocs(collection(db, "users"));
@@ -180,12 +193,9 @@
             });
             document.getElementById('totalTeachers').innerText = tCount;
             document.getElementById('totalStudents').innerText = sSnap.size;
-        } catch (err) {
-            console.error("Load Error:", err);
-        }
+        } catch (err) { console.error("Load Error:", err); }
     }
 
-    // --- 3. RENDER TABLES ---
     function renderTables(data) {
         const container = document.getElementById('divisionWiseContainer');
         container.innerHTML = "";
@@ -212,6 +222,7 @@
                         <td>${s.level || 'N/A'}</td>
                         <td>${s.parentEmail}</td>
                         <td>
+                            <button class="btn-view" onclick="viewProgress('${s.id}', '${s.name}')">Progress</button>
                             <button class="btn-edit" onclick="openEditModal('${s.id}', '${s.name}', '${s.division}', '${s.level || ''}')">Edit</button>
                             <button class="btn-delete" onclick="deleteStudent('${s.id}')">Delete</button>
                         </td>
@@ -223,7 +234,7 @@
         }
     }
 
-    // --- 4. SEARCH & MODAL LOGIC (Global scope) ---
+    // --- SEARCH & MODALS ---
     document.getElementById('studentSearch').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term));
@@ -238,8 +249,40 @@
         document.getElementById('editModal').style.display = 'block';
     };
 
-    window.closeModal = () => {
-        document.getElementById('editModal').style.display = 'none';
+    window.closeModal = () => { document.getElementById('editModal').style.display = 'none'; };
+
+    // --- VIEW PROGRESS LOGIC ---
+    window.viewProgress = async (studentId, studentName) => {
+        document.getElementById('progressTitle').innerText = "Progress: " + studentName;
+        const list = document.getElementById('progressList');
+        list.innerHTML = "Fetching records...";
+        document.getElementById('progressModal').style.display = 'block';
+
+        try {
+            const q = query(collection(db, "progress_reports"), where("studentId", "==", studentId), orderBy("date", "desc"));
+            const snap = await getDocs(q);
+            
+            if (snap.empty) {
+                list.innerHTML = "<p>No progress records found for this student.</p>";
+                return;
+            }
+
+            let html = "";
+            snap.forEach(doc => {
+                const d = doc.data();
+                html += `
+                    <div class="progress-entry">
+                        <strong>Date:</strong> ${d.date} | <strong>Status:</strong> ${d.attendance}<br>
+                        <strong>Performance:</strong> ${d.performance}<br>
+                        <strong>Sabaq:</strong> ${d.sabaq || 'N/A'}<br>
+                        <small>Logged by: ${d.teacherName || 'Teacher'}</small>
+                    </div>`;
+            });
+            list.innerHTML = html;
+        } catch (err) { 
+            list.innerHTML = "Error: Please ensure Firestore Indexes are created. Check console (F12) for link.";
+            console.error(err);
+        }
     };
 
     document.getElementById('saveEditBtn').addEventListener('click', async () => {
@@ -263,15 +306,14 @@
         }
     };
 
-    // --- 5. SUBMIT HANDLERS ---
+    // --- FORM SUBMITS ---
     teacherForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('teacherEmail').value;
         try {
             await setDoc(doc(db, "users", email), {
                 name: document.getElementById('teacherName').value,
-                email: email,
-                role: "teacher",
+                email: email, role: "teacher",
                 division: document.getElementById('teacherDivision').value
             });
             teacherForm.reset();
@@ -290,9 +332,7 @@
                 level: document.getElementById('studentLevel').value,
                 parentEmail: pEmail
             });
-            await setDoc(doc(db, "users", pEmail), { 
-                role: "parent", email: pEmail, children: arrayUnion(name) 
-            }, { merge: true });
+            await setDoc(doc(db, "users", pEmail), { role: "parent", email: pEmail, children: arrayUnion(name) }, { merge: true });
             studentForm.reset();
             loadData();
         } catch (err) { alert(err.message); }
