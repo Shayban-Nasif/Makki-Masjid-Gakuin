@@ -6,57 +6,35 @@
     <title>Parent Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .parent-container { padding: 20px; max-width: 600px; margin: auto; }
-        .info-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .child-header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 10px; margin-bottom: 20px; }
-        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin-top: 5px; text-transform: capitalize; }
-        .present { background: #e8f5e9; color: #2e7d32; }
-        .absent { background: #ffebee; color: #c62828; }
-        .lesson-box { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; border-left: 4px solid var(--primary-green); }
-        .label { font-size: 0.8rem; color: #666; font-weight: bold; display: block; }
-        .value { font-size: 1.1rem; color: #004d40; }
-        
-        /* Sibling Selector Styles */
-        .selector-box { background: #004d40; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
-        .selector-box select { padding: 8px; border-radius: 4px; border: none; font-size: 1rem; width: 60%; }
+        .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .header { background: #d4af37; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .child-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
+        .report-card { border-left: 5px solid #004d40; background: #f9f9f9; padding: 15px; margin-top: 10px; border-radius: 4px; }
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .excellent { background: #e8f5e9; color: #2e7d32; }
+        .needs-practice { background: #fff3e0; color: #ef6c00; }
+        .btn-logout { background: #fff; color: #d4af37; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
-<body>
+<body style="background: #f4f7f6;">
 
     <div class="parent-container">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="color: var(--primary-green);">Parent Portal</h2>
-            <button onclick="window.location.href='index.html'" class="status-btn">Logout</button>
-        </header>
-
-        <div id="siblingSelector" class="selector-box" style="display: none;">
-            <span>Viewing for:</span>
-            <select id="childDropdown"></select>
+        <div class="header">
+            <div>
+                <h1>Parent Dashboard</h1>
+                <p id="parentWelcome">Welcome</p>
+            </div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
-        <div id="loading" style="text-align: center; margin-top: 50px;">Retrieving records...</div>
-
-        <div id="content" style="display: none;">
-            <div class="info-card">
-                <div class="child-header">
-                    <h1 id="childName" style="margin:0;">Student Name</h1>
-                    <p id="childDivision" style="color: #666; font-style: italic;"></p>
-                </div>
-                
-                <div style="text-align: center;">
-                    <span class="label">Today's Attendance</span>
-                    <div id="attendanceStatus" class="status-badge">Loading...</div>
-                </div>
-            </div>
-
-            <h3 style="color: var(--primary-green);">Latest Lesson Progress</h3>
-            <div class="info-card" id="lessonContainer"></div>
+        <div id="childrenContainer">
+            <p style="text-align:center; margin-top:20px;">Loading your children's records...</p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -70,110 +48,88 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 1. Get the list of siblings from localStorage
-        const childrenListRaw = localStorage.getItem('childrenList');
-        const children = JSON.parse(childrenListRaw || "[]");
+        // 1. Get Parent Info from Session
+        const parentName = localStorage.getItem('userName');
+        const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
+        document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + parentName;
 
-        async function initPage() {
-            const dropdown = document.getElementById('childDropdown');
-            const selectorDiv = document.getElementById('siblingSelector');
+        async function loadAllChildrenReports() {
+            const container = document.getElementById('childrenContainer');
+            container.innerHTML = "";
 
-            if (children.length === 0) {
-                document.getElementById('loading').innerHTML = "<p style='color:red'>No children found linked to this account.</p>";
+            if (childrenList.length === 0) {
+                container.innerHTML = "<p>No children linked to this account. Please contact Admin.</p>";
                 return;
             }
 
-            // If there's more than 1 child, show the dropdown
-            if (children.length > 1) {
-                selectorDiv.style.display = 'flex';
-                children.forEach(name => {
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.innerText = name;
-                    dropdown.appendChild(opt);
-                });
+            for (const childName of childrenList) {
+                // Create a section for each child
+                const childDiv = document.createElement('div');
+                childDiv.className = 'child-section';
+                childDiv.innerHTML = `<h3>Report for: ${childName}</h3><div id="logs-${childName.replace(/\s/g, '')}">Loading...</div>`;
+                container.appendChild(childDiv);
 
-                dropdown.addEventListener('change', (e) => {
-                    loadChildProgress(e.target.value);
-                });
+                await fetchReports(childName);
             }
-
-            // Always load the first child initially
-            loadChildProgress(children[0]);
         }
 
-        async function loadChildProgress(selectedChild) {
-            const loadingEl = document.getElementById('loading');
-            const contentEl = document.getElementById('content');
-            const lessonContainer = document.getElementById('lessonContainer');
-
-            // Reset UI
-            loadingEl.style.display = 'block';
-            contentEl.style.display = 'none';
-
+        async function fetchReports(name) {
+            const logDiv = document.getElementById(`logs-${name.replace(/\s/g, '')}`);
+            
             try {
-                const q = query(
-                    collection(db, "daily_logs"),
-                    where("studentName", "==", selectedChild)
-                );
-
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    loadingEl.innerHTML = `<p>No records found for <strong>${selectedChild}</strong>. Please check back later.</p>`;
+                // We first find the student ID by their name
+                const studentQuery = query(collection(db, "students"), where("name", "==", name));
+                const studentSnap = await getDocs(studentQuery);
+                
+                if (studentSnap.empty) {
+                    logDiv.innerHTML = "<p>Student profile not found.</p>";
                     return;
                 }
 
-                let logs = [];
-                querySnapshot.forEach(doc => logs.push(doc.data()));
+                const studentId = studentSnap.docs[0].id;
+
+                // Now get the latest 5 progress reports for this student ID
+                const reportQuery = query(
+                    collection(db, "progress_reports"), 
+                    where("studentId", "==", studentId),
+                    orderBy("date", "desc"),
+                    limit(5)
+                );
                 
-                // Sort by timestamp (manual sort to avoid Firebase Indexing delay)
-                logs.sort((a, b) => {
-                    const timeA = a.timestamp?.seconds || 0;
-                    const timeB = b.timestamp?.seconds || 0;
-                    return timeB - timeA;
-                });
+                const reportSnap = await getDocs(reportQuery);
 
-                const data = logs[0]; 
+                if (reportSnap.empty) {
+                    logDiv.innerHTML = "<p>No recent reports available yet.</p>";
+                    return;
+                }
 
-                // Fill UI
-                document.getElementById('childName').innerText = data.studentName;
-                document.getElementById('childDivision').innerText = data.division + " Division";
-                
-                const att = document.getElementById('attendanceStatus');
-                att.innerText = data.attendance;
-                att.className = "status-badge " + data.attendance.toLowerCase();
-
-                const divisionLabels = {
-                    "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
-                    "Nazera": ["Nazera Juz", "Dua", "Islamic Studies"],
-                    "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-                };
-
-                const labels = divisionLabels[data.division] || ["Lesson 1", "Lesson 2", "Lesson 3"];
-
-                let lessonHtml = "";
-                data.lessons.forEach((val, index) => {
-                    lessonHtml += `
-                        <div class="lesson-box">
-                            <span class="label">${labels[index]}</span>
-                            <span class="value">${val || 'No update provided'}</span>
+                let html = "";
+                reportSnap.forEach(doc => {
+                    const data = doc.data();
+                    const perfClass = data.performance === 'Excellent' ? 'excellent' : 'needs-practice';
+                    
+                    html += `
+                        <div class="report-card">
+                            <strong>Date:</strong> ${data.date} | <strong>Attendance:</strong> ${data.attendance}<br>
+                            <strong>Sabaq:</strong> ${data.sabaq || 'N/A'}<br>
+                            <strong>Performance:</strong> <span class="status-badge ${perfClass}">${data.performance}</span>
                         </div>
                     `;
                 });
-
-                lessonContainer.innerHTML = lessonHtml;
-                loadingEl.style.display = 'none';
-                contentEl.style.display = 'block';
+                logDiv.innerHTML = html;
 
             } catch (err) {
                 console.error(err);
-                loadingEl.innerHTML = `<p style='color:red'>Error loading data: ${err.message}</p>`;
+                logDiv.innerHTML = "<p>Error loading reports. (Index might be needed)</p>";
             }
         }
 
-        // Start the page
-        initPage();
+        window.logout = () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        loadAllChildrenReports();
     </script>
 </body>
 </html>
