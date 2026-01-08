@@ -20,18 +20,29 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (userDoc.exists()) {
             const userData = userDoc.data();
             const role = userData.role;
-            const division = userData.division || ""; // Get division if it exists
 
-            // 3. Store info in LocalStorage so other pages can use it
+            // 3. Clear old session data first
+            localStorage.clear();
+
+            // 4. Store universal info in LocalStorage
             localStorage.setItem('userEmail', email);
             localStorage.setItem('userRole', role);
-            localStorage.setItem('userDivision', division);
             localStorage.setItem('userName', userData.name || "User");
+
+            // 5. Role-Specific Logic
+            if (role === 'teacher') {
+                localStorage.setItem('userDivision', userData.division || "Maktab");
+            } 
+            
+            if (role === 'parent') {
+                // IMPORTANT: This 'childName' must match the field name in your Firestore 'users' doc
+                localStorage.setItem('childName', userData.childName || "Student");
+            }
 
             message.style.color = "green";
             message.innerText = `Welcome ${userData.name || ''}! Redirecting...`;
 
-            // 4. Redirect based on role
+            // 6. Redirect based on role
             setTimeout(() => {
                 if (role === 'admin') {
                     window.location.href = "admin.html";
