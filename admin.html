@@ -13,13 +13,19 @@
         .sidebar-menu li { padding: 15px 0; border-bottom: 1px solid #00695c; cursor: pointer; }
         .sidebar-menu li:hover { color: #d4af37; }
         .main-content { flex: 1; padding: 40px; background: #f4f7f6; overflow-y: auto; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; }
-        .stat-card h3 { margin: 0; color: #777; font-size: 0.9rem; }
-        .stat-card p { font-size: 1.8rem; font-weight: bold; margin: 10px 0; color: #004d40; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #004d40; }
+        .stat-card h3 { margin: 0; color: #777; font-size: 0.85rem; text-transform: uppercase; }
+        .stat-card p { font-size: 1.5rem; font-weight: bold; margin: 10px 0; color: #004d40; }
         .action-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .logout-btn { background: #c62828; color: white; border: none; padding: 10px; width: 100%; margin-top: 50px; cursor: pointer; border-radius: 5px; }
         input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        
+        /* Table Styles for Student Details */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th { background: #f8f9fa; color: #555; text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .div-header { background: #e0f2f1; color: #004d40; padding: 10px; margin-top: 20px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -44,6 +50,9 @@
 
             <div class="stats-grid">
                 <div class="stat-card"><h3>Total Students</h3><p id="totalStudents">0</p></div>
+                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Maktab</h3><p id="countMaktab">0</p></div>
+                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Nazera</h3><p id="countNazera">0</p></div>
+                <div class="stat-card" style="border-top-color: #d4af37;"><h3>Hifz</h3><p id="countHifz">0</p></div>
                 <div class="stat-card"><h3>Total Teachers</h3><p id="totalTeachers">0</p></div>
             </div>
 
@@ -59,7 +68,7 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                     <input type="password" id="teacherPassword" placeholder="Temp Password" required>
-                    <button type="submit" class="login-btn" style="grid-column: span 2;">Register Teacher</button>
+                    <button type="submit" class="login-btn" style="grid-column: span 2; padding: 12px; background: #004d40; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Teacher</button>
                 </form>
                 <p id="adminMsg"></p>
             </div>
@@ -75,10 +84,16 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                     <input type="text" id="studentLevel" placeholder="Current Level (e.g. Level 1)">
-                    <input type="email" id="parentEmail" placeholder="Parent Email (Use same email for siblings)" required>
-                    <button type="submit" class="login-btn" style="grid-column: span 2; background-color: #d4af37;">Register Student</button>
+                    <input type="email" id="parentEmail" placeholder="Parent Email" required>
+                    <button type="submit" class="login-btn" style="grid-column: span 2; padding: 12px; background-color: #d4af37; color: white; border: none; border-radius: 4px; cursor: pointer;">Register Student</button>
                 </form>
                 <p id="studentMsg"></p>
+            </div>
+
+            <div class="action-section">
+                <h3>Division-wise Student Details</h3>
+                <div id="divisionWiseContainer">
+                    </div>
             </div>
 
             <div class="action-section">
@@ -125,7 +140,7 @@
             } catch (err) { alert(err.message); }
         });
 
-        // --- ADD STUDENT LOGIC (Updated for Siblings) ---
+        // --- ADD STUDENT LOGIC ---
         const studentForm = document.getElementById('addStudentForm');
         studentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -135,7 +150,6 @@
             const level = document.getElementById('studentLevel').value;
 
             try {
-                // 1. Create Student Document
                 await addDoc(collection(db, "students"), {
                     name: name,
                     division: divChoice,
@@ -143,13 +157,11 @@
                     parentEmail: pEmail
                 });
 
-                // 2. Create/Update Parent User Profile with arrayUnion
-                // This adds the name to a 'children' list without overwriting existing ones
                 await setDoc(doc(db, "users", pEmail), { 
                     role: "parent", 
                     email: pEmail,
                     children: arrayUnion(name) 
-                }, { merge: true }); // Merge ensures we don't delete other fields
+                }, { merge: true });
                 
                 document.getElementById('studentMsg').innerText = "Successfully registered " + name;
                 studentForm.reset();
@@ -157,16 +169,64 @@
             } catch (err) { alert(err.message); }
         });
 
-        // --- LOAD DATA ---
+        // --- LOAD AND GROUP DATA ---
         async function loadData() {
             const tSnap = await getDocs(collection(db, "users"));
             const sSnap = await getDocs(collection(db, "students"));
-            document.getElementById('totalStudents').innerText = sSnap.size;
             
+            // Initial counts
+            let counts = { Maktab: 0, Nazera: 0, Hifz: 0 };
+            let divisionGroups = { Maktab: [], Nazera: [], Hifz: [] };
+
+            // Process Students
+            sSnap.forEach(doc => {
+                const s = doc.data();
+                if (counts.hasOwnProperty(s.division)) {
+                    counts[s.division]++;
+                    divisionGroups[s.division].push(s);
+                }
+            });
+
+            // Update Stat Cards
+            document.getElementById('totalStudents').innerText = sSnap.size;
+            document.getElementById('countMaktab').innerText = counts.Maktab;
+            document.getElementById('countNazera').innerText = counts.Nazera;
+            document.getElementById('countHifz').innerText = counts.Hifz;
+
+            // Generate Division Tables
+            const container = document.getElementById('divisionWiseContainer');
+            container.innerHTML = "";
+
+            for (const [divName, students] of Object.entries(divisionGroups)) {
+                if (students.length > 0) {
+                    let html = `<div class="div-header">${divName} Division (${students.length})</div>`;
+                    html += `<table>
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>Level</th>
+                                        <th>Parent Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                    
+                    students.forEach(s => {
+                        html += `<tr>
+                                    <td>${s.name}</td>
+                                    <td>${s.level || '---'}</td>
+                                    <td>${s.parentEmail}</td>
+                                 </tr>`;
+                    });
+                    
+                    html += `</tbody></table>`;
+                    container.innerHTML += html;
+                }
+            }
+
+            // Update Teachers List
             let tList = document.getElementById('teachersList');
             tList.innerHTML = "";
             let tCount = 0;
-            
             tSnap.forEach(doc => {
                 const u = doc.data();
                 if(u.role === 'teacher') {
