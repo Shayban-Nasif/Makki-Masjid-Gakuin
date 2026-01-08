@@ -6,25 +6,28 @@
     <title>Parent Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .header { background: #d4af37; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .parent-container { max-width: 850px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .header { background: #004d40; color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .child-section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 25px; }
         
-        /* Goal Tracker Styles */
-        .goal-card { background: #fdfdfd; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #eee; }
-        .progress-container { background: #eee; border-radius: 10px; height: 18px; width: 100%; margin: 15px 0; overflow: hidden; }
-        .progress-bar { background: linear-gradient(90deg, #004d40, #00796b); height: 100%; width: 0%; transition: width 1s ease-in-out; }
-        .goal-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: #666; font-weight: bold; }
-        .latest-status { font-size: 1.2rem; font-weight: bold; color: #004d40; margin-bottom: 5px; }
+        /* Tabs for Academic vs Finance */
+        .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
+        .tab-btn.active { color: #d4af37; border-bottom: 3px solid #d4af37; }
+
+        /* Triple Progress Bars */
+        .academic-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+        .subject-progress-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .progress-container { background: #e0e0e0; border-radius: 10px; height: 12px; width: 100%; margin: 10px 0; overflow: hidden; }
+        .progress-bar { background: #d4af37; height: 100%; width: 0%; transition: width 1s ease-in-out; }
         
-        /* History Styles */
-        .history-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; }
-        .report-card { border-left: 4px solid #d4af37; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+        /* Finance Styles */
+        .finance-card { background: #fff8e1; border: 1px solid #ffe082; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .fee-amount { font-size: 1.5rem; font-weight: bold; color: #004d40; }
+
+        .report-card { border-left: 4px solid #004d40; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
         .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-        .btn-logout { background: #fff; color: #d4af37; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        
-        .lesson-item { padding: 4px 0; border-bottom: 1px solid #f0f0f0; color: #444; }
-        .lesson-item:last-child { border-bottom: none; }
+        .btn-logout { background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -32,8 +35,8 @@
     <div class="parent-container">
         <div class="header">
             <div>
-                <h1>Parent Dashboard</h1>
-                <p id="parentWelcome">Welcome</p>
+                <h1 style="margin:0; font-size: 1.5rem;">Family Dashboard</h1>
+                <p id="parentWelcome" style="margin:5px 0 0 0; color: #d4af37;"></p>
             </div>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
@@ -57,118 +60,124 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const parentName = localStorage.getItem('userName') || "Parent";
+        const parentEmail = localStorage.getItem('userEmail');
         const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
-        document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + parentName;
+        document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + (localStorage.getItem('userName') || "Parent");
 
-        async function loadAllChildrenReports() {
+        const divisionLabels = {
+            "Maktab": ["Qaida", "Dua", "Islamic Studies"],
+            "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
+            "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
+        };
+
+        async function loadDashboard() {
             const container = document.getElementById('childrenContainer');
             container.innerHTML = "";
 
-            if (childrenList.length === 0) {
-                container.innerHTML = "<p style='text-align:center; margin-top:50px;'>No children linked to this account. Please contact the Office.</p>";
-                return;
-            }
-
             for (const name of childrenList) {
-                const childDiv = document.createElement('div');
-                childDiv.className = 'child-section';
-                childDiv.innerHTML = `<h2>${name}</h2><div id="logs-${name.replace(/\s/g, '')}">Loading records...</div>`;
-                container.appendChild(childDiv);
-                await fetchReports(name);
-            }
-        }
-
-        async function fetchReports(name) {
-            const logDiv = document.getElementById(`logs-${name.replace(/\s/g, '')}`);
-            
-            try {
                 const studentQuery = query(collection(db, "students"), where("name", "==", name));
-                const studentSnap = await getDocs(studentQuery);
-                if (studentSnap.empty) {
-                    logDiv.innerHTML = "Profile not found.";
-                    return;
-                }
-
-                const s = studentSnap.docs[0].data();
-                const studentId = studentSnap.docs[0].id;
+                const snap = await getDocs(studentQuery);
                 
-                const current = parseInt(s.level) || 0;
-                const total = parseInt(s.goal) || 10;
-                const percent = Math.min((current / total) * 100, 100);
-
-                const reportQuery = query(
-                    collection(db, "progress_reports"), 
-                    where("studentId", "==", studentId),
-                    orderBy("date", "desc"),
-                    limit(5)
-                );
-                const reportSnap = await getDocs(reportQuery);
-
-                let html = `
-                    <div class="goal-card">
-                        <div class="latest-status">Current Progress: Level ${current}</div>
-                        <p style="margin:0; color:#666; font-size:0.9rem;">Goal: Complete ${s.division} Level</p>
-                        
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${percent}%"></div>
-                        </div>
-                        
-                        <div class="goal-info">
-                            <span>${Math.round(percent)}% Complete</span>
-                            <span>Target: Level ${total}</span>
-                        </div>
-                        
-                        ${s.eta ? `
-                        <div style="margin-top:15px; padding-top:10px; border-top:1px dashed #ddd; color:#d4af37; font-size:0.85rem;">
-                            <strong>Expected Completion:</strong> ${s.eta}
-                        </div>` : ''}
-                    </div>
-
-                    <div class="history-label">Detailed Daily Logs</div>
-                `;
-
-                if (reportSnap.empty) {
-                    html += "<p style='color:#999;'>No daily logs found for this student.</p>";
-                } else {
-                    reportSnap.forEach(doc => {
-                        const d = doc.data();
-                        
-                        // Parse the Triple Lesson format: "Qaida: X | Dua: Y | Studies: Z"
-                        const sabaqParts = d.sabaq ? d.sabaq.split(' | ') : ["N/A"];
-                        
-                        html += `
-                            <div class="report-card">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                    <strong>${d.date}</strong>
-                                    <span class="status-badge" style="background:${d.performance === 'Excellent' ? '#e8f5e9' : '#fff3e0'}; color:${d.performance === 'Excellent' ? '#2e7d32' : '#ef6c00'};">
-                                        ${d.performance}
-                                    </span>
-                                </div>
-                                <div style="margin-bottom:8px;">
-                                    ${sabaqParts.map(part => `<div class="lesson-item"> ${part}</div>`).join('')}
-                                </div>
-                                <div style="font-size:0.8rem; color:#888;">
-                                    Attendance: <strong>${d.attendance}</strong>
-                                </div>
-                            </div>
-                        `;
-                    });
+                if (!snap.empty) {
+                    const s = snap.docs[0].data();
+                    const sid = snap.docs[0].id;
+                    renderChildSection(container, s, sid);
                 }
-                logDiv.innerHTML = html;
-
-            } catch (err) {
-                console.error(err);
-                logDiv.innerHTML = "Error loading records.";
             }
         }
 
-        window.logout = () => {
-            localStorage.clear();
-            window.location.href = 'index.html';
+        function renderChildSection(container, s, sid) {
+            const labels = divisionLabels[s.division] || ["Class 1", "Class 2", "Class 3"];
+            const goals = s.goals || { c1: 30, c2: 30, c3: 30 };
+            const levels = s.levels || { c1: 0, c2: 0, c3: 0 };
+
+            const section = document.createElement('div');
+            section.className = 'child-section';
+            section.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 style="margin:0; color:#004d40;">${s.name} <span style="font-size:0.9rem; font-weight:normal; color:#666;">(${s.division})</span></h2>
+                    ${s.eta ? `<span style="background:#e0f2f1; padding:5px 10px; border-radius:20px; font-size:0.8rem; color:#00796b;">ETA: ${s.eta}</span>` : ''}
+                </div>
+
+                <div class="tab-menu" style="margin-top:20px;">
+                    <button class="tab-btn active" onclick="switchTab(this, 'academic-${sid}')">Academic</button>
+                    <button class="tab-btn" onclick="switchTab(this, 'finance-${sid}')">Finance</button>
+                </div>
+
+                <div id="academic-${sid}" class="tab-content">
+                    <div class="academic-grid">
+                        ${renderProgressBar(labels[0], levels.c1, goals.c1)}
+                        ${renderProgressBar(labels[1], levels.c2, goals.c2)}
+                        ${renderProgressBar(labels[2], levels.c3, goals.c3)}
+                    </div>
+                    <h4 style="border-bottom:1px solid #eee; padding-bottom:10px;">Recent Activity</h4>
+                    <div id="logs-${sid}">Loading logs...</div>
+                </div>
+
+                <div id="finance-${sid}" class="tab-content" style="display:none;">
+                    <div class="finance-card">
+                        <div>
+                            <p style="margin:0; color:#666;">Monthly Donation</p>
+                            <div class="fee-amount">¥${s.monthlyFee || 0}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="status-badge" style="background:#e8f5e9; color:#2e7d32;">Active Plan</span>
+                            <p style="font-size:0.8rem; color:#888; margin:5px 0 0 0;">Payable at the Office</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(section);
+            fetchLogs(sid);
+        }
+
+        function renderProgressBar(label, current, total) {
+            const percent = Math.min((current / total) * 100, 100);
+            return `
+                <div class="subject-progress-card">
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                        <strong>${label}</strong>
+                        <span>Level ${current} of ${total}</span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width:${percent}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function fetchLogs(sid) {
+            const logDiv = document.getElementById(`logs-${sid}`);
+            const q = query(collection(db, "progress_reports"), where("studentId", "==", sid), orderBy("date", "desc"), limit(3));
+            const snap = await getDocs(q);
+            
+            let html = "";
+            if (snap.empty) html = "<p>No recent logs.</p>";
+            snap.forEach(doc => {
+                const d = doc.data();
+                html += `
+                    <div class="report-card">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <strong>${d.date}</strong>
+                            <span class="status-badge" style="background:#fff3e0; color:#ef6c00;">${d.performance}</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#555;">${d.sabaq}</div>
+                    </div>
+                `;
+            });
+            logDiv.innerHTML = html;
+        }
+
+        window.switchTab = (btn, targetId) => {
+            const parent = btn.parentElement.parentElement;
+            parent.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(targetId).style.display = 'block';
+            btn.classList.add('active');
         };
 
-        loadAllChildrenReports();
+        window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
+        loadDashboard();
     </script>
 </body>
 </html>
