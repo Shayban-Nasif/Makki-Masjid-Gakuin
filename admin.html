@@ -75,7 +75,7 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                     <input type="text" id="studentLevel" placeholder="Current Level (e.g. Level 1)">
-                    <input type="email" id="parentEmail" placeholder="Parent Email" required>
+                    <input type="email" id="parentEmail" placeholder="Parent Email (Use same email for siblings)" required>
                     <button type="submit" class="login-btn" style="grid-column: span 2; background-color: #d4af37;">Register Student</button>
                 </form>
                 <p id="studentMsg"></p>
@@ -90,7 +90,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, setDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, getDocs, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -125,35 +125,42 @@
             } catch (err) { alert(err.message); }
         });
 
-        // --- ADD STUDENT LOGIC ---
+        // --- ADD STUDENT LOGIC (Updated for Siblings) ---
         const studentForm = document.getElementById('addStudentForm');
         studentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('studentName').value;
             const divChoice = document.getElementById('studentDivision').value;
             const pEmail = document.getElementById('parentEmail').value;
+            const level = document.getElementById('studentLevel').value;
 
             try {
+                // 1. Create Student Document
                 await addDoc(collection(db, "students"), {
                     name: name,
                     division: divChoice,
-                    level: document.getElementById('studentLevel').value,
+                    level: level,
                     parentEmail: pEmail
                 });
-                // Create parent user profile
-                await setDoc(doc(db, "users", pEmail), { role: "parent", childName: name });
+
+                // 2. Create/Update Parent User Profile with arrayUnion
+                // This adds the name to a 'children' list without overwriting existing ones
+                await setDoc(doc(db, "users", pEmail), { 
+                    role: "parent", 
+                    email: pEmail,
+                    children: arrayUnion(name) 
+                }, { merge: true }); // Merge ensures we don't delete other fields
                 
-                document.getElementById('studentMsg').innerText = "Student added to " + divChoice;
+                document.getElementById('studentMsg').innerText = "Successfully registered " + name;
                 studentForm.reset();
                 loadData();
             } catch (err) { alert(err.message); }
         });
 
-        // --- LOAD DATA FOR DASHBOARD ---
+        // --- LOAD DATA ---
         async function loadData() {
             const tSnap = await getDocs(collection(db, "users"));
             const sSnap = await getDocs(collection(db, "students"));
-            
             document.getElementById('totalStudents').innerText = sSnap.size;
             
             let tList = document.getElementById('teachersList');
