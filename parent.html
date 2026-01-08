@@ -1,119 +1,165 @@
-<style>
-    /* New Goal Tracker Styles */
-    .goal-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 25px;
-        border-top: 5px solid #d4af37;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }
-    .progress-container {
-        background: #eee;
-        border-radius: 10px;
-        height: 20px;
-        width: 100%;
-        margin: 15px 0;
-        overflow: hidden;
-    }
-    .progress-bar {
-        background: linear-gradient(90deg, #004d40, #00796b);
-        height: 100%;
-        width: 0%; /* Will be set by JS */
-        transition: width 1s ease-in-out;
-    }
-    .goal-info { display: flex; justify-content: space-between; font-size: 0.9rem; color: #555; }
-    .latest-status { font-size: 1.1rem; font-weight: bold; color: #004d40; margin-bottom: 5px; }
-    
-    .history-label { 
-        font-size: 0.8rem; 
-        text-transform: uppercase; 
-        letter-spacing: 1px; 
-        color: #888; 
-        margin-top: 30px; 
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-    }
-</style>
-
-<div id="childrenContainer"></div>
-
-<script type="module">
-    // ... (Your Firebase Imports stay the same) ...
-
-    // --- CONFIGURATION: Define total lessons for each division ---
-    const divisionGoals = {
-        "Maktab": { total: 10, label: "Qaida Lessons" },
-        "Nazera": { total: 30, label: "Para/Juz" },
-        "Hifz": { total: 30, label: "Para/Juz Memorization" }
-    };
-
-    async function fetchReports(name) {
-        const logDiv = document.getElementById(`logs-${name.replace(/\s/g, '')}`);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Portal | Makki Masjid Gakuin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .header { background: #d4af37; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .child-section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 25px; }
         
-        try {
-            // 1. Get Student Info (to find their Current Level)
-            const studentQuery = query(collection(db, "students"), where("name", "==", name));
-            const studentSnap = await getDocs(studentQuery);
-            if (studentSnap.empty) return;
+        /* Goal Tracker Styles */
+        .goal-card { background: #fdfdfd; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #eee; }
+        .progress-container { background: #eee; border-radius: 10px; height: 18px; width: 100%; margin: 15px 0; overflow: hidden; }
+        .progress-bar { background: linear-gradient(90deg, #004d40, #00796b); height: 100%; width: 0%; transition: width 1s ease-in-out; }
+        .goal-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: #666; font-weight: bold; }
+        .latest-status { font-size: 1.2rem; font-weight: bold; color: #004d40; margin-bottom: 5px; }
+        
+        /* History Styles */
+        .history-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; }
+        .report-card { border-left: 4px solid #d4af37; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 5px; }
+        .btn-logout { background: #fff; color: #d4af37; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body style="background: #f4f7f6;">
 
-            const studentData = studentSnap.docs[0].data();
-            const studentId = studentSnap.docs[0].id;
-            
-            // 2. Calculate Progress
-            // We assume studentLevel is a number like "1" or "Level 3"
-            const currentLevelNum = parseInt(studentData.level.replace(/\D/g, '')) || 0;
-            const goalConfig = divisionGoals[studentData.division] || { total: 10, label: "Progress" };
-            const percent = Math.min((currentLevelNum / goalConfig.total) * 100, 100);
+    <div class="parent-container">
+        <div class="header">
+            <div>
+                <h1>Parent Dashboard</h1>
+                <p id="parentWelcome">Welcome</p>
+            </div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
 
-            // 3. Get History
-            const reportQuery = query(
-                collection(db, "progress_reports"), 
-                where("studentId", "==", studentId),
-                orderBy("date", "desc"),
-                limit(5)
-            );
-            const reportSnap = await getDocs(reportQuery);
+        <div id="childrenContainer">
+            </div>
+    </div>
 
-            // 4. Build the UI
-            let html = `
-                <div class="goal-card">
-                    <div class="latest-status">Current Level: ${studentData.level}</div>
-                    <p style="margin:0; color:#666;">Goal: Complete ${goalConfig.label}</p>
-                    
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${percent}%"></div>
-                    </div>
-                    
-                    <div class="goal-info">
-                        <span>Started: Level 0</span>
-                        <span>Target: ${goalConfig.total} ${goalConfig.label}</span>
-                    </div>
-                    <p style="font-size:0.8rem; margin-top:10px; color:#d4af37;">
-                        <strong>Note:</strong> Expected completion based on current pace is approx. 2 months.
-                    </p>
-                </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-                <div class="history-label">Recent History</div>
-            `;
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+            authDomain: "makki-masjid-gakuin.firebaseapp.com",
+            projectId: "makki-masjid-gakuin",
+            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+            messagingSenderId: "376596641128",
+            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+        };
 
-            if (reportSnap.empty) {
-                html += "<p>No daily logs yet.</p>";
-            } else {
-                reportSnap.forEach(doc => {
-                    const data = doc.data();
-                    html += `
-                        <div class="report-card">
-                            <strong>Date:</strong> ${data.date} | <strong>Status:</strong> ${data.attendance}<br>
-                            <strong>Lesson:</strong> ${data.sabaq || 'N/A'}<br>
-                            <strong>Performance:</strong> ${data.performance}
-                        </div>
-                    `;
-                });
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const parentName = localStorage.getItem('userName') || "Parent";
+        const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
+        document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + parentName;
+
+        async function loadAllChildrenReports() {
+            const container = document.getElementById('childrenContainer');
+            container.innerHTML = "";
+
+            if (childrenList.length === 0) {
+                container.innerHTML = "<p style='text-align:center; margin-top:50px;'>No children linked to this account. Please contact the Office.</p>";
+                return;
             }
-            logDiv.innerHTML = html;
 
-        } catch (err) { console.error(err); }
-    }
-    // ... (Rest of your init logic) ...
-</script>
+            for (const name of childrenList) {
+                const childDiv = document.createElement('div');
+                childDiv.className = 'child-section';
+                childDiv.innerHTML = `<h2>${name}</h2><div id="logs-${name.replace(/\s/g, '')}">Loading records...</div>`;
+                container.appendChild(childDiv);
+                await fetchReports(name);
+            }
+        }
+
+        async function fetchReports(name) {
+            const logDiv = document.getElementById(`logs-${name.replace(/\s/g, '')}`);
+            
+            try {
+                // 1. Get Student Data for Goals
+                const studentQuery = query(collection(db, "students"), where("name", "==", name));
+                const studentSnap = await getDocs(studentQuery);
+                if (studentSnap.empty) {
+                    logDiv.innerHTML = "Profile not found.";
+                    return;
+                }
+
+                const s = studentSnap.docs[0].data();
+                const studentId = studentSnap.docs[0].id;
+                
+                // 2. Calculate Progress using data from Admin Panel
+                const current = parseInt(s.level) || 0;
+                const total = parseInt(s.goal) || 10;
+                const percent = Math.min((current / total) * 100, 100);
+
+                // 3. Get Recent Logs
+                const reportQuery = query(
+                    collection(db, "progress_reports"), 
+                    where("studentId", "==", studentId),
+                    orderBy("date", "desc"),
+                    limit(5)
+                );
+                const reportSnap = await getDocs(reportQuery);
+
+                // 4. Render UI
+                let html = `
+                    <div class="goal-card">
+                        <div class="latest-status">Current Progress: Lesson ${current}</div>
+                        <p style="margin:0; color:#666; font-size:0.9rem;">Goal: Complete ${s.division} Level</p>
+                        
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${percent}%"></div>
+                        </div>
+                        
+                        <div class="goal-info">
+                            <span>${Math.round(percent)}% Complete</span>
+                            <span>Target: ${total} Lessons</span>
+                        </div>
+                        
+                        ${s.eta ? `
+                        <div style="margin-top:15px; padding-top:10px; border-top:1px dashed #ddd; color:#d4af37; font-size:0.85rem;">
+                            <strong>Expected Completion:</strong> ${s.eta}
+                        </div>` : ''}
+                    </div>
+
+                    <div class="history-label">Recent Daily Logs</div>
+                `;
+
+                if (reportSnap.empty) {
+                    html += "<p style='color:#999;'>No daily logs found for this student.</p>";
+                } else {
+                    reportSnap.forEach(doc => {
+                        const d = doc.data();
+                        html += `
+                            <div class="report-card">
+                                <strong>${d.date}</strong> | Attendance: ${d.attendance}<br>
+                                <div style="margin-top:5px;">
+                                    <strong>Sabaq:</strong> ${d.sabaq || 'N/A'}<br>
+                                    <strong>Performance:</strong> <span style="color:#004d40; font-weight:bold;">${d.performance}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                logDiv.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                logDiv.innerHTML = "Error loading reports. Check browser console for index link.";
+            }
+        }
+
+        window.logout = () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        };
+
+        loadAllChildrenReports();
+    </script>
+</body>
+</html>
