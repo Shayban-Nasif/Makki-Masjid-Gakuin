@@ -6,20 +6,21 @@
     <title>Teacher Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .teacher-container { max-width: 900px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .teacher-container { max-width: 950px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; }
+        th { background: #f8f9fa; font-size: 0.85rem; text-transform: uppercase; color: #666; }
         select, input, textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        .btn-log { background: #d4af37; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
-        .btn-submit { background: #004d40; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 10px; }
+        .btn-log { background: #d4af37; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-submit { background: #004d40; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-top: 10px; font-weight: bold; }
         
         /* Modal */
         #logModal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
-        .modal-content { background: white; margin: 5% auto; padding: 25px; width: 500px; border-radius: 8px; }
-        .subject-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 4px; }
+        .modal-content { background: white; margin: 2% auto; padding: 25px; width: 550px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        .subject-row { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px; background: #f9f9f9; padding: 12px; border-radius: 6px; border-left: 4px solid #d4af37; }
+        .label-text { font-weight: bold; color: #004d40; font-size: 0.9rem; display: block; margin-bottom: 5px; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -28,19 +29,19 @@
         <div class="header">
             <div>
                 <h1 id="teacherGreeting">Welcome, Teacher</h1>
-                <p id="divisionInfo">Division: Loading...</p>
+                <p id="divisionInfo" style="color: #d4af37; font-weight: bold;"></p>
             </div>
             <button onclick="logout()" style="background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">Logout</button>
         </div>
 
         <div class="section">
-            <h3>My Students</h3>
+            <h3>My Class Students</h3>
             <div id="studentTableContainer">
                 <table>
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Current Level</th>
+                            <th>Student Name</th>
+                            <th>Progress (C1 | C2 | C3)</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -52,17 +53,17 @@
 
     <div id="logModal">
         <div class="modal-content">
-            <h3 id="modalStudentName">Daily Progress</h3>
+            <h3 id="modalStudentName" style="margin-top:0; color:#004d40;">Daily Progress Update</h3>
             <form id="progressForm">
                 <input type="hidden" id="logStudentId">
                 
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <div style="flex:1">
-                        <label>Date</label>
+                        <label class="label-text">Date</label>
                         <input type="date" id="logDate" required>
                     </div>
                     <div style="flex:1">
-                        <label>Attendance</label>
+                        <label class="label-text">Attendance</label>
                         <select id="logAttendance">
                             <option value="Present">Present</option>
                             <option value="Absent">Absent</option>
@@ -71,42 +72,52 @@
                     </div>
                 </div>
 
-                <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-
-                <div class="subject-grid">
-                    <div>
-                        <label>Qaida/Quran (Lesson Detail)</label>
-                        <input type="text" id="sabaq1" placeholder="e.g. Page 5, Line 2">
+                <div id="subjectInputsContainer">
+                    <div class="subject-row">
+                        <div>
+                            <label class="label-text" id="lblS1">Subject 1 Detail</label>
+                            <input type="text" id="sabaq1" placeholder="e.g. Page 5, Line 2">
+                        </div>
+                        <div>
+                            <label class="label-text">Current Level</label>
+                            <input type="number" id="level1" required>
+                        </div>
                     </div>
-                    <div>
-                        <label>New Level</label>
-                        <input type="number" id="levelUpdate" placeholder="e.g. 6">
+
+                    <div class="subject-row">
+                        <div>
+                            <label class="label-text" id="lblS2">Subject 2 Detail</label>
+                            <input type="text" id="sabaq2" placeholder="e.g. Dua for Sleeping">
+                        </div>
+                        <div>
+                            <label class="label-text">Current Level</label>
+                            <input type="number" id="level2" required>
+                        </div>
+                    </div>
+
+                    <div class="subject-row">
+                        <div>
+                            <label class="label-text" id="lblS3">Subject 3 Detail</label>
+                            <input type="text" id="sabaq3" placeholder="e.g. Names of Allah">
+                        </div>
+                        <div>
+                            <label class="label-text">Current Level</label>
+                            <input type="number" id="level3" required>
+                        </div>
                     </div>
                 </div>
 
-                <div class="subject-grid">
-                    <div style="grid-column: span 2;">
-                        <label>Dua/Memorization</label>
-                        <input type="text" id="sabaq2" placeholder="e.g. Eating Dua">
-                    </div>
+                <div style="margin-bottom: 15px;">
+                    <label class="label-text">Daily Performance</label>
+                    <select id="logPerformance">
+                        <option value="Excellent">Excellent - Very attentive</option>
+                        <option value="Good">Good - Steady progress</option>
+                        <option value="Average">Average - Needs focus</option>
+                        <option value="Needs Practice">Needs Practice - Struggling</option>
+                    </select>
                 </div>
 
-                <div class="subject-grid">
-                    <div style="grid-column: span 2;">
-                        <label>Islamic Studies</label>
-                        <input type="text" id="sabaq3" placeholder="e.g. Pillars of Islam">
-                    </div>
-                </div>
-
-                <label>Overall Performance</label>
-                <select id="logPerformance">
-                    <option value="Excellent">Excellent</option>
-                    <option value="Good">Good</option>
-                    <option value="Average">Average</option>
-                    <option value="Needs Practice">Needs Practice</option>
-                </select>
-
-                <button type="submit" class="btn-submit">Update Progress & Notify Parents</button>
+                <button type="submit" class="btn-submit">Submit Record & Update Levels</button>
                 <button type="button" onclick="closeModal()" style="width:100%; background:#999; color:white; border:none; padding:10px; margin-top:5px; border-radius:4px; cursor:pointer;">Cancel</button>
             </form>
         </div>
@@ -128,6 +139,12 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const divisionLabels = {
+            "Maktab": ["Qaida", "Dua", "Islamic Studies"],
+            "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
+            "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
+        };
+
         const teacherEmail = localStorage.getItem('userEmail');
         if (!teacherEmail) { window.location.href = 'index.html'; }
 
@@ -138,7 +155,14 @@
             if (tDoc.exists()) {
                 teacherData = tDoc.data();
                 document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + teacherData.name;
-                document.getElementById('divisionInfo').innerText = "Division: " + teacherData.division;
+                document.getElementById('divisionInfo').innerText = "Assigned Division: " + teacherData.division;
+                
+                // Set Subject Labels based on Teacher's Division
+                const labels = divisionLabels[teacherData.division] || ["Subject 1", "Subject 2", "Subject 3"];
+                document.getElementById('lblS1').innerText = labels[0] + " (Progress)";
+                document.getElementById('lblS2').innerText = labels[1] + " (Progress)";
+                document.getElementById('lblS3').innerText = labels[2] + " (Progress)";
+
                 loadStudents(teacherData.division);
             }
         }
@@ -151,33 +175,49 @@
 
             snap.forEach(doc => {
                 const s = doc.data();
+                const l = s.levels || { c1: 0, c2: 0, c3: 0 };
+                const g = s.goals || { c1: 30, c2: 30, c3: 30 };
+                
                 list.innerHTML += `
                     <tr>
                         <td><strong>${s.name}</strong></td>
-                        <td>Level ${s.level || 0} / ${s.goal || 10}</td>
-                        <td><button class="btn-log" onclick="openLogModal('${doc.id}', '${s.name}', '${s.level || 0}')">Log Today</button></td>
+                        <td style="font-size: 0.85rem; color: #555;">
+                            ${l.c1}/${g.c1} | ${l.c2}/${g.c2} | ${l.c3}/${g.c3}
+                        </td>
+                        <td><button class="btn-log" onclick="openLogModal('${doc.id}', '${s.name}', ${JSON.stringify(l)})">Daily Update</button></td>
                     </tr>
                 `;
             });
         }
 
-        window.openLogModal = (id, name, currentLevel) => {
+        window.openLogModal = (id, name, levels) => {
             document.getElementById('logStudentId').value = id;
-            document.getElementById('levelUpdate').value = currentLevel;
-            document.getElementById('modalStudentName').innerText = "Progress for " + name;
+            document.getElementById('level1').value = levels.c1 || 0;
+            document.getElementById('level2').value = levels.c2 || 0;
+            document.getElementById('level3').value = levels.c3 || 0;
+            
+            document.getElementById('modalStudentName').innerText = "Progress Update: " + name;
             document.getElementById('logDate').valueAsDate = new Date();
             document.getElementById('logModal').style.display = 'block';
         };
 
-        window.closeModal = () => { document.getElementById('logModal').style.display = 'none'; };
+        window.closeModal = () => { 
+            document.getElementById('logModal').style.display = 'none'; 
+            document.getElementById('progressForm').reset();
+        };
 
         document.getElementById('progressForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const sid = document.getElementById('logStudentId').value;
-            const newLevel = document.getElementById('levelUpdate').value;
             
-            // Format the combined Sabaq for the History log
-            const combinedSabaq = `Qaida: ${document.getElementById('sabaq1').value} | Dua: ${document.getElementById('sabaq2').value} | Studies: ${document.getElementById('sabaq3').value}`;
+            const newLevels = {
+                c1: parseInt(document.getElementById('level1').value),
+                c2: parseInt(document.getElementById('level2').value),
+                c3: parseInt(document.getElementById('level3').value)
+            };
+
+            const labels = divisionLabels[teacherData.division];
+            const combinedSabaq = `${labels[0]}: ${document.getElementById('sabaq1').value} | ${labels[1]}: ${document.getElementById('sabaq2').value} | ${labels[2]}: ${document.getElementById('sabaq3').value}`;
 
             const logData = {
                 studentId: sid,
@@ -190,18 +230,17 @@
             };
 
             try {
-                // 1. Save History Record
+                // 1. Save Activity Log
                 await addDoc(collection(db, "progress_reports"), logData);
                 
-                // 2. Update Student's actual level in the student document
+                // 2. Update Student document with new levels
                 await updateDoc(doc(db, "students", sid), {
-                    level: parseInt(newLevel)
+                    levels: newLevels
                 });
 
-                alert("Progress Updated Successfully!");
+                alert("Daily report submitted successfully!");
                 closeModal();
                 loadStudents(teacherData.division);
-                document.getElementById('progressForm').reset();
             } catch (err) { alert("Error: " + err.message); }
         });
 
