@@ -10,23 +10,18 @@
         .header { background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
         .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
-        
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
         .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
         .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
         .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
-
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #004d40; border-radius: 6px; font-size: 1rem; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.85rem; }
         th { background: #f4f4f4; color: #444; position: sticky; top: 0; }
-        
         input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
-        .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
         .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
         .reason-tag { display: block; font-size: 0.7rem; color: #666; font-style: italic; margin-top: 4px; }
     </style>
@@ -48,7 +43,7 @@
 
         <div class="section">
             <h3>Student Enrollment</h3>
-            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
+            <div class="admin-grid">
                 <div><label>Student Name</label><input type="text" id="sName"></div>
                 <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
                 <div><label>Date of Birth</label><input type="date" id="sDob"></div>
@@ -59,17 +54,17 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                 </div>
-                <div><label>Monthly Fee (¥)</label><input type="number" id="sFee"></div>
+                <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="5000"></div>
             </div>
-            <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
+            <button onclick="addStudent()" class="btn-primary">Enroll Student</button>
         </div>
 
         <div class="section">
             <h3>Active Students & Payments</h3>
             <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
             
-            <div style="overflow-x: auto; max-height: 600px;">
-                <table id="studentTable">
+            <div style="overflow-x: auto;">
+                <table>
                     <thead>
                         <tr>
                             <th>Student (Age)</th>
@@ -110,8 +105,7 @@
             const birth = new Date(dobString);
             const today = new Date();
             let age = today.getFullYear() - birth.getFullYear();
-            const m = today.getMonth() - birth.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
             return age;
         }
 
@@ -130,20 +124,26 @@
                     monthlyFee: fee, transportFee: 0, extraCharge: 0, extraChargeReason: "",
                     goals: {c1:0, c2:0, c3:0}, levels: {c1:0, c2:0, c3:0}
                 });
-                await setDoc(doc(db, "users", pEmail), { email: pEmail, role: 'parent', childrenList: arrayUnion(name) }, { merge: true });
+                await setDoc(doc(db, "users", pEmail), { email: pEmail, role: 'parent' }, { merge: true });
                 alert(`Enrolled ${name}`);
-                location.reload();
-            } catch(e) { alert(e.message); }
+                loadStudents(); // Refresh without full reload
+            } catch(e) { alert("Error: " + e.message); }
         };
 
-        async function loadStudents() {
+        window.loadStudents = async () => {
             const studentSnap = await getDocs(collection(db, "students"));
             const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
             const paidIds = paySnap.docs.map(d => d.data().studentId);
+            
+            // Count teachers
+            const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
+            document.getElementById('count-teachers').innerText = teacherSnap.size;
+
             const tbody = document.getElementById('studentTableBody');
             tbody.innerHTML = "";
 
             let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+            
             studentSnap.forEach(docSnap => {
                 const s = docSnap.data();
                 const sid = docSnap.id;
@@ -154,7 +154,7 @@
                 const eFee = Number(s.extraCharge) || 0;
                 const total = isPaid ? 0 : (mFee + tFee + eFee);
                 
-                stats[s.division]++;
+                stats[s.division] = (stats[s.division] || 0) + 1;
 
                 tbody.innerHTML += `
                     <tr>
@@ -168,7 +168,6 @@
                         <td>
                             <button class="action-btn" onclick="setTransport('${sid}', ${tFee})">🚌</button>
                             <button class="action-btn" onclick="addExtra('${sid}')">➕</button>
-                            <button class="action-btn" onclick="editAll('${sid}', '${s.name}', ${mFee})">✏️</button>
                             <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
                         </td>
                     </tr>`;
@@ -176,27 +175,6 @@
             document.getElementById('count-maktab').innerText = stats.Maktab;
             document.getElementById('count-nazera').innerText = stats.Nazera;
             document.getElementById('count-hifz').innerText = stats.Hifz;
-        }
-
-        window.setTransport = async (sid, current) => {
-            const val = prompt("Monthly Transport Fee (¥):", current);
-            if (val !== null) {
-                await updateDoc(doc(db, "students", sid), { transportFee: Number(val) || 0 });
-                loadStudents();
-            }
-        };
-
-        window.addExtra = async (sid) => {
-            const reason = prompt("Reason (e.g. New Books, Donation):");
-            if (!reason) return;
-            const amount = prompt(`Amount for "${reason}" (¥):`);
-            if (amount !== null) {
-                await updateDoc(doc(db, "students", sid), { 
-                    extraCharge: Number(amount) || 0,
-                    extraChargeReason: reason 
-                });
-                loadStudents();
-            }
         };
 
         window.markAsPaid = async (sid, name) => {
@@ -207,29 +185,41 @@
             }
         };
 
-        window.filterTable = () => {
-            const input = document.getElementById("studentSearch").value.toUpperCase();
-            const tr = document.getElementById("studentTableBody").getElementsByTagName("tr");
-            for (let i = 0; i < tr.length; i++) {
-                tr[i].style.display = tr[i].innerText.toUpperCase().includes(input) ? "" : "none";
+        window.setTransport = async (sid, current) => {
+            const val = prompt("Monthly Transport Fee (¥):", current);
+            if (val !== null) {
+                await updateDoc(doc(db, "students", sid), { transportFee: Number(val) || 0 });
+                loadStudents();
             }
         };
 
-        window.editAll = async (sid, oldName, oldFee) => {
-            const newName = prompt("Edit Name:", oldName);
-            const newFee = prompt("Edit Monthly Fee (¥):", oldFee);
-            const updates = {};
-            if(newName) updates.name = newName;
-            if(newFee) updates.monthlyFee = Number(newFee);
-            await updateDoc(doc(db, "students", sid), updates);
-            loadStudents();
+        window.addExtra = async (sid) => {
+            const reason = prompt("Reason (e.g. Books, Donation):");
+            if (!reason) return;
+            const amount = prompt(`Amount for "${reason}" (¥):`);
+            if (amount !== null) {
+                await updateDoc(doc(db, "students", sid), { extraCharge: Number(amount) || 0, extraChargeReason: reason });
+                loadStudents();
+            }
         };
 
         window.deleteStudent = async (sid) => {
-            if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
+            if(confirm("Delete student forever?")) {
+                await deleteDoc(doc(db, "students", sid));
+                loadStudents();
+            }
+        };
+
+        window.filterTable = () => {
+            const input = document.getElementById("studentSearch").value.toUpperCase();
+            const rows = document.querySelector("#studentTableBody").rows;
+            for (const row of rows) {
+                row.style.display = row.innerText.toUpperCase().includes(input) ? "" : "none";
+            }
         };
 
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
+        
         loadStudents();
     </script>
 </body>
