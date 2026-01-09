@@ -6,42 +6,58 @@
     <title>Parent Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
-        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
-        .tab.active { color: #004d40; border-bottom: 3px solid #004d40; }
-        .child-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; border-left: 5px solid #004d40; }
+        :root { --primary: #004d40; --gold: #d4af37; --bg: #f4f7f6; }
+        body { background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        .parent-container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        
+        .header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header h2 { margin: 0; font-size: 1.5rem; }
+        
+        .nav-tabs { display: flex; gap: 10px; margin: 25px 0; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; transition: 0.3s; border-radius: 6px; }
+        .tab.active { background: var(--primary); color: white; }
+
+        .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
+        .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+        /* Finance Styles */
         .finance-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-        .finance-table td { padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 0.95rem; }
-        .total-row { font-size: 1.1rem; color: #004d40; border-top: 2px solid #004d40 !important; font-weight: bold; }
-        .fee-badge { display: inline-block; padding: 8px 15px; border-radius: 6px; font-weight: bold; margin-top: 15px; }
-        .paid { background: #e8f5e9; color: #2e7d32; }
-        .unpaid { background: #ffebee; color: #c62828; }
+        .finance-table td { padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 1rem; color: #444; }
+        .total-row { font-size: 1.2rem; color: var(--primary); border-top: 2px solid var(--primary) !important; font-weight: bold; }
+        .extra-label { font-size: 0.8rem; color: #c62828; display: block; font-weight: normal; }
+        
+        .status-badge { display: inline-block; padding: 10px 20px; border-radius: 50px; font-weight: bold; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .paid { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
+        .unpaid { background: #ffebee; color: #c62828; border: 1px solid #c62828; }
+
         /* Progress Styles */
-        .progress-row { margin: 15px 0; }
-        .progress-bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
-        .progress-bar-fill { background: #d4af37; height: 100%; transition: width 0.5s; }
+        .progress-item { margin: 20px 0; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 500; }
+        .bar-bg { background: #eee; height: 12px; border-radius: 10px; overflow: hidden; }
+        .bar-fill { background: linear-gradient(90deg, var(--gold), #f3d47a); height: 100%; transition: width 0.8s ease-in-out; }
+        
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        .btn-logout:hover { background: white; color: var(--primary); }
     </style>
 </head>
-<body style="background: #f4f7f6;">
+<body>
 
     <div class="parent-container">
         <div class="header">
             <div>
-                <h2>Welcome, Parent</h2>
-                <p id="currentMonthLabel" style="color: #666; margin: 0;"></p>
+                <h2 id="parentGreeting">Welcome</h2>
+                <span id="currentMonth" style="opacity: 0.8;">January 2026</span>
             </div>
-            <button onclick="logout()" style="background:#666; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
+            <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
         <div class="nav-tabs">
-            <button class="tab active" id="btnReport" onclick="switchTab('report')">Progress Report</button>
-            <button class="tab" id="btnFinance" onclick="switchTab('finance')">Finance & Fees</button>
+            <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
+            <button class="tab" id="btnFinance" onclick="switchTab('finance')">Fees & Invoices</button>
         </div>
 
         <div id="childrenContainer">
-            <p>Loading details...</p>
+            <div style="text-align:center; padding: 50px; color: #666;">Loading student data...</div>
         </div>
     </div>
 
@@ -62,36 +78,52 @@
         const db = getFirestore(app);
         const parentEmail = localStorage.getItem('userEmail');
         const currentMonthYear = "January 2026";
-        document.getElementById('currentMonthLabel').innerText = currentMonthYear;
 
         let studentsData = [];
         let paidIds = [];
 
-        async function loadData() {
+        async function loadParentData() {
             if (!parentEmail) { window.location.href = 'index.html'; return; }
-            const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
-            const querySnapshot = await getDocs(q);
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            paidIds = paySnap.docs.map(d => d.data().studentId);
-            studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderDashboard('report'); 
+            
+            try {
+                // Get all children linked to this parent email
+                const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
+                const studentSnap = await getDocs(q);
+                
+                // Get payment records for current month
+                const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+                paidIds = paySnap.docs.map(d => d.data().studentId);
+                
+                studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                renderView('report');
+            } catch (e) {
+                console.error(e);
+                document.getElementById('childrenContainer').innerHTML = "Error loading data. Please try again.";
+            }
         }
 
-        window.renderDashboard = (view) => {
+        window.renderView = (view) => {
             const container = document.getElementById('childrenContainer');
             container.innerHTML = "";
+
+            if (studentsData.length === 0) {
+                container.innerHTML = "<div class='child-card'>No students found linked to this email.</div>";
+                return;
+            }
 
             studentsData.forEach(child => {
                 const card = document.createElement('div');
                 card.className = 'child-card';
 
                 if (view === 'report') {
-                    const labels = getLabels(child.division);
+                    const labels = getDivisionLabels(child.division);
                     card.innerHTML = `
-                        <h3>${child.name} <small>(${child.division})</small></h3>
-                        <div class="progress-row">${renderProgress(labels[0], child.levels?.c1, child.goals?.c1)}</div>
-                        <div class="progress-row">${renderProgress(labels[1], child.levels?.c2, child.goals?.c2)}</div>
-                        <div class="progress-row">${renderProgress(labels[2], child.levels?.c3, child.goals?.c3)}</div>
+                        <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
+                        <div class="progress-item">${bar(labels[0], child.levels?.c1, child.goals?.c1)}</div>
+                        <div class="progress-item">${bar(labels[1], child.levels?.c2, child.goals?.c2)}</div>
+                        <div class="progress-item">${bar(labels[2], child.levels?.c3, child.goals?.c3)}</div>
+                        <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
                     `;
                 } else {
                     const isPaid = paidIds.includes(child.id);
@@ -99,17 +131,22 @@
                     const tFee = Number(child.transportFee) || 0;
                     const eFee = Number(child.extraCharge) || 0;
                     const total = isPaid ? 0 : (mFee + tFee + eFee);
-                    
+
                     card.innerHTML = `
-                        <h3>${child.name} - Fee Breakdown</h3>
+                        <h3>${child.name} - ${currentMonthYear}</h3>
                         <table class="finance-table">
                             <tr><td>Monthly Tuition</td><td style="text-align:right">¥${mFee}</td></tr>
                             <tr><td>Transportation</td><td style="text-align:right">¥${tFee}</td></tr>
-                            ${eFee > 0 ? `<tr><td><strong>${child.extraChargeReason || 'Extra'}</strong><br><small>One-time</small></td><td style="text-align:right">¥${eFee}</td></tr>` : ''}
-                            <tr class="total-row"><td>Total Due</td><td style="text-align:right">¥${total}</td></tr>
+                            ${eFee > 0 ? `<tr>
+                                <td>Other Charges <span class="extra-label">${child.extraChargeReason}</span></td>
+                                <td style="text-align:right">¥${eFee}</td>
+                            </tr>` : ''}
+                            <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
                         </table>
-                        <div class="fee-badge ${isPaid ? 'paid' : 'unpaid'}">
-                            ${isPaid ? 'Status: PAID ✅' : 'Status: UNPAID'}
+                        <div style="text-align:center">
+                            <div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">
+                                ${isPaid ? 'Status: Paid ✅' : 'Status: Pending Payment'}
+                            </div>
                         </div>
                     `;
                 }
@@ -117,28 +154,29 @@
             });
         };
 
-        function renderProgress(label, current, goal) {
-            const perc = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+        function bar(label, cur, goal) {
+            const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
             return `
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>${label}</span><span>${current || 0}/${goal || 0}</span></div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
+                <div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div>
+                <div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>
             `;
         }
 
-        function getLabels(div) {
-            if (div === "Nazera") return ["Nazera", "Tajweed", "Dua/IS"];
-            if (div === "Hifz") return ["Sabaq", "Sabaq Para", "Ammi"];
-            return ["Qaida", "Dua", "Islamic Studies"];
+        function getDivisionLabels(div) {
+            if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
+            if (div === "Hifz") return ["Daily Sabaq", "Sabaqi (Recent)", "Ammi (Revision)"];
+            return ["Qaida Lessons", "Masnoon Duas", "Islamic Etiquettes"];
         }
 
         window.switchTab = (view) => {
             document.getElementById('btnReport').classList.toggle('active', view === 'report');
             document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
-            renderDashboard(view);
+            renderView(view);
         };
 
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-        loadData();
+
+        loadParentData();
     </script>
 </body>
 </html>
