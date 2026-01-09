@@ -40,9 +40,11 @@
             <div class="stat-card"><div class="stat-val" id="count-hifz">0</div><div class="stat-label">Hifz</div></div>
         </div>
 
+
+        
         <div class="section">
             <h3>Student Enrollment</h3>
-            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;">
+            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
                 <div><label>Student Name</label><input type="text" id="sName"></div>
                 <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
                 <div><label>Date of Birth</label><input type="date" id="sDob"></div>
@@ -54,6 +56,12 @@
                     </select>
                 </div>
                 <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="5000"></div>
+            </div>
+            <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
+                <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
+                <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
+                <div><label>Target ETA</label><input type="date" id="sEta"></div>
             </div>
             <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
         </div>
