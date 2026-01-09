@@ -6,47 +6,38 @@
     <title>Parent Portal | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .parent-container { max-width: 850px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .header { background: #004d40; color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .child-section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 25px; }
+        .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
+        .child-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; border-left: 5px solid #004d40; }
+        .fee-badge { display: inline-block; padding: 10px 20px; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+        .paid { background: #e8f5e9; color: #2e7d32; }
+        .unpaid { background: #ffebee; color: #c62828; }
         
-        .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
-        .tab-btn.active { color: #d4af37; border-bottom: 3px solid #d4af37; }
-
-        .academic-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
-        .subject-progress-card { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
-        .progress-container { background: #e0e0e0; border-radius: 10px; height: 12px; width: 100%; margin: 10px 0; overflow: hidden; }
-        .progress-bar { background: #d4af37; height: 100%; width: 0%; transition: width 1s ease-in-out; }
+        .finance-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
+        .finance-table td { padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 0.95rem; }
+        .finance-table .label { color: #666; }
+        .finance-table .amount { text-align: right; font-weight: bold; }
+        .total-row { font-size: 1.1rem; color: #004d40; border-top: 2px solid #004d40 !important; }
         
-        /* Updated Finance Styles */
-        .finance-card { background: #fff8e1; border: 1px solid #ffe082; padding: 20px; border-radius: 8px; }
-        .finance-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #ffe082; }
-        .total-row { display: flex; justify-content: space-between; padding: 12px 0; font-weight: bold; font-size: 1.2rem; color: #004d40; }
-        .due-warning { color: #c62828; }
-
-        .report-card { border-left: 4px solid #004d40; background: #fafafa; padding: 15px; margin-bottom: 12px; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
-        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-        .btn-logout { background: #c62828; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .extra-reason { font-size: 0.8rem; color: #777; font-weight: normal; display: block; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
 
     <div class="parent-container">
         <div class="header">
-            <div>
-                <h1 style="margin:0; font-size: 1.5rem;">Family Dashboard</h1>
-                <p id="parentWelcome" style="margin:5px 0 0 0; color: #d4af37;"></p>
-            </div>
-            <button class="btn-logout" onclick="logout()">Logout</button>
+            <h2>Welcome, Parent</h2>
+            <button onclick="logout()" style="background:#666; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
 
-        <div id="childrenContainer"></div>
+        <div id="childrenContainer">
+            <p>Loading children details...</p>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -59,161 +50,73 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
+        const parentEmail = localStorage.getItem('userEmail');
         const currentMonthYear = "January 2026";
-        const childrenList = JSON.parse(localStorage.getItem('childrenList') || "[]");
-        document.getElementById('parentWelcome').innerText = "Assalamu Alaikum, " + (localStorage.getItem('userName') || "Parent");
 
-        const divisionLabels = {
-            "Maktab": ["Qaida", "Dua", "Islamic Studies"],
-            "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
-            "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-        };
+        async function loadParentDashboard() {
+            if (!parentEmail) { window.location.href = 'index.html'; return; }
 
-        async function loadDashboard() {
+            const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
+            const querySnapshot = await getDocs(q);
             const container = document.getElementById('childrenContainer');
             container.innerHTML = "";
 
-            for (const name of childrenList) {
-                const studentQuery = query(collection(db, "students"), where("name", "==", name));
-                const snap = await getDocs(studentQuery);
-                
-                if (!snap.empty) {
-                    const s = snap.docs[0].data();
-                    const sid = snap.docs[0].id;
-                    renderChildSection(container, s, sid);
-                }
+            if (querySnapshot.empty) {
+                container.innerHTML = "<p>No enrolled students found for this email.</p>";
+                return;
             }
-        }
 
-        function renderChildSection(container, s, sid) {
-            const labels = divisionLabels[s.division] || ["Class 1", "Class 2", "Class 3"];
-            const goals = s.goals || { c1: 30, c2: 30, c3: 30 };
-            const levels = s.levels || { c1: 0, c2: 0, c3: 0 };
+            // Get payments for this month
+            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+            const paidIds = paySnap.docs.map(d => d.data().studentId);
 
-            const section = document.createElement('div');
-            section.className = 'child-section';
-            section.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 style="margin:0; color:#004d40;">${s.name} <span style="font-size:0.9rem; font-weight:normal; color:#666;">(${s.division})</span></h2>
-                    ${s.eta ? `<span style="background:#e0f2f1; padding:5px 10px; border-radius:20px; font-size:0.8rem; color:#00796b;">ETA: ${s.eta}</span>` : ''}
-                </div>
+            querySnapshot.forEach((docSnap) => {
+                const child = docSnap.data();
+                const cid = docSnap.id;
+                const isPaid = paidIds.includes(cid);
 
-                <div class="tab-menu" style="margin-top:20px;">
-                    <button class="tab-btn active" onclick="switchTab(this, 'academic-${sid}')">Academic</button>
-                    <button class="tab-btn" onclick="switchTab(this, 'finance-${sid}')">Finance</button>
-                </div>
+                const mFee = child.monthlyFee || 0;
+                const tFee = child.transportFee || 0;
+                const eFee = child.extraCharge || 0;
+                const total = isPaid ? 0 : (mFee + tFee + eFee);
 
-                <div id="academic-${sid}" class="tab-content">
-                    <div class="academic-grid">
-                        ${renderProgressBar(labels[0], levels.c1, goals.c1)}
-                        ${renderProgressBar(labels[1], levels.c2, goals.c2)}
-                        ${renderProgressBar(labels[2], levels.c3, goals.c3)}
-                    </div>
-                    <h4 style="border-bottom:1px solid #eee; padding-bottom:10px;">Recent Activity</h4>
-                    <div id="logs-${sid}">Loading logs...</div>
-                </div>
+                const card = document.createElement('div');
+                card.className = 'child-card';
+                card.innerHTML = `
+                    <h3>${child.name} <small style="color:#666; font-weight:normal;">(${child.division})</small></h3>
+                    
+                    <table class="finance-table">
+                        <tr>
+                            <td class="label">Monthly Tuition</td>
+                            <td class="amount">¥${mFee}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Transportation</td>
+                            <td class="amount">¥${tFee}</td>
+                        </tr>
+                        ${eFee > 0 ? `
+                        <tr>
+                            <td class="label">Extra Charges / Donation
+                                <span class="extra-reason">${child.extraChargeReason || 'Special Charge'}</span>
+                            </td>
+                            <td class="amount">¥${eFee}</td>
+                        </tr>` : ''}
+                        <tr class="total-row">
+                            <td class="label"><strong>Total Owed for ${currentMonthYear}</strong></td>
+                            <td class="amount">¥${total}</td>
+                        </tr>
+                    </table>
 
-                <div id="finance-${sid}" class="tab-content" style="display:none;">
-                    <div class="finance-card">
-                        <div id="payStatus-${sid}">Checking payment status...</div>
-                        <hr style="border:0; border-top:1px solid #ffe082; margin:15px 0;">
-                        <div class="finance-row">
-                            <span>Monthly Fee</span>
-                            <span>¥${s.monthlyFee || 0}</span>
-                        </div>
-                        <div class="finance-row">
-                            <span>Previous Dues</span>
-                            <span class="${s.previousDues > 0 ? 'due-warning' : ''}">¥${s.previousDues || 0}</span>
-                        </div>
-                        <div class="total-row" id="totalOwedRow-${sid}">
-                            <span>Total Outstanding</span>
-                            <span>Calculating...</span>
-                        </div>
-                        <p style="font-size:0.8rem; color:#888; margin-top:10px; text-align:center;">Please settle all dues at the main office.</p>
-                    </div>
-                </div>
-            `;
-            container.appendChild(section);
-            fetchLogs(sid);
-            fetchFinanceDetails(sid, s.monthlyFee, s.previousDues);
-        }
-
-        function renderProgressBar(label, current, total) {
-            const percent = Math.min((current / (total || 1)) * 100, 100);
-            return `
-                <div class="subject-progress-card">
-                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                        <strong>${label}</strong>
-                        <span>Level ${current} of ${total}</span>
-                    </div>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width:${percent}%"></div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function fetchLogs(sid) {
-            const logDiv = document.getElementById(`logs-${sid}`);
-            const q = query(collection(db, "progress_reports"), where("studentId", "==", sid), orderBy("date", "desc"), limit(3));
-            const snap = await getDocs(q);
-            
-            let html = "";
-            if (snap.empty) html = "<p>No recent logs found.</p>";
-            snap.forEach(doc => {
-                const d = doc.data();
-                html += `
-                    <div class="report-card">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                            <strong>${d.date}</strong>
-                            <span class="status-badge" style="background:#fff3e0; color:#ef6c00;">${d.performance}</span>
-                        </div>
-                        <div style="font-size:0.85rem; color:#555;">${d.sabaq}</div>
+                    <div class="fee-badge ${isPaid ? 'paid' : 'unpaid'}">
+                        ${isPaid ? 'Status: PAID ✅' : 'Status: UNPAID (Please visit office)'}
                     </div>
                 `;
+                container.appendChild(card);
             });
-            logDiv.innerHTML = html;
         }
-
-        async function fetchFinanceDetails(sid, monthlyFee, prevDues) {
-            const statusDiv = document.getElementById(`payStatus-${sid}`);
-            const totalRow = document.getElementById(`totalOwedRow-${sid}`);
-            
-            try {
-                const q = query(collection(db, "payments"), 
-                          where("studentId", "==", sid), 
-                          where("month", "==", currentMonthYear));
-                
-                const snap = await getDocs(q);
-                const isPaid = !snap.empty;
-                const total = isPaid ? (parseInt(prevDues) || 0) : ((parseInt(monthlyFee) || 0) + (parseInt(prevDues) || 0));
-
-                if (isPaid) {
-                    statusDiv.innerHTML = `<span class="status-badge" style="background:#e8f5e9; color:#2e7d32; font-size:1rem; width:100%; text-align:center;">${currentMonthYear}: PAID ✅</span>`;
-                } else {
-                    statusDiv.innerHTML = `<span class="status-badge" style="background:#ffebee; color:#c62828; font-size:1rem; width:100%; text-align:center;">${currentMonthYear}: UNPAID ❌</span>`;
-                }
-
-                totalRow.innerHTML = `
-                    <span>Total Outstanding</span>
-                    <span style="color:${total > 0 ? '#c62828' : '#2e7d32'}">¥${total}</span>
-                `;
-            } catch (err) {
-                statusDiv.innerHTML = "Status Unavailable";
-            }
-        }
-
-        window.switchTab = (btn, targetId) => {
-            const parent = btn.parentElement.parentElement;
-            parent.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(targetId).style.display = 'block';
-            btn.classList.add('active');
-        };
 
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-        loadDashboard();
+        loadParentDashboard();
     </script>
 </body>
 </html>
