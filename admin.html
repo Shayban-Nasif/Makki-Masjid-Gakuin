@@ -14,15 +14,10 @@
         .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
         .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
         .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
-        
-        /* New Division Styles */
-        .div-header { background: #e0f2f1; color: #004d40; padding: 10px 15px; border-radius: 6px; margin-top: 25px; font-weight: bold; border-left: 5px solid #d4af37; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; margin-bottom: 20px; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.85rem; }
-        th { background: #f8f8f8; color: #444; }
-        
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #004d40; border-radius: 6px; font-size: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.85rem; }
+        th { background: #f4f4f4; color: #444; position: sticky; top: 0; }
         input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
         .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -46,8 +41,22 @@
         </div>
 
         <div class="section">
+            <h3>Add New Teacher</h3>
+            <div class="admin-grid">
+                <input type="text" id="tName" placeholder="Teacher Name">
+                <input type="email" id="tEmail" placeholder="Teacher Email">
+                <select id="tDivision">
+                    <option value="Maktab">Maktab</option>
+                    <option value="Nazera">Nazera</option>
+                    <option value="Hifz">Hifz</option>
+                </select>
+                <button onclick="addTeacher()" class="btn-primary">Register Teacher</button>
+            </div>
+        </div>
+        
+        <div class="section">
             <h3>Student Enrollment</h3>
-            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;">
+            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
                 <div><label>Student Name</label><input type="text" id="sName"></div>
                 <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
                 <div><label>Date of Birth</label><input type="date" id="sDob"></div>
@@ -60,15 +69,34 @@
                 </div>
                 <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="5000"></div>
             </div>
+            <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
+                <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
+                <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
+                <div><label>Target ETA</label><input type="date" id="sEta"></div>
+            </div>
             <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
         </div>
 
         <div class="section">
-            <h3>Student Lists & Fee Status</h3>
-            <input type="text" id="studentSearch" class="search-box" placeholder="Search by name across all divisions..." onkeyup="filterTable()">
-            
-            <div id="divisionContainer">
-                </div>
+            <h3>Active Students & Payments</h3>
+            <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
+            <div style="overflow-x: auto;">
+                <table id="studentTable">
+                    <thead>
+                        <tr>
+                            <th>Student (Age)</th>
+                            <th>Division</th>
+                            <th>Monthly Fee</th>
+                            <th>Transport</th>
+                            <th>Total Owed</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -125,56 +153,40 @@
             const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
             const paidIds = paySnap.docs.map(d => d.data().studentId);
             
-            const container = document.getElementById('divisionContainer');
-            container.innerHTML = "";
-            
-            const divisions = ["Maktab", "Nazera", "Hifz"];
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = "";
             let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
 
-            divisions.forEach(divName => {
-                // Create Header and Table for each division
-                const divSection = document.createElement('div');
-                divSection.innerHTML = `
-                    <div class="div-header">${divName} Students</div>
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Student (Age)</th>
-                                    <th>Fee Status</th>
-                                    <th>Total Due</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-${divName}"></tbody>
-                        </table>
-                    </div>
-                `;
-                container.appendChild(divSection);
-
-                const tbody = document.getElementById(`tbody-${divName}`);
+            studentSnap.forEach(docSnap => {
+                const s = docSnap.data();
+                const sid = docSnap.id;
+                const isPaid = paidIds.includes(sid);
+                const mFee = Number(s.monthlyFee) || 0;
+                const tFee = Number(s.transportFee) || 0;
+                const total = isPaid ? 0 : (mFee + tFee);
                 
-                studentSnap.forEach(docSnap => {
-                    const s = docSnap.data();
-                    if (s.division === divName) {
-                        stats[divName]++;
-                        const sid = docSnap.id;
-                        const isPaid = paidIds.includes(sid);
-                        const total = isPaid ? 0 : (Number(s.monthlyFee) + Number(s.transportFee));
+                stats[s.division]++;
 
-                        tbody.innerHTML += `
-                            <tr class="student-row">
-                                <td><strong>${s.name}</strong> (${calculateAge(s.dob)} yrs)<br><small>${s.parentEmail}</small></td>
-                                <td>${isPaid ? '✅ <span style="color:#2e7d32">Paid</span>' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect Fee</button>`}</td>
-                                <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${total}</td>
-                                <td>
-                                    <button class="action-btn" onclick="editInfo('${sid}', '${s.name}', ${s.monthlyFee})" title="Edit Name/Fee">✏️</button>
-                                    <button class="action-btn" onclick="setTransport('${sid}', ${s.transportFee})" title="Transport">🚌</button>
-                                    <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
-                                </td>
-                            </tr>`;
-                    }
-                });
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${s.name}</strong> (${calculateAge(s.dob)} yrs)<br><small>${s.parentEmail}</small></td>
+                        <td>
+                            <select onchange="updateDivision('${sid}', this.value)" style="padding:4px; font-size:0.75rem;">
+                                <option value="Maktab" ${s.division==='Maktab'?'selected':''}>Maktab</option>
+                                <option value="Nazera" ${s.division==='Nazera'?'selected':''}>Nazera</option>
+                                <option value="Hifz" ${s.division==='Hifz'?'selected':''}>Hifz</option>
+                            </select>
+                        </td>
+                        <td>¥${mFee}</td>
+                        <td>¥${tFee}</td>
+                        <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${total}</td>
+                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect</button>`}</td>
+                        <td>
+                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})" title="Transport Fee">🚌</button>
+                            <button class="action-btn" onclick="editInfo('${sid}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
+                            <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
+                        </td>
+                    </tr>`;
             });
 
             document.getElementById('count-teachers').innerText = teacherSnap.size;
@@ -183,13 +195,9 @@
             document.getElementById('count-hifz').innerText = stats.Hifz;
         };
 
-        window.markAsPaid = async (sid, name) => {
-            if(confirm(`Confirm payment for ${name}?`)) {
-                await addDoc(collection(db, "payments"), { 
-                    studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() 
-                });
-                loadStudents();
-            }
+        window.updateDivision = async (sid, newDiv) => {
+            await updateDoc(doc(db, "students", sid), { division: newDiv });
+            loadStudents();
         };
 
         window.editInfo = async (sid, oldName, oldFee) => {
@@ -212,12 +220,21 @@
             }
         };
 
+        window.markAsPaid = async (sid, name) => {
+            if(confirm(`Confirm payment for ${name}?`)) {
+                await addDoc(collection(db, "payments"), { 
+                    studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() 
+                });
+                loadStudents();
+            }
+        };
+
         window.filterTable = () => {
             const input = document.getElementById("studentSearch").value.toUpperCase();
-            const rows = document.querySelectorAll(".student-row");
-            rows.forEach(row => {
+            const rows = document.getElementById("studentTableBody").getElementsByTagName("tr");
+            for (let row of rows) {
                 row.style.display = row.innerText.toUpperCase().includes(input) ? "" : "none";
-            });
+            }
         };
 
         window.deleteStudent = async (sid) => {
