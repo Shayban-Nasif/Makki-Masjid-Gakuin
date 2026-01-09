@@ -7,31 +7,49 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .parent-container { max-width: 800px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .child-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; border-left: 5px solid #004d40; }
-        .fee-badge { display: inline-block; padding: 10px 20px; border-radius: 8px; font-weight: bold; margin-top: 10px; }
-        .paid { background: #e8f5e9; color: #2e7d32; }
-        .unpaid { background: #ffebee; color: #c62828; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
+        /* Navigation Tabs */
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
+        .tab.active { color: #004d40; border-bottom: 3px solid #004d40; }
+
+        .child-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; border-left: 5px solid #004d40; }
+        
+        /* Progress Styles */
+        .progress-row { margin: 15px 0; }
+        .progress-bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px; }
+        .progress-bar-fill { background: #d4af37; height: 100%; transition: width 0.5s; }
+        
+        /* Finance Styles */
         .finance-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
         .finance-table td { padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 0.95rem; }
-        .finance-table .label { color: #666; }
-        .finance-table .amount { text-align: right; font-weight: bold; }
-        .total-row { font-size: 1.1rem; color: #004d40; border-top: 2px solid #004d40 !important; }
-        
-        .extra-reason { font-size: 0.8rem; color: #777; font-weight: normal; display: block; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .total-row { font-size: 1.1rem; color: #004d40; border-top: 2px solid #004d40 !important; font-weight: bold; }
+        .fee-badge { display: inline-block; padding: 8px 15px; border-radius: 6px; font-weight: bold; margin-top: 15px; font-size: 0.85rem; }
+        .paid { background: #e8f5e9; color: #2e7d32; }
+        .unpaid { background: #ffebee; color: #c62828; }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
 
     <div class="parent-container">
         <div class="header">
-            <h2>Welcome, Parent</h2>
+            <div>
+                <h2 id="parentGreeting">Welcome, Parent</h2>
+                <p id="currentMonthLabel" style="color: #666; margin: 0;"></p>
+            </div>
             <button onclick="logout()" style="background:#666; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
 
+        <div class="nav-tabs">
+            <button class="tab active" id="btnReport" onclick="switchTab('report')">Progress Report</button>
+            <button class="tab" id="btnFinance" onclick="switchTab('finance')">Finance & Fees</button>
+        </div>
+
         <div id="childrenContainer">
-            <p>Loading children details...</p>
+            <p>Loading details...</p>
         </div>
     </div>
 
@@ -52,71 +70,88 @@
         const db = getFirestore(app);
         const parentEmail = localStorage.getItem('userEmail');
         const currentMonthYear = "January 2026";
+        document.getElementById('currentMonthLabel').innerText = currentMonthYear;
 
-        async function loadParentDashboard() {
+        let studentsData = [];
+        let paidIds = [];
+
+        async function loadData() {
             if (!parentEmail) { window.location.href = 'index.html'; return; }
 
             const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
             const querySnapshot = await getDocs(q);
+            
+            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+            paidIds = paySnap.docs.map(d => d.data().studentId);
+
+            studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderDashboard('report'); 
+        }
+
+        window.renderDashboard = (view) => {
             const container = document.getElementById('childrenContainer');
             container.innerHTML = "";
 
-            if (querySnapshot.empty) {
-                container.innerHTML = "<p>No enrolled students found for this email.</p>";
-                return;
-            }
-
-            // Get payments for this month
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            const paidIds = paySnap.docs.map(d => d.data().studentId);
-
-            querySnapshot.forEach((docSnap) => {
-                const child = docSnap.data();
-                const cid = docSnap.id;
-                const isPaid = paidIds.includes(cid);
-
-                const mFee = child.monthlyFee || 0;
-                const tFee = child.transportFee || 0;
-                const eFee = child.extraCharge || 0;
-                const total = isPaid ? 0 : (mFee + tFee + eFee);
-
+            studentsData.forEach(child => {
                 const card = document.createElement('div');
                 card.className = 'child-card';
-                card.innerHTML = `
-                    <h3>${child.name} <small style="color:#666; font-weight:normal;">(${child.division})</small></h3>
-                    
-                    <table class="finance-table">
-                        <tr>
-                            <td class="label">Monthly Tuition</td>
-                            <td class="amount">¥${mFee}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Transportation</td>
-                            <td class="amount">¥${tFee}</td>
-                        </tr>
-                        ${eFee > 0 ? `
-                        <tr>
-                            <td class="label">Extra Charges / Donation
-                                <span class="extra-reason">${child.extraChargeReason || 'Special Charge'}</span>
-                            </td>
-                            <td class="amount">¥${eFee}</td>
-                        </tr>` : ''}
-                        <tr class="total-row">
-                            <td class="label"><strong>Total Owed for ${currentMonthYear}</strong></td>
-                            <td class="amount">¥${total}</td>
-                        </tr>
-                    </table>
 
-                    <div class="fee-badge ${isPaid ? 'paid' : 'unpaid'}">
-                        ${isPaid ? 'Status: PAID ✅' : 'Status: UNPAID (Please visit office)'}
-                    </div>
-                `;
+                if (view === 'report') {
+                    // PROGRESS REPORT VIEW
+                    const labels = getLabels(child.division);
+                    card.innerHTML = `
+                        <h3>${child.name} <small>(${child.division})</small></h3>
+                        <div class="progress-row">${renderProgress(labels[0], child.levels?.c1, child.goals?.c1)}</div>
+                        <div class="progress-row">${renderProgress(labels[1], child.levels?.c2, child.goals?.c2)}</div>
+                        <div class="progress-row">${renderProgress(labels[2], child.levels?.c3, child.goals?.c3)}</div>
+                        <p style="margin-top:15px; font-size:0.9rem;"><strong>Target Completion:</strong> ${child.eta || 'TBD'}</p>
+                    `;
+                } else {
+                    // FINANCE VIEW
+                    const isPaid = paidIds.includes(child.id);
+                    const total = isPaid ? 0 : ((child.monthlyFee || 0) + (child.transportFee || 0) + (child.extraCharge || 0));
+                    
+                    card.innerHTML = `
+                        <h3>${child.name} - Fee Breakdown</h3>
+                        <table class="finance-table">
+                            <tr><td>Tuition Fee</td><td style="text-align:right">¥${child.monthlyFee || 0}</td></tr>
+                            <tr><td>Transport</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
+                            ${child.extraCharge > 0 ? `<tr><td>${child.extraChargeReason || 'Extra'}<br><small>One-time</small></td><td style="text-align:right">¥${child.extraCharge}</td></tr>` : ''}
+                            <tr class="total-row"><td>Total Due</td><td style="text-align:right">¥${total}</td></tr>
+                        </table>
+                        <div class="fee-badge ${isPaid ? 'paid' : 'unpaid'}">
+                            ${isPaid ? 'Status: PAID ✅' : 'Status: UNPAID'}
+                        </div>
+                    `;
+                }
                 container.appendChild(card);
             });
+        };
+
+        function renderProgress(label, current, goal) {
+            const perc = goal > 0 ? Math.min((current / goal) * 100, 100) : 0;
+            return `
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                    <span>${label}</span><span>${current || 0} / ${goal || 0}</span>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
+            `;
         }
 
+        function getLabels(div) {
+            if (div === "Nazera") return ["Nazera", "Tajweed", "Dua/IS"];
+            if (div === "Hifz") return ["Sabaq", "Sabaq Para", "Ammi"];
+            return ["Qaida", "Dua", "Islamic Studies"]; // Default Maktab
+        }
+
+        window.switchTab = (view) => {
+            document.getElementById('btnReport').classList.toggle('active', view === 'report');
+            document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
+            renderDashboard(view);
+        };
+
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-        loadParentDashboard();
+        loadData();
     </script>
 </body>
 </html>
