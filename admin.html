@@ -6,29 +6,25 @@
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* ... keeping your existing styles ... */
         .admin-container { max-width: 1200px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
         .header { background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
         .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
-        
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
         .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
         .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
         .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
-
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #004d40; border-radius: 6px; font-size: 1rem; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.85rem; }
         th { background: #f4f4f4; color: #444; position: sticky; top: 0; }
-        
         input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
         .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
-        .reason-tag { display: block; font-size: 0.7rem; color: #666; font-style: italic; }
+        .reason-tag { display: block; font-size: 0.7rem; color: #c62828; font-weight: bold; margin-top: 4px; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -59,7 +55,7 @@
                         <option value="Hifz">Hifz</option>
                     </select>
                 </div>
-                <div><label>Monthly Fee (¥)</label><input type="number" id="sFee"></div>
+                <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="5000"></div>
             </div>
             <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
                 <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
@@ -73,7 +69,6 @@
         <div class="section">
             <h3>Active Students & Payments</h3>
             <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
-            
             <div style="overflow-x: auto; max-height: 600px;">
                 <table id="studentTable">
                     <thead>
@@ -96,11 +91,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getFirestore, doc, setDoc, addDoc, collection, 
-            getDocs, query, where, deleteDoc, updateDoc, 
-            orderBy, arrayUnion 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -120,8 +111,7 @@
             const birth = new Date(dobString);
             const today = new Date();
             let age = today.getFullYear() - birth.getFullYear();
-            const m = today.getMonth() - birth.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
             return age;
         }
 
@@ -130,15 +120,15 @@
             const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
             const dob = document.getElementById('sDob').value;
             const div = document.getElementById('sDivision').value;
-            const fee = parseInt(document.getElementById('sFee').value) || 0;
+            const fee = Number(document.getElementById('sFee').value) || 0;
             const goals = {
-                c1: parseInt(document.getElementById('g1').value) || 0,
-                c2: parseInt(document.getElementById('g2').value) || 0,
-                c3: parseInt(document.getElementById('g3').value) || 0
+                c1: Number(document.getElementById('g1').value) || 0,
+                c2: Number(document.getElementById('g2').value) || 0,
+                c3: Number(document.getElementById('g3').value) || 0
             };
             const eta = document.getElementById('sEta').value;
 
-            if(!name || !pEmail || !dob) return alert("Name, Parent Email, and DoB are required");
+            if(!name || !pEmail || !dob) return alert("Missing required fields");
 
             try {
                 await addDoc(collection(db, "students"), {
@@ -146,59 +136,50 @@
                     monthlyFee: fee, transportFee: 0, extraCharge: 0, extraChargeReason: "",
                     goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
                 });
-
-                await setDoc(doc(db, "users", pEmail), {
-                    email: pEmail, role: 'parent', name: "Parent Account", 
-                    childrenList: arrayUnion(name)
-                }, { merge: true });
-
-                alert(`Enrolled ${name} successfully!`);
+                await setDoc(doc(db, "users", pEmail), { email: pEmail, role: 'parent', childrenList: arrayUnion(name) }, { merge: true });
+                alert("Student Enrolled");
                 location.reload();
-            } catch(e) { alert("Error: " + e.message); }
+            } catch(e) { alert(e.message); }
         };
 
-        async function loadStudents() {
+        window.loadStudents = async () => {
             const studentSnap = await getDocs(collection(db, "students"));
             const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
             const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            
             const paidIds = paySnap.docs.map(d => d.data().studentId);
+            
             const tbody = document.getElementById('studentTableBody');
             tbody.innerHTML = "";
-
             let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+
             studentSnap.forEach(docSnap => {
                 const s = docSnap.data();
                 const sid = docSnap.id;
                 const isPaid = paidIds.includes(sid);
-                const age = calculateAge(s.dob);
                 
-                const mFee = s.monthlyFee || 0;
-                const tFee = s.transportFee || 0;
-                const eFee = s.extraCharge || 0;
+                // Ensure math uses Numbers
+                const mFee = Number(s.monthlyFee) || 0;
+                const tFee = Number(s.transportFee) || 0;
+                const eFee = Number(s.extraCharge) || 0;
                 const total = isPaid ? 0 : (mFee + tFee + eFee);
                 
                 stats[s.division]++;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${s.name}</strong> (${age} yrs)<br><small>${s.parentEmail}</small></td>
-                        <td>
-                            <select onchange="updateDivision('${sid}', this.value)" style="padding:2px; font-size:0.75rem;">
-                                <option value="Maktab" ${s.division==='Maktab'?'selected':''}>Maktab</option>
-                                <option value="Nazera" ${s.division==='Nazera'?'selected':''}>Nazera</option>
-                                <option value="Hifz" ${s.division==='Hifz'?'selected':''}>Hifz</option>
-                            </select>
-                        </td>
+                        <td><strong>${s.name}</strong> (${calculateAge(s.dob)} yrs)</td>
+                        <td>${s.division}</td>
                         <td>¥${mFee}</td>
                         <td>¥${tFee}</td>
-                        <td>¥${eFee} <span class="reason-tag">${s.extraChargeReason || ''}</span></td>
-                        <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${total}</td>
-                        <td>${isPaid ? '✅ <span style="color:#2e7d32;font-size:0.7rem;">PAID</span>' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect</button>`}</td>
                         <td>
-                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})" title="Transport Fee">🚌</button>
-                            <button class="action-btn" onclick="addExtra('${sid}')" title="Add Donation/Book Charge">➕</button>
-                            <button class="action-btn" onclick="editAll('${sid}', '${s.name}', ${mFee})" title="Edit Basic Info">✏️</button>
+                            ¥${eFee} 
+                            ${eFee > 0 ? `<span class="reason-tag">(${s.extraChargeReason})</span>` : ''}
+                        </td>
+                        <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${total}</td>
+                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect</button>`}</td>
+                        <td>
+                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})">🚌</button>
+                            <button class="action-btn" onclick="addExtra('${sid}')">➕</button>
                             <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
                         </td>
                     </tr>`;
@@ -208,84 +189,57 @@
             document.getElementById('count-maktab').innerText = stats.Maktab;
             document.getElementById('count-nazera').innerText = stats.Nazera;
             document.getElementById('count-hifz').innerText = stats.Hifz;
-        }
-
-        window.setTransport = async (sid, current) => {
-            const val = prompt("Enter Monthly Transport Fee (¥):", current);
-            if (val !== null) {
-                await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 });
-                loadStudents();
-            }
         };
 
         window.addExtra = async (sid) => {
-            const reason = prompt("Reason (e.g. New Books, Event Donation):");
+            const reason = prompt("Enter Reason (e.g., Books, Donation):");
             if (!reason) return;
-            const amount = prompt(`Enter amount for "${reason}" (¥):`);
+            const amount = prompt(`Enter Amount for ${reason} (¥):`);
             if (amount !== null) {
                 await updateDoc(doc(db, "students", sid), { 
-                    extraCharge: parseInt(amount) || 0,
+                    extraCharge: Number(amount) || 0, 
                     extraChargeReason: reason 
                 });
                 loadStudents();
             }
         };
 
+        window.markAsPaid = async (sid, name) => {
+            if(confirm(`Collect ¥ total for ${name}?`)) {
+                // 1. Record payment
+                await addDoc(collection(db, "payments"), { 
+                    studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() 
+                });
+                // 2. Clear extra charge so it doesn't repeat next month
+                await updateDoc(doc(db, "students", sid), { 
+                    extraCharge: 0, extraChargeReason: "" 
+                });
+                loadStudents();
+            }
+        };
+
+        window.setTransport = async (sid, current) => {
+            const val = prompt("Transport Fee (¥):", current);
+            if (val !== null) {
+                await updateDoc(doc(db, "students", sid), { transportFee: Number(val) || 0 });
+                loadStudents();
+            }
+        };
+
         window.filterTable = () => {
             const input = document.getElementById("studentSearch").value.toUpperCase();
-            const tr = document.getElementById("studentTableBody").getElementsByTagName("tr");
-            for (let i = 0; i < tr.length; i++) {
-                const tdText = tr[i].innerText.toUpperCase();
-                tr[i].style.display = tdText.indexOf(input) > -1 ? "" : "none";
-            }
-        };
-
-        window.updateDivision = async (sid, newDiv) => {
-            try {
-                await updateDoc(doc(db, "students", sid), { division: newDiv });
-                loadStudents();
-            } catch(e) { alert(e.message); }
-        };
-
-        window.editAll = async (sid, oldName, oldFee) => {
-            const newName = prompt("Edit Student Name:", oldName);
-            const newFee = prompt("Edit Monthly Fee (¥):", oldFee);
-            if(newName || newFee) {
-                const updates = {};
-                if(newName) updates.name = newName;
-                if(newFee) updates.monthlyFee = parseInt(newFee);
-                await updateDoc(doc(db, "students", sid), updates);
-                loadStudents();
-            }
-        };
-
-        window.markAsPaid = async (sid, name) => {
-            if(confirm(`Confirm payment collection for ${name}?`)) {
-                // When paying, we clear the one-time extra charge
-                await updateDoc(doc(db, "students", sid), { extraCharge: 0, extraChargeReason: "" });
-                await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() });
-                loadStudents();
+            const rows = document.getElementById("studentTableBody").getElementsByTagName("tr");
+            for (let row of rows) {
+                row.style.display = row.innerText.toUpperCase().includes(input) ? "" : "none";
             }
         };
 
         window.deleteStudent = async (sid) => {
-            if(confirm("Permanently delete this student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
+            if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
         };
 
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
-
-        document.getElementById('sDivision').onchange = (e) => {
-            const labels = {
-                "Maktab": ["Qaida", "Dua", "Islamic Studies"],
-                "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
-                "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-            };
-            const selected = labels[e.target.value];
-            document.getElementById('lblG1').innerText = "Goal (" + selected[0] + ")";
-            document.getElementById('lblG2').innerText = "Goal (" + selected[1] + ")";
-            document.getElementById('lblG3').innerText = "Goal (" + selected[2] + ")";
-        };
-
+        
         loadStudents();
     </script>
 </body>
