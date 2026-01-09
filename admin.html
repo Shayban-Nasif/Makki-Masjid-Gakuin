@@ -6,7 +6,6 @@
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* ... keeping your existing styles ... */
         .admin-container { max-width: 1200px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
         .header { background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
@@ -24,7 +23,6 @@
         .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
-        .reason-tag { display: block; font-size: 0.7rem; color: #c62828; font-weight: bold; margin-top: 4px; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -44,7 +42,7 @@
 
         <div class="section">
             <h3>Student Enrollment</h3>
-            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
+            <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr;">
                 <div><label>Student Name</label><input type="text" id="sName"></div>
                 <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
                 <div><label>Date of Birth</label><input type="date" id="sDob"></div>
@@ -57,19 +55,13 @@
                 </div>
                 <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="5000"></div>
             </div>
-            <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
-                <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
-                <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
-                <div><label>Target ETA</label><input type="date" id="sEta"></div>
-            </div>
             <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
         </div>
 
         <div class="section">
             <h3>Active Students & Payments</h3>
             <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
-            <div style="overflow-x: auto; max-height: 600px;">
+            <div style="overflow-x: auto;">
                 <table id="studentTable">
                     <thead>
                         <tr>
@@ -77,7 +69,6 @@
                             <th>Division</th>
                             <th>Monthly Fee</th>
                             <th>Transport</th>
-                            <th>Extra/Donation</th>
                             <th>Total Owed</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -121,20 +112,14 @@
             const dob = document.getElementById('sDob').value;
             const div = document.getElementById('sDivision').value;
             const fee = Number(document.getElementById('sFee').value) || 0;
-            const goals = {
-                c1: Number(document.getElementById('g1').value) || 0,
-                c2: Number(document.getElementById('g2').value) || 0,
-                c3: Number(document.getElementById('g3').value) || 0
-            };
-            const eta = document.getElementById('sEta').value;
 
             if(!name || !pEmail || !dob) return alert("Missing required fields");
 
             try {
                 await addDoc(collection(db, "students"), {
                     name, parentEmail: pEmail, dob, division: div, 
-                    monthlyFee: fee, transportFee: 0, extraCharge: 0, extraChargeReason: "",
-                    goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
+                    monthlyFee: fee, transportFee: 0,
+                    levels: { c1: 0, c2: 0, c3: 0 }
                 });
                 await setDoc(doc(db, "users", pEmail), { email: pEmail, role: 'parent', childrenList: arrayUnion(name) }, { merge: true });
                 alert("Student Enrolled");
@@ -156,30 +141,29 @@
                 const s = docSnap.data();
                 const sid = docSnap.id;
                 const isPaid = paidIds.includes(sid);
-                
-                // Ensure math uses Numbers
                 const mFee = Number(s.monthlyFee) || 0;
                 const tFee = Number(s.transportFee) || 0;
-                const eFee = Number(s.extraCharge) || 0;
-                const total = isPaid ? 0 : (mFee + tFee + eFee);
+                const total = isPaid ? 0 : (mFee + tFee);
                 
                 stats[s.division]++;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${s.name}</strong> (${calculateAge(s.dob)} yrs)</td>
-                        <td>${s.division}</td>
+                        <td><strong>${s.name}</strong> (${calculateAge(s.dob)} yrs)<br><small>${s.parentEmail}</small></td>
+                        <td>
+                            <select onchange="updateDivision('${sid}', this.value)" style="padding:4px; font-size:0.75rem;">
+                                <option value="Maktab" ${s.division==='Maktab'?'selected':''}>Maktab</option>
+                                <option value="Nazera" ${s.division==='Nazera'?'selected':''}>Nazera</option>
+                                <option value="Hifz" ${s.division==='Hifz'?'selected':''}>Hifz</option>
+                            </select>
+                        </td>
                         <td>¥${mFee}</td>
                         <td>¥${tFee}</td>
-                        <td>
-                            ¥${eFee} 
-                            ${eFee > 0 ? `<span class="reason-tag">(${s.extraChargeReason})</span>` : ''}
-                        </td>
                         <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${total}</td>
                         <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect</button>`}</td>
                         <td>
-                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})">🚌</button>
-                            <button class="action-btn" onclick="addExtra('${sid}')">➕</button>
+                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})" title="Transport Fee">🚌</button>
+                            <button class="action-btn" onclick="editInfo('${sid}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
                             <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
                         </td>
                     </tr>`;
@@ -191,37 +175,36 @@
             document.getElementById('count-hifz').innerText = stats.Hifz;
         };
 
-        window.addExtra = async (sid) => {
-            const reason = prompt("Enter Reason (e.g., Books, Donation):");
-            if (!reason) return;
-            const amount = prompt(`Enter Amount for ${reason} (¥):`);
-            if (amount !== null) {
-                await updateDoc(doc(db, "students", sid), { 
-                    extraCharge: Number(amount) || 0, 
-                    extraChargeReason: reason 
-                });
-                loadStudents();
-            }
+        window.updateDivision = async (sid, newDiv) => {
+            await updateDoc(doc(db, "students", sid), { division: newDiv });
+            loadStudents();
         };
 
-        window.markAsPaid = async (sid, name) => {
-            if(confirm(`Collect ¥ total for ${name}?`)) {
-                // 1. Record payment
-                await addDoc(collection(db, "payments"), { 
-                    studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() 
-                });
-                // 2. Clear extra charge so it doesn't repeat next month
-                await updateDoc(doc(db, "students", sid), { 
-                    extraCharge: 0, extraChargeReason: "" 
-                });
+        window.editInfo = async (sid, oldName, oldFee) => {
+            const newName = prompt("Edit Student Name:", oldName);
+            const newFee = prompt("Edit Monthly Fee (¥):", oldFee);
+            if(newName !== null || newFee !== null) {
+                const up = {};
+                if(newName) up.name = newName;
+                if(newFee) up.monthlyFee = Number(newFee);
+                await updateDoc(doc(db, "students", sid), up);
                 loadStudents();
             }
         };
 
         window.setTransport = async (sid, current) => {
-            const val = prompt("Transport Fee (¥):", current);
+            const val = prompt("Monthly Transport Fee (¥):", current);
             if (val !== null) {
                 await updateDoc(doc(db, "students", sid), { transportFee: Number(val) || 0 });
+                loadStudents();
+            }
+        };
+
+        window.markAsPaid = async (sid, name) => {
+            if(confirm(`Confirm payment for ${name}?`)) {
+                await addDoc(collection(db, "payments"), { 
+                    studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() 
+                });
                 loadStudents();
             }
         };
@@ -235,7 +218,7 @@
         };
 
         window.deleteStudent = async (sid) => {
-            if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
+            if(confirm("Delete student permanently?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
         };
 
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
