@@ -42,14 +42,25 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
                 localStorage.setItem('userDivision', userData.division || "Maktab");
             } 
             
+            // --- Updated Role-Specific Logic in app.js ---
             if (actualRole === 'parent') {
                 let childrenArray = [];
-                if (userData.children && Array.isArray(userData.children)) {
+                
+                // 1. Check for 'childrenList' (this matches our new admin.html logic)
+                if (userData.childrenList && Array.isArray(userData.childrenList)) {
+                    childrenArray = userData.childrenList;
+                } 
+                // 2. Fallback: Check for older field names just in case
+                else if (userData.children && Array.isArray(userData.children)) {
                     childrenArray = userData.children;
-                } else if (userData.childName) {
+                } 
+                else if (userData.childName) {
                     childrenArray = [userData.childName];
                 }
+                
+                // Save to localStorage as a string
                 localStorage.setItem('childrenList', JSON.stringify(childrenArray));
+                console.log("Students linked to this parent:", childrenArray);
             }
 
             message.style.color = "green";
