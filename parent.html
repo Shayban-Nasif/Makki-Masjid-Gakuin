@@ -129,18 +129,13 @@
                     const isPaid = paidIds.includes(child.id);
                     const mFee = Number(child.monthlyFee) || 0;
                     const tFee = Number(child.transportFee) || 0;
-                    const eFee = Number(child.extraCharge) || 0;
-                    const total = isPaid ? 0 : (mFee + tFee + eFee);
+                    const total = isPaid ? 0 : (mFee + tFee);
 
                     card.innerHTML = `
                         <h3>${child.name} - ${currentMonthYear}</h3>
                         <table class="finance-table">
                             <tr><td>Monthly Tuition</td><td style="text-align:right">¥${mFee}</td></tr>
                             <tr><td>Transportation</td><td style="text-align:right">¥${tFee}</td></tr>
-                            ${eFee > 0 ? `<tr>
-                                <td>Other Charges <span class="extra-label">${child.extraChargeReason}</span></td>
-                                <td style="text-align:right">¥${eFee}</td>
-                            </tr>` : ''}
                             <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
                         </table>
                         <div style="text-align:center">
