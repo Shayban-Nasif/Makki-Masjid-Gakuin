@@ -3,94 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Makki Masjid Gakuin | Welcome</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Makki Masjid Gakuin | Excellence in Islamic Education</title>
     <style>
-        /* Hero Section */
-        .hero { 
-            background: linear-gradient(rgba(0,77,64,0.7), rgba(0,77,64,0.7)), url('https://images.unsplash.com/photo-1542810634-71277d95dcbb?auto=format&fit=crop&q=80');
-            background-size: cover; height: 60vh; display: flex; align-items: center; justify-content: center; color: white; text-align: center;
-        }
+        :root { --primary: #004d40; --accent: #d4af37; --text: #333; --light: #f4f7f6; }
+        body { margin: 0; font-family: 'Segoe UI', Roboto, sans-serif; color: var(--text); line-height: 1.6; }
+        
+        /* Navigation */
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); sticky: top; z-index: 1000; }
+        .logo { font-weight: bold; font-size: 1.5rem; color: var(--primary); }
+        nav a { margin-left: 20px; text-decoration: none; color: var(--text); font-weight: 500; }
+        .btn-portal { background: var(--primary); color: white; padding: 8px 20px; border-radius: 5px; }
+
+        /* Hero / Slider Area */
+        .slider { height: 70vh; position: relative; overflow: hidden; background: #222; }
+        .slide { position: absolute; width: 100%; height: 100%; opacity: 0; transition: opacity 1s ease-in-out; display: flex; align-items: center; justify-content: center; text-align: center; color: white; background-size: cover; background-position: center; }
+        .slide.active { opacity: 1; }
+        .slide-content { background: rgba(0,0,0,0.5); padding: 30px; border-radius: 10px; max-width: 800px; }
         
         /* Prayer Times Bar */
-        .prayer-bar { background: #d4af37; color: #004d40; padding: 15px; display: flex; justify-content: space-around; font-weight: bold; flex-wrap: wrap; }
-
-        /* Content Sections */
-        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; max-width: 1200px; margin: 40px auto; padding: 0 20px; }
-        .info-card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .prayer-bar { background: var(--accent); color: var(--primary); padding: 15px; display: flex; justify-content: center; gap: 30px; font-weight: bold; flex-wrap: wrap; }
         
-        /* Division Cards */
-        .divisions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; }
-        .div-box { border: 1px solid #eee; padding: 15px; border-radius: 8px; text-align: center; transition: 0.3s; }
-        .div-box:hover { border-color: #d4af37; transform: translateY(-5px); }
-
-        .btn-login { background: #004d40; color: white; padding: 10px 25px; border-radius: 5px; text-decoration: none; font-weight: bold; }
+        /* Main Layout */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 2fr 1fr; gap: 30px; }
+        
+        /* Cards */
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border-top: 4px solid var(--primary); }
+        .topic-tag { display: inline-block; background: #e0f2f1; color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 10px; }
+        
+        /* Responsive */
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } .prayer-bar { gap: 10px; font-size: 0.8rem; } }
     </style>
 </head>
-<body style="background: #fdfdfd; margin: 0; font-family: 'Segoe UI', sans-serif;">
+<body>
 
-    <nav style="display: flex; justify-content: space-between; padding: 20px 5%; align-items: center; background: white;">
-        <h2 style="color: #004d40; margin:0;">MAKKI MASJID GAKUIN</h2>
+    <nav>
+        <div class="logo">MAKKI MASJID GAKUIN</div>
         <div>
-            <a href="#events" style="margin-right:20px; text-decoration:none; color:#333;">Events</a>
-            <a href="#divisions" style="margin-right:20px; text-decoration:none; color:#333;">Divisions</a>
-            <a href="login.html" class="btn-login">Portal Login</a>
+            <a href="#about">About</a>
+            <a href="#divisions">Divisions</a>
+            <a href="#contact">Contact</a>
+            <a href="login.html" class="btn-portal">Login</a>
         </div>
     </nav>
 
-    <header class="hero">
-        <div>
-            <h1 style="font-size: 3rem; margin-bottom: 10px;">Nurturing Faith & Knowledge</h1>
-            <p style="font-size: 1.2rem;">Welcome to the official portal of Makki Masjid Gakuin</p>
+    <div class="slider">
+        <div class="slide active" style="background-image: linear-gradient(rgba(0,0,0,0.4),rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070')">
+            <div class="slide-content">
+                <h1>Nurturing the Future Generation</h1>
+                <p>Authentic Islamic knowledge for kids in a modern environment.</p>
+            </div>
         </div>
-    </header>
-
-    <div class="prayer-bar" id="prayerTimes">
-        <span>Fajr: 05:30</span> <span>Dhuhr: 12:15</span> <span>Asr: 15:30</span> 
-        <span>Maghrib: 17:45</span> <span>Isha: 19:15</span>
+        <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.4),rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=2070')">
+            <div class="slide-content">
+                <h1>Hifz & Nazera Programs</h1>
+                <p>Focusing on Tajweed and spiritual connection with the Quran.</p>
+            </div>
+        </div>
     </div>
 
-    <div class="content-grid">
+    <div class="prayer-bar">
+        <span>Fajr: 05:30</span>
+        <span>Dhuhr: 12:15</span>
+        <span>Asr: 15:30</span>
+        <span>Maghrib: 17:45</span>
+        <span>Isha: 19:15</span>
+        <span id="live-clock" style="margin-left: 20px; color: white;"></span>
+    </div>
+
+    <div class="container">
         <main>
-            <section class="info-card" id="divisions">
-                <h3>Our Divisions</h3>
-                <div class="divisions">
-                    <div class="div-box">
-                        <h4>Maktab</h4>
-                        <p>Foundational Islamic learning for children.</p>
+            <section id="about" class="card">
+                <h2>Welcome to our Maktab</h2>
+                <p>Makki Masjid Gakuin is dedicated to providing high-quality Islamic education to children in our community. We combine traditional values with modern teaching methods to ensure every student thrives.</p>
+            </section>
+
+            <section id="divisions" class="card">
+                <h2>Our Programs</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="background:var(--light); padding:15px; border-radius:8px;">
+                        <h4>Maktab (Basic)</h4>
+                        <p>For beginners starting with Qaida and basic Duas.</p>
                     </div>
-                    <div class="div-box">
+                    <div style="background:var(--light); padding:15px; border-radius:8px;">
                         <h4>Nazera</h4>
-                        <p>Fluent Quranic recitation with Tajweed.</p>
-                    </div>
-                    <div class="div-box">
-                        <h4>Hifz</h4>
-                        <p>Memorization of the Holy Quran.</p>
+                        <p>Complete recitation of Quran with focus on Tajweed.</p>
                     </div>
                 </div>
             </section>
 
-            <section class="info-card">
-                <h3>Friday Reminders</h3>
-                <p>Stay updated with our weekly Islamic topics and Hadith series...</p>
+            <section class="card">
+                <h2>Regular Islamic Topics</h2>
+                <div class="topic-box">
+                    <span class="topic-tag">Fiqh</span>
+                    <h4>Understanding the Importance of Salah</h4>
+                    <p>A weekly series for students and parents on the spiritual benefits of prayer.</p>
+                </div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <div class="topic-box">
+                    <span class="topic-tag">Akhlaq</span>
+                    <h4>Character Building: Honesty</h4>
+                    <p>Teaching our children the prophetic example of truthfulness.</p>
+                </div>
             </section>
         </main>
 
         <aside>
-            <div class="info-card" id="events">
+            <div class="card" style="border-top-color: #c62828;">
                 <h3 style="color: #c62828;">Upcoming Events</h3>
-                <ul style="padding-left: 20px; line-height: 2;">
-                    <li><strong>Ramadan Prep:</strong> March 1st</li>
-                    <li><strong>Annual Jalsa:</strong> April 15th</li>
-                    <li><strong>Parents Meeting:</strong> May 5th</li>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <strong>Ramadan Workshop</strong><br>
+                        <small>📅 March 1, 2026 | 2:00 PM</small>
+                    </li>
+                    <li style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <strong>Parent-Teacher Meeting</strong><br>
+                        <small>📅 March 15, 2026 | After Dhuhr</small>
+                    </li>
                 </ul>
+            </div>
+
+            <div class="card">
+                <h3>Contact Us</h3>
+                <p>📍 123 Masjid Road, Tokyo, Japan</p>
+                <p>📞 +81 00-0000-0000</p>
+                <p>✉️ info@makkimasjid.jp</p>
             </div>
         </aside>
     </div>
 
-    <footer style="text-align: center; padding: 40px; background: #eee; margin-top: 40px;">
-        <p>&copy; 2026 Makki Masjid Gakuin. All rights reserved.</p>
+    <footer style="background: var(--primary); color: white; text-align: center; padding: 30px; margin-top: 50px;">
+        <p>&copy; 2026 Makki Masjid Gakuin. All Rights Reserved.</p>
     </footer>
 
+    <script>
+        // Simple Slider Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        function showNextSlide() {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + 1) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+        setInterval(showNextSlide, 5000);
+
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
 </body>
 </html>
