@@ -109,25 +109,6 @@
         </div>
     </div>
 
-    <div class="section">
-        <h3>📢 Manage Landing Page Notices</h3>
-        <div class="admin-grid" style="grid-template-columns: 1fr 2fr 1fr;">
-            <div>
-                <label>Category</label>
-                <select id="noticeType">
-                    <option value="event">Upcoming Event</option>
-                    <option value="topic">Islamic Topic</option>
-                </select>
-            </div>
-            <div>
-                <label>Title / Message</label>
-                <input type="text" id="noticeText" placeholder="e.g., Annual Jalsa - March 15th">
-            </div>
-            <div style="display:flex; align-items:flex-end;">
-                <button onclick="postNotice()" class="btn-primary" style="width:100%;">Post to Homepage</button>
-            </div>
-        </div>
-    </div>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -308,21 +289,6 @@
 
         loadStudents();
         
-        window.postNotice = async () => {
-        const type = document.getElementById('noticeType').value;
-        const text = document.getElementById('noticeText').value;
-        if(!text) return;
-    
-        try {
-            await addDoc(collection(db, "notices"), {
-                type: type,
-                content: text,
-                timestamp: new Date().toISOString()
-            });
-            alert("Posted to Landing Page!");
-            document.getElementById('noticeText').value = "";
-        } catch(e) { alert(e.message); }
-    };
     </script>
 </body>
 </html>
