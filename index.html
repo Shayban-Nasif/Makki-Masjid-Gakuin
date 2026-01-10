@@ -140,24 +140,6 @@
     </footer>
 
     <script>
-        // Add inside the <script> of index.html
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        
-        const db = getFirestore(app);
-        
-        async function loadPublicNotices() {
-            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(5));
-            const querySnapshot = await getDocs(q);
-            
-            const eventList = document.querySelector('#events ul'); // Target your events list
-            const topicSection = document.querySelector('#topics'); // Target your topics area
-            
-            // Clear existing placeholders if you want
-            // querySnapshot.forEach((doc) => { ... logic to append to HTML ... });
-        }
-        loadPublicNotices();
-        
         // Simple Slider Logic
         let currentSlide = 0;
         const slides = document.querySelectorAll('.slide');
