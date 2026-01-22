@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <style>
-        :root { --primary: #004d40; --gold: #d4af37; }
+        :root { --primary: #004d40; --gold: #d4af37; --red: #c62828; --green: #2e7d32; }
         .admin-container { max-width: 1150px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
         .header { background: var(--primary); color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
@@ -23,7 +23,15 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Tables - Fixed Width and Style */
+        /* Payment Ledger Grid */
+        .ledger-container { margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; display: none; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 10px; }
+        .month-block { padding: 8px; text-align: center; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid #ddd; }
+        .month-paid { background: var(--green); color: white; border: none; }
+        .month-due { background: var(--red); color: white; border: none; }
+        .month-future { background: white; color: #999; }
+
+        /* Tables */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; border-bottom: 2px solid #eee; }
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.88rem; }
@@ -34,7 +42,7 @@
         /* UI Elements */
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+        .btn-pay { background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
@@ -69,8 +77,7 @@
                     <div><label>Student Name</label><input type="text" id="sName"></div>
                     <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
                     <div><label>Date of Birth</label><input type="date" id="sDob"></div>
-                    <div>
-                        <label>Division</label>
+                    <div><label>Division</label>
                         <select id="sDivision" onchange="updateGoalLabels()">
                             <option value="Maktab">Maktab</option>
                             <option value="Nazera">Nazera</option>
@@ -80,8 +87,8 @@
                     <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="0"></div>
                 </div>
                 <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                    <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
-                    <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
+                    <div><label id="lblG1">Goal (Qaida Page)</label><input type="number" id="g1"></div>
+                    <div><label id="lblG2">Goal (Dua No.)</label><input type="number" id="g2"></div>
                     <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
                     <div><label>Target ETA</label><input type="date" id="sEta"></div>
                 </div>
@@ -111,27 +118,19 @@
             </div>
             <div class="section">
                 <h3>Teacher's List</h3>
-                <table id="teacherTable">
-                    <thead>
-                        <tr><th>Name</th><th>Email</th><th>Division</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody id="teacherTableBody"></tbody>
-                </table>
+                <table><thead><tr><th>Name</th><th>Email</th><th>Division</th><th>Actions</th></tr></thead><tbody id="teacherTableBody"></tbody></table>
             </div>
         </div>
 
         <div id="notices-tab" class="tab-content">
             <div class="section">
                 <h3>📢 Post New Notice</h3>
-                <textarea id="noticeMsg" placeholder="Type message for parents..." style="height:100px; margin-bottom:10px;"></textarea>
-                <button onclick="sendNotice()" class="btn-primary" style="width:200px; margin-top:0;">Send Notice</button>
+                <textarea id="noticeMsg" placeholder="Type message..."></textarea>
+                <button onclick="sendNotice()" class="btn-primary" style="width:200px;">Send Notice</button>
             </div>
             <div class="section">
                 <h3>History</h3>
-                <table>
-                    <thead><tr><th style="width:20%">Date</th><th>Message</th><th style="width:10%">Action</th></tr></thead>
-                    <tbody id="noticeTableBody"></tbody>
-                </table>
+                <table><thead><tr><th>Date</th><th>Message</th><th>Action</th></tr></thead><tbody id="noticeTableBody"></tbody></table>
             </div>
         </div>
     </div>
@@ -151,9 +150,12 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const currentMonthYear = "January 2026";
+        
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonthIdx = now.getMonth(); // 0-11
 
-        // Tab Switcher
         window.openTab = (evt, tabId) => {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -161,34 +163,26 @@
             evt.currentTarget.classList.add('active');
         };
 
-        // --- DYNAMIC LABEL LOGIC ---
         window.updateGoalLabels = () => {
             const div = document.getElementById('sDivision').value;
-            const l1 = document.getElementById('lblG1');
-            const l2 = document.getElementById('lblG2');
-            const l3 = document.getElementById('lblG3');
-
-            if (div === "Hifz") {
-                l1.innerText = "Goal (Para)";
-                l2.innerText = "Goal (Tajweed)";
-                l3.innerText = "Goal (Islamic Studies)";
-            } else if (div === "Nazera") {
-                l1.innerText = "Goal (Para)";
-                l2.innerText = "Goal (Tajweed)";
-                l3.innerText = "Goal (Islamic Studies)";
-            } else {
-                l1.innerText = "Goal (Qaida)";
-                l2.innerText = "Goal (Dua)";
-                l3.innerText = "Goal (Islamic Studies)";
-            }
+            const l1 = document.getElementById('lblG1'), l2 = document.getElementById('lblG2'), l3 = document.getElementById('lblG3');
+            if (div === "Hifz") { l1.innerText="Goal (Para)"; l2.innerText="Goal (Sabaqi)"; l3.innerText="Goal (Manzil)"; }
+            else if (div === "Nazera") { l1.innerText="Goal (Para No.)"; l2.innerText="Goal (Line)"; l3.innerText="Goal (Tajweed)"; }
+            else { l1.innerText="Goal (Qaida Page)"; l2.innerText="Goal (Dua No.)"; l3.innerText="Goal (Islamic)"; }
         };
 
-        // Data Loading
         window.loadStudents = async () => {
             const studentSnap = await getDocs(collection(db, "students"));
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            const paidIds = paySnap.docs.map(d => d.data().studentId);
+            const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
             
+            // Map payments by studentId and month index
+            const paymentsMap = {};
+            paySnap.forEach(d => {
+                const p = d.data();
+                if(!paymentsMap[p.studentId]) paymentsMap[p.studentId] = [];
+                paymentsMap[p.studentId].push(p.monthIndex);
+            });
+
             const container = document.getElementById('divisionContainer');
             container.innerHTML = "";
             let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
@@ -212,22 +206,36 @@
                     </div>
                     <div class="division-content" id="${divId}">
                         <table>
-                            <thead><tr><th>Student</th><th>Email</th><th>Fee</th><th>Transport</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+                            <thead><tr><th>Student</th><th>Email</th><th>Yearly Status</th><th>Actions</th></tr></thead>
                             <tbody>
                                 ${students.map(s => {
-                                    const isPaid = paidIds.includes(s.id);
+                                    const studentPaidMonths = paymentsMap[s.id] || [];
                                     const mFee = parseInt(s.monthlyFee) || 0;
                                     const tFee = parseInt(s.transportFee) || 0;
+                                    const total = mFee + tFee;
+
                                     return `<tr>
                                         <td><strong>${s.name}</strong></td>
                                         <td>${s.parentEmail}</td>
-                                        <td>¥${mFee}</td><td>¥${tFee}</td>
-                                        <td style="color:${isPaid?'green':'red'}; font-weight:bold">¥${isPaid ? 0 : mFee+tFee}</td>
-                                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}','${s.name}')">Collect</button>`}</td>
                                         <td>
-                                            <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
-                                            <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})">✏️</button>
-                                            <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
+                                            <div class="calendar-grid">
+                                                ${months.map((m, i) => {
+                                                    let statusClass = "month-future";
+                                                    if(studentPaidMonths.includes(i)) statusClass = "month-paid";
+                                                    else if(i <= currentMonthIdx) statusClass = "month-due";
+                                                    
+                                                    return `<div class="month-block ${statusClass}" title="${m} ${currentYear}">
+                                                        ${m}<br>¥${total}
+                                                    </div>`;
+                                                }).join('')}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="btn-pay" onclick="markAsPaid('${s.id}','${s.name}', ${currentMonthIdx})">Collect Jan</button>
+                                            <div style="margin-top:5px;">
+                                                <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
+                                                <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
+                                            </div>
                                         </td>
                                     </tr>`;
                                 }).join('')}
@@ -241,10 +249,24 @@
             document.getElementById('count-hifz').innerText = stats.Hifz;
         };
 
+        window.markAsPaid = async (sid, name, mIdx) => {
+            const monthName = months[mIdx];
+            await addDoc(collection(db, "payments"), { 
+                studentId: sid, 
+                studentName: name, 
+                monthName: monthName, 
+                monthIndex: mIdx,
+                year: currentYear,
+                timestamp: new Date() 
+            });
+            alert(`Payment recorded for ${monthName} ${currentYear}`);
+            loadStudents();
+        };
+
+        // Standard Functions (Search, Delete, Notices, Teacher Load)
         window.loadTeachers = async () => {
             const snap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
-            const tbody = document.getElementById('teacherTableBody');
-            tbody.innerHTML = "";
+            const tbody = document.getElementById('teacherTableBody'); tbody.innerHTML = "";
             snap.forEach(d => {
                 const t = d.data();
                 tbody.innerHTML += `<tr><td>${t.name}</td><td>${t.email}</td><td>${t.division}</td>
@@ -256,8 +278,7 @@
         window.loadNotices = async () => {
             const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
             const snap = await getDocs(q);
-            const tbody = document.getElementById('noticeTableBody');
-            tbody.innerHTML = "";
+            const tbody = document.getElementById('noticeTableBody'); tbody.innerHTML = "";
             snap.forEach(d => {
                 const n = d.data();
                 tbody.innerHTML += `<tr><td>${n.date}</td><td>${n.message}</td>
@@ -265,30 +286,17 @@
             });
         };
 
-        // Actions
         window.addStudent = async () => {
             const name = document.getElementById('sName').value;
             if(!name) return alert("Enter Name");
             await addDoc(collection(db, "students"), {
-                name,
-                parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
-                dob: document.getElementById('sDob').value,
-                division: document.getElementById('sDivision').value,
-                monthlyFee: parseInt(document.getElementById('sFee').value) || 0,
-                transportFee: 0,
+                name, parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
+                dob: document.getElementById('sDob').value, division: document.getElementById('sDivision').value,
+                monthlyFee: parseInt(document.getElementById('sFee').value) || 0, transportFee: 0,
                 goals: [document.getElementById('g1').value, document.getElementById('g2').value, document.getElementById('g3').value],
                 eta: document.getElementById('sEta').value
             });
-            alert("Success!"); loadStudents();
-        };
-
-        window.addTeacher = async () => {
-            const email = document.getElementById('tEmail').value.toLowerCase();
-            await setDoc(doc(db, "users", email), {
-                name: document.getElementById('tName').value,
-                email: email, role: 'teacher', division: document.getElementById('tDivision').value
-            });
-            loadTeachers();
+            loadStudents();
         };
 
         window.searchStudents = () => {
@@ -296,46 +304,22 @@
             document.querySelectorAll('.division-card').forEach(card => {
                 let match = false;
                 card.querySelectorAll('tbody tr').forEach(row => {
-                    row.style.display = row.innerText.toLowerCase().includes(term) ? "" : "none";
-                    if(row.innerText.toLowerCase().includes(term)) match = true;
+                    const found = row.innerText.toLowerCase().includes(term);
+                    row.style.display = found ? "" : "none";
+                    if(found) match = true;
                 });
                 card.style.display = match ? "" : "none";
             });
         };
 
-        window.markAsPaid = async (sid, name) => {
-            await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, timestamp: new Date() });
-            loadStudents();
-        };
-
-        window.deleteStudent = async (id) => { if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
-        window.deleteTeacher = async (id) => { if(confirm("Remove teacher?")) { await deleteDoc(doc(db, "users", id)); loadTeachers(); } };
-        window.deleteNotice = async (id) => { if(confirm("Delete notice?")) { await deleteDoc(doc(db, "notices", id)); loadNotices(); } };
-        window.sendNotice = async () => {
-            const msg = document.getElementById('noticeMsg').value;
-            if(!msg) return;
-            await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
-            document.getElementById('noticeMsg').value = ""; loadNotices();
-        };
-
-        window.toggleDivision = (id) => {
-            const el = document.getElementById(id);
-            el.style.display = el.style.display === "none" ? "block" : "none";
-        };
-
+        window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
+        window.deleteStudent = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
         window.setTransport = async (sid, cur) => {
-            const val = prompt("Monthly Transport Fee:", cur);
+            const val = prompt("Transport Fee:", cur);
             if(val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); loadStudents(); }
         };
-
-        window.editAll = async (sid, n, f) => {
-            const newN = prompt("New Name:", n); const newF = prompt("New Fee:", f);
-            if(newN || newF) { await updateDoc(doc(db, "students", sid), { name: newN, monthlyFee: parseInt(newF) }); loadStudents(); }
-        };
-
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
 
-        // Initial Load
         loadStudents(); loadTeachers(); loadNotices();
     </script>
 </body>
