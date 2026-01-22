@@ -248,19 +248,23 @@
 
                 // Teachers List
                 const ttbody = document.getElementById('teacherTableBody');
-                ttbody.innerHTML = "";
-                teacherSnap.forEach(docSnap => {
-                    const t = docSnap.data();
-                    ttbody.innerHTML += `<tr><td>${t.name}</td><td>${t.email}</td><td>${t.division}</td>
-                        <td><button class="action-btn" onclick="deleteTeacher('${docSnap.id}')" style="color:red">🗑️</button></td></tr>`;
-                });
+            ttbody.innerHTML = "";
+            teacherSnap.forEach(docSnap => {
+                const t = docSnap.data();
+                ttbody.innerHTML += `
+                    <tr>
+                        <td>${t.name}</td>
+                        <td>${t.email}</td>
+                        <td>${t.division}</td>
+                        <td><button class="action-btn" onclick="deleteTeacher('${t.email}')" style="color:red">🗑️</button></td>
+                    </tr>`;
+            });
 
-                document.getElementById('count-teachers').innerText = teacherSnap.size;
-                document.getElementById('count-maktab').innerText = stats.Maktab;
-                document.getElementById('count-nazera').innerText = stats.Nazera;
-                document.getElementById('count-hifz').innerText = stats.Hifz;
-            } catch (e) { console.error(e); }
-        };
+            document.getElementById('count-teachers').innerText = teacherSnap.size;
+            document.getElementById('count-maktab').innerText = stats.Maktab;
+            document.getElementById('count-nazera').innerText = stats.Nazera;
+            document.getElementById('count-hifz').innerText = stats.Hifz;
+        }
 
         window.toggleDivision = (id) => {
             const content = document.getElementById(id);
