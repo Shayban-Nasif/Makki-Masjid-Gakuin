@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
-    <link rel="stylesheet" href="style.css">
     <style>
         :root { --primary: #004d40; --gold: #d4af37; }
         .admin-container { max-width: 1150px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
@@ -24,15 +23,14 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Student Divisions */
-        .division-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
-        .division-header { background: var(--primary); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
-        .division-header:hover { background: #00695c; }
-        .division-content { display: block; padding: 10px; }
-        .division-table { width: 100%; border-collapse: collapse; }
-        .division-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; }
-        .division-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        /* Tables - FIXED FOR WIDTH */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: auto; }
+        th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.88rem; vertical-align: middle; }
 
+        .division-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
+        .division-header { background: var(--primary); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        
         /* UI Elements */
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -60,8 +58,8 @@
 
         <div class="tab-menu">
             <button class="tab-btn active" onclick="openTab(event, 'students-tab')">Students Management</button>
-            <button class="tab-btn" onclick="openTab(event, 'teachers-tab')">Teachers Management</button>
-            <button class="tab-btn" onclick="openTab(event, 'notices-tab')">Notice Board</button>
+            <button class="tab-btn" onclick="event, openTab(event, 'teachers-tab')">Teachers Management</button>
+            <button class="tab-btn" onclick="event, openTab(event, 'notices-tab')">Notice Board</button>
         </div>
 
         <div id="students-tab" class="tab-content active">
@@ -81,9 +79,9 @@
                     <div><label>Monthly Fee (¥)</label><input type="number" id="sFee"></div>
                 </div>
                 <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                    <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
-                    <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
-                    <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
+                    <div><label>Goal (Qaida)</label><input type="number" id="g1"></div>
+                    <div><label>Goal (Dua)</label><input type="number" id="g2"></div>
+                    <div><label>Goal (Islamic Studies)</label><input type="number" id="g3"></div>
                     <div><label>Target ETA</label><input type="date" id="sEta"></div>
                 </div>
                 <button onclick="addStudent()" class="btn-primary" style="margin-top:15px; width:100%;">Enroll Student</button>
@@ -112,12 +110,12 @@
             </div>
             <div class="section">
                 <h3>Teacher's List</h3>
-                <table id="teacherTable">
+                <table>
                     <thead>
                         <tr>
                             <th>Teacher Name</th>
                             <th>Email Address</th>
-                            <th>Primary Division</th>
+                            <th>Division</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -129,29 +127,24 @@
         <div id="notices-tab" class="tab-content">
             <div class="section">
                 <h3>📢 Send New Notice to Parents</h3>
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <textarea id="noticeMsg" placeholder="Type your announcement here..." style="height: 120px; font-family: inherit;"></textarea>
-                    <button onclick="sendNotice()" class="btn-primary" style="width: 200px; align-self: flex-end;">Post Notice</button>
-                </div>
+                <textarea id="noticeMsg" placeholder="Type announcement..."></textarea>
+                <button onclick="sendNotice()" class="btn-primary" style="margin-top:10px;">Post Notice</button>
             </div>
             <div class="section">
                 <h3>Sent Notices</h3>
-                <div style="overflow-x: auto;">
-                    <table id="noticeTable">
-                        <thead>
-                            <tr><th style="width: 25%;">Date</th><th style="width: 65%;">Message</th><th style="width: 10%;">Action</th></tr>
-                        </thead>
-                        <tbody id="noticeTableBody"></tbody>
-                    </table>
-                </div>
+                <table>
+                    <thead>
+                        <tr><th style="width:25%">Date</th><th>Message</th><th style="width:10%">Action</th></tr>
+                    </thead>
+                    <tbody id="noticeTableBody"></tbody>
+                </table>
             </div>
         </div>
-
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -167,194 +160,166 @@
         const currentMonthYear = "January 2026";
 
         window.openTab = (evt, tabId) => {
-            const contents = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < contents.length; i++) contents[i].classList.remove("active");
-            const btns = document.getElementsByClassName("tab-btn");
-            for (let i = 0; i < btns.length; i++) btns[i].classList.remove("active");
-            document.getElementById(tabId).classList.add("active");
-            evt.currentTarget.classList.add("active");
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
         };
 
-        function calculateAge(dobString) {
-            if(!dobString) return "N/A";
-            const birth = new Date(dobString);
-            const today = new Date();
-            let age = today.getFullYear() - birth.getFullYear();
-            const m = today.getMonth() - birth.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-            return age;
+        function calculateAge(dob) {
+            if(!dob) return "N/A";
+            const birth = new Date(dob);
+            const diff = new Date() - birth;
+            return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
         }
 
         window.loadStudents = async () => {
-            try {
-                const studentSnap = await getDocs(collection(db, "students"));
-                const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
-                const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-                const paidIds = paySnap.docs.map(d => d.data().studentId);
+            const studentSnap = await getDocs(collection(db, "students"));
+            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+            const paidIds = paySnap.docs.map(d => d.data().studentId);
+            
+            const container = document.getElementById('divisionContainer');
+            container.innerHTML = "";
+            let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+            const groups = {};
 
-                const container = document.getElementById('divisionContainer');
-                container.innerHTML = "";
-                let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-
-                const groups = {};
-                studentSnap.forEach(docSnap => {
-                    const s = { id: docSnap.id, ...docSnap.data() };
-                    const div = s.division || "Unassigned";
-                    if (!groups[div]) groups[div] = [];
-                    groups[div].push(s);
-                    if(stats[div] !== undefined) stats[div]++;
-                });
-
-                for (const [divisionName, students] of Object.entries(groups)) {
-                    const divId = `div-${divisionName.replace(/\s+/g, '')}`;
-                    const section = document.createElement('div');
-                    section.className = 'division-card';
-                    section.innerHTML = `
-                        <div class="division-header" onclick="toggleDivision('${divId}')">
-                            <span>📂 ${divisionName} Division (${students.length} Students)</span>
-                            <span id="icon-${divId}">▼</span>
-                        </div>
-                        <div class="division-content" id="${divId}">
-                            <table class="division-table">
-                                <thead>
-                                    <tr><th>Student (Age)</th><th>Parent Email</th><th>Tuition</th><th>Transport</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${students.map(s => {
-                                        const isPaid = paidIds.includes(s.id);
-                                        const age = calculateAge(s.dob);
-                                        const tFee = s.transportFee || 0;
-                                        const totalDue = (parseInt(s.monthlyFee) || 0) + (parseInt(tFee) || 0);
-                                        return `
-                                            <tr>
-                                                <td><strong>${s.name}</strong> (${age} yrs)</td>
-                                                <td style="font-size:0.8rem">${s.parentEmail}</td>
-                                                <td>¥${s.monthlyFee}</td>
-                                                <td>¥${tFee}</td>
-                                                <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${isPaid ? 0 : totalDue}</td>
-                                                <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>`}</td>
-                                                <td>
-                                                    <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
-                                                    <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${s.monthlyFee})">✏️</button>
-                                                    <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
-                                                </td>
-                                            </tr>`;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>`;
-                    container.appendChild(section);
-                }
-
-                // Teachers List
-                const ttbody = document.getElementById('teacherTableBody');
-            ttbody.innerHTML = "";
-            teacherSnap.forEach(docSnap => {
-                const t = docSnap.data();
-                ttbody.innerHTML += `
-                    <tr>
-                        <td>${t.name}</td>
-                        <td>${t.email}</td>
-                        <td>${t.division}</td>
-                        <td><button class="action-btn" onclick="deleteTeacher('${t.email}')" style="color:red">🗑️</button></td>
-                    </tr>`;
+            studentSnap.forEach(docSnap => {
+                const s = { id: docSnap.id, ...docSnap.data() };
+                const div = s.division || "Unassigned";
+                if(!groups[div]) groups[div] = [];
+                groups[div].push(s);
+                if(stats[div] !== undefined) stats[div]++;
             });
 
-            document.getElementById('count-teachers').innerText = teacherSnap.size;
+            for (const [divName, students] of Object.entries(groups)) {
+                const divId = `div-${divName.replace(/\s+/g, '')}`;
+                const card = document.createElement('div');
+                card.className = 'division-card';
+                card.innerHTML = `
+                    <div class="division-header" onclick="toggleDivision('${divId}')">
+                        <span>📂 ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
+                    </div>
+                    <div class="division-content" id="${divId}">
+                        <table>
+                            <thead><tr><th>Student</th><th>Email</th><th>Tuition</th><th>Transport</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody>
+                                ${students.map(s => {
+                                    const isPaid = paidIds.includes(s.id);
+                                    const tFee = parseInt(s.transportFee) || 0;
+                                    const mFee = parseInt(s.monthlyFee) || 0;
+                                    return `<tr>
+                                        <td><strong>${s.name}</strong> (${calculateAge(s.dob)}y)</td>
+                                        <td>${s.parentEmail}</td>
+                                        <td>¥${mFee}</td><td>¥${tFee}</td>
+                                        <td style="color:${isPaid?'green':'red'}; font-weight:bold">¥${isPaid ? 0 : mFee+tFee}</td>
+                                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}','${s.name}')">Collect</button>`}</td>
+                                        <td>
+                                            <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
+                                            <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})">✏️</button>
+                                            <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
+                                        </td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+                container.appendChild(card);
+            }
             document.getElementById('count-maktab').innerText = stats.Maktab;
             document.getElementById('count-nazera').innerText = stats.Nazera;
             document.getElementById('count-hifz').innerText = stats.Hifz;
-        }
-
-        window.toggleDivision = (id) => {
-            const content = document.getElementById(id);
-            const icon = document.getElementById(`icon-${id}`);
-            if (content.style.display === "none") {
-                content.style.display = "block";
-                icon.innerText = "▼";
-            } else {
-                content.style.display = "none";
-                icon.innerText = "▶";
-            }
         };
 
-        window.searchStudents = () => {
-            const input = document.getElementById('studentSearch').value.toLowerCase();
-            const cards = document.querySelectorAll('.division-card');
-            cards.forEach(card => {
-                const rows = card.querySelectorAll('tbody tr');
-                let found = false;
-                rows.forEach(row => {
-                    const text = row.innerText.toLowerCase();
-                    if (text.includes(input)) { row.style.display = ""; found = true; }
-                    else { row.style.display = "none"; }
-                });
-                card.style.display = found ? "" : "none";
-                const content = card.querySelector('.division-content');
-                if (input !== "") { content.style.display = "block"; }
+        window.loadTeachers = async () => {
+            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = "";
+            snap.forEach(docSnap => {
+                const t = docSnap.data();
+                tbody.innerHTML += `<tr><td>${t.name}</td><td>${t.email}</td><td>${t.division}</td>
+                <td><button class="action-btn" onclick="deleteTeacher('${docSnap.id}')" style="color:red">🗑️</button></td></tr>`;
             });
+            document.getElementById('count-teachers').innerText = snap.size;
         };
 
-        window.addStudent = async () => {
-            const name = document.getElementById('sName').value.trim();
-            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
-            const dob = document.getElementById('sDob').value;
-            const div = document.getElementById('sDivision').value;
-            const fee = parseInt(document.getElementById('sFee').value) || 0;
-            if(!name || !pEmail || !dob) return alert("Required fields missing");
-            try {
-                await addDoc(collection(db, "students"), { name, parentEmail: pEmail, dob, division: div, monthlyFee: fee, transportFee: 0 });
-                alert("Enrolled!"); loadStudents();
-            } catch(e) { alert(e.message); }
-        };
-
-        window.addTeacher = async () => {
-            const name = document.getElementById('tName').value.trim();
-            const email = document.getElementById('tEmail').value.toLowerCase().trim();
-            const div = document.getElementById('tDivision').value;
-            try {
-                await setDoc(doc(db, "users", email), { name, email, role: 'teacher', division: div });
-                alert("Teacher added!"); loadStudents();
-            } catch(e) { alert(e.message); }
-        };
-
-        window.sendNotice = async () => {
-            const msg = document.getElementById('noticeMsg').value.trim();
-            if(!msg) return alert("Enter message");
-            try {
-                await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
-                alert("Notice sent!"); document.getElementById('noticeMsg').value = ""; loadNotices();
-            } catch(e) { alert(e.message); }
-        };
-
-        async function loadNotices() {
+        window.loadNotices = async () => {
             const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
             const snap = await getDocs(q);
             const tbody = document.getElementById('noticeTableBody');
             tbody.innerHTML = "";
-            snap.forEach(docSnap => {
-                const n = docSnap.data();
+            snap.forEach(d => {
+                const n = d.data();
                 tbody.innerHTML += `<tr><td>${n.date}</td><td>${n.message}</td>
-                    <td><button class="action-btn" onclick="deleteNotice('${docSnap.id}')" style="color:red">🗑️</button></td></tr>`;
+                <td><button class="action-btn" onclick="deleteNotice('${d.id}')" style="color:red">🗑️</button></td></tr>`;
             });
-        }
-
-        window.deleteNotice = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "notices", id)); loadNotices(); } };
-        window.markAsPaid = async (sid, name) => { await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, timestamp: new Date() }); loadStudents(); };
-        window.deleteStudent = async (sid) => { if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); } };
-        window.setTransport = async (sid, current) => {
-            const val = prompt("Enter Monthly Transport Fee (¥):", current);
-            if (val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); loadStudents(); }
         };
-        window.editAll = async (sid, oldName, oldFee) => {
-            const n = prompt("Name:", oldName); const f = prompt("Fee:", oldFee);
-            if(n || f) { await updateDoc(doc(db, "students", sid), { name: n, monthlyFee: parseInt(f) }); loadStudents(); }
+
+        window.addStudent = async () => {
+            const data = {
+                name: document.getElementById('sName').value,
+                parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
+                dob: document.getElementById('sDob').value,
+                division: document.getElementById('sDivision').value,
+                monthlyFee: parseInt(document.getElementById('sFee').value) || 0,
+                transportFee: 0,
+                goals: [document.getElementById('g1').value, document.getElementById('g2').value, document.getElementById('g3').value],
+                eta: document.getElementById('sEta').value
+            };
+            await addDoc(collection(db, "students"), data);
+            alert("Enrolled!"); loadStudents();
+        };
+
+        window.addTeacher = async () => {
+            const email = document.getElementById('tEmail').value.toLowerCase();
+            await setDoc(doc(db, "users", email), {
+                name: document.getElementById('tName').value,
+                email: email,
+                role: 'teacher',
+                division: document.getElementById('tDivision').value
+            });
+            loadTeachers();
+        };
+
+        window.sendNotice = async () => {
+            const msg = document.getElementById('noticeMsg').value;
+            await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
+            document.getElementById('noticeMsg').value = ""; loadNotices();
+        };
+
+        window.searchStudents = () => {
+            const term = document.getElementById('studentSearch').value.toLowerCase();
+            document.querySelectorAll('.division-card').forEach(card => {
+                let match = false;
+                card.querySelectorAll('tbody tr').forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(term) ? "" : "none";
+                    if(text.includes(term)) match = true;
+                });
+                card.style.display = match ? "" : "none";
+                if(term) card.querySelector('.division-content').style.display = "block";
+            });
+        };
+
+        window.deleteStudent = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
+        window.deleteNotice = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "notices", id)); loadNotices(); } };
+        window.deleteTeacher = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "users", id)); loadTeachers(); } };
+        window.markAsPaid = async (sid, name) => { await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, timestamp: new Date() }); loadStudents(); };
+        window.toggleDivision = (id) => { 
+            const el = document.getElementById(id); 
+            el.style.display = el.style.display === "none" ? "block" : "none"; 
+        };
+        window.setTransport = async (sid, cur) => {
+            const val = prompt("Transport Fee:", cur);
+            if(val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) }); loadStudents(); }
+        };
+        window.editAll = async (sid, n, f) => {
+            const newN = prompt("Name:", n); const newF = prompt("Fee:", f);
+            if(newN || newF) { await updateDoc(doc(db, "students", sid), { name: newN, monthlyFee: parseInt(newF) }); loadStudents(); }
         };
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
 
-        // Initialize
-        loadStudents();
-        loadNotices();
+        // Start
+        loadStudents(); loadTeachers(); loadNotices();
     </script>
 </body>
 </html>
