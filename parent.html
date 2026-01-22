@@ -25,7 +25,11 @@
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
         .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
-        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .history-item { 
+            border-bottom: 1px solid #eee; 
+            padding: 15px 0; 
+            white-space: pre-wrap; /* This preserves your line breaks */
+        }
         .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
         
         /* Finance Styles */
@@ -171,31 +175,43 @@
 
         // Notice System
         window.displayNotices = async () => {
-            try {
-                const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
-                const noticeDiv = document.getElementById('parentNoticeDisplay');
-                const historyList = document.getElementById('historyList');
-                noticeDiv.innerHTML = "";
-                historyList.innerHTML = "";
-                let count = 0;
-                snap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (count === 0) {
-                        noticeDiv.innerHTML = `
-                            <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                                <span><strong>Latest Notice:</strong> ${data.message}</span>
-                                <button onclick="openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px;">History</button>
+                try {
+                    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+                    const snap = await getDocs(q);
+                    const noticeDiv = document.getElementById('parentNoticeDisplay');
+                    const historyList = document.getElementById('historyList');
+                    
+                    noticeDiv.innerHTML = "";
+                    historyList.innerHTML = "";
+                    
+                    let count = 0;
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        
+                        if (count === 0) {
+                            // Latest Notice Box
+                            noticeDiv.innerHTML = `
+                                <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
+                                    <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
+                                    <button onclick="openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
+                                </div>`;
+                        }
+                        
+                        // History List Items
+                        historyList.innerHTML += `
+                            <div class="history-item" style="white-space: pre-wrap; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                <div class="history-date" style="color:#d4af37; font-size:0.8rem; font-weight:bold;">${data.date}</div>
+                                <div style="margin-top:5px;">${data.message}</div>
                             </div>`;
-                    }
-                    historyList.innerHTML += `<div class="history-item"><div class="history-date">${data.date}</div><div>${data.message}</div></div>`;
-                    count++;
-                });
-            } catch (e) { console.error("Notice Error:", e); }
-        };
-
-        window.openHistory = () => document.getElementById('historyModal').style.display = 'block';
-        window.closeHistory = () => document.getElementById('historyModal').style.display = 'none';
+                        
+                        count++;
+                    });
+                    
+                    if(count === 0) noticeDiv.innerHTML = "";
+                } catch (e) { 
+                    console.error("Notice Error:", e); 
+                }
+            };
         
         loadParentData();
         displayNotices();
