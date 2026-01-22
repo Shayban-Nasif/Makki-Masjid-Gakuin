@@ -173,8 +173,8 @@
 
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
-        // Notice System
-        window.displayNotices = async () => {
+        // 1. Notice System Logic
+            window.displayNotices = async () => {
                 try {
                     const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
                     const snap = await getDocs(q);
@@ -189,15 +189,13 @@
                         const data = docSnap.data();
                         
                         if (count === 0) {
-                            // Latest Notice Box
                             noticeDiv.innerHTML = `
                                 <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
                                     <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                                    <button onclick="openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
+                                    <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
                                 </div>`;
                         }
                         
-                        // History List Items
                         historyList.innerHTML += `
                             <div class="history-item" style="white-space: pre-wrap; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                                 <div class="history-date" style="color:#d4af37; font-size:0.8rem; font-weight:bold;">${data.date}</div>
@@ -212,6 +210,25 @@
                     console.error("Notice Error:", e); 
                 }
             };
+            
+            // 2. Modal Control Functions (Explicitly Global)
+            window.openHistory = () => {
+                const modal = document.getElementById('historyModal');
+                if(modal) modal.style.display = 'block';
+            };
+            
+            window.closeHistory = () => {
+                const modal = document.getElementById('historyModal');
+                if(modal) modal.style.display = 'none';
+            };
+            
+            // 3. Close modal if clicking outside the white box
+            window.addEventListener('click', (event) => {
+                const modal = document.getElementById('historyModal');
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            });
         
         loadParentData();
         displayNotices();
