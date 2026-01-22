@@ -4,88 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Parent Portal | Makki Masjid Gakuin</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        :root { --primary: #004d40; --gold: #d4af37; --bg: #f4f7f6; }
-        body { background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-        .parent-container { max-width: 900px; margin: 20px auto; padding: 20px; }
+        :root { --primary: #004d40; --gold: #d4af37; --red: #e57373; --green: #81c784; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; }
+        .navbar { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
         
-        .header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .header h2 { margin: 0; font-size: 1.5rem; }
+        /* Profile & Progress Section */
+        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .student-header { border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .student-header h2 { margin: 0; color: var(--primary); }
         
-        .nav-tabs { display: flex; gap: 10px; margin: 25px 0; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; transition: 0.3s; border-radius: 6px; }
-        .tab.active { background: var(--primary); color: white; }
+        .progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .progress-item { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid var(--gold); }
+        .progress-label { font-size: 0.75rem; color: #666; text-transform: uppercase; font-weight: bold; }
+        .progress-val { font-size: 1.2rem; font-weight: bold; color: #333; margin-top: 5px; }
 
-        .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
-        .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        
-        /* Notice History PoP Up Styles */    
-        /* Modal Styles */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
-        .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
-        .history-item { 
-            border-bottom: 1px solid #eee; 
-            padding: 15px 0; 
-            white-space: pre-wrap; /* This preserves your line breaks */
+        /* Annual Payment Ledger */
+        .ledger-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .month-box { 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center; 
+            border: 2px solid #eee; 
+            transition: 0.3s;
         }
-        .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
+        .month-name { font-weight: bold; font-size: 1rem; display: block; }
+        .month-fee { font-size: 0.85rem; margin-top: 5px; opacity: 0.9; }
         
-        /* Finance Styles */
-        .finance-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
-        .finance-table td { padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 1rem; color: #444; }
-        .total-row { font-size: 1.2rem; color: var(--primary); border-top: 2px solid var(--primary) !important; font-weight: bold; }
-        .extra-label { font-size: 0.8rem; color: #c62828; display: block; font-weight: normal; }
-        
-        .status-badge { display: inline-block; padding: 10px 20px; border-radius: 50px; font-weight: bold; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
-        .paid { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
-        .unpaid { background: #ffebee; color: #c62828; border: 1px solid #c62828; }
+        /* Status Colors */
+        .paid { background: var(--green); color: white; border-color: #66bb6a; }
+        .due { background: var(--red); color: white; border-color: #ef5350; }
+        .future { background: white; color: #bbb; border-style: dashed; }
 
-        /* Progress Styles */
-        .progress-item { margin: 20px 0; }
-        .progress-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 500; }
-        .bar-bg { background: #eee; height: 12px; border-radius: 10px; overflow: hidden; }
-        .bar-fill { background: linear-gradient(90deg, var(--gold), #f3d47a); height: 100%; transition: width 0.8s ease-in-out; }
-        
-        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
-        .btn-logout:hover { background: white; color: var(--primary); }
+        .legend { display: flex; gap: 15px; margin-top: 15px; font-size: 0.85rem; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 3px; }
+
+        @media (max-width: 600px) { .calendar-grid { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
 
-    <div class="parent-container">
-        <div class="header">
-            <div>
-                <h2 id="parentGreeting">Welcome</h2>
-                <span id="currentMonth" style="opacity: 0.8;">January 2026</span>
-            </div>
-            <button class="btn-logout" onclick="logout()">Logout</button>
-        </div>
-        
-        <div id="parentNoticeDisplay" style="margin-top: 20px;"></div>
+    <nav class="navbar">
+        <span>Masjid Gakuin Parent Portal</span>
+        <button onclick="logout()" style="background:transparent; color:white; border:1px solid white; padding:5px 15px; border-radius:4px; cursor:pointer;">Logout</button>
+    </nav>
 
-            <div id="historyModal" class="modal">
-                <div class="modal-content">
-                    <span class="close-modal" onclick="closeHistory()">&times;</span>
-                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
-                    <div id="historyList"></div>
+    <div class="container">
+        <div id="loading">Loading records...</div>
+        
+        <div id="content" style="display:none;">
+            <div class="card">
+                <div class="student-header">
+                    <h2 id="disp-name">Student Name</h2>
+                    <p id="disp-division" style="margin:5px 0; color:#666; font-weight:bold;">Division</p>
+                </div>
+                <div class="progress-grid">
+                    <div class="progress-item"><div class="progress-label" id="lbl-g1">Goal 1</div><div class="progress-val" id="val-g1">-</div></div>
+                    <div class="progress-item"><div class="progress-label" id="lbl-g2">Goal 2</div><div class="progress-val" id="val-g2">-</div></div>
+                    <div class="progress-item"><div class="progress-label" id="lbl-g3">Goal 3</div><div class="progress-val" id="val-g3">-</div></div>
+                    <div class="progress-item"><div class="progress-label">Target Completion</div><div class="progress-val" id="val-eta">-</div></div>
                 </div>
             </div>
-        
-        <div class="nav-tabs">
-            <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
-            <button class="tab" id="btnFinance" onclick="switchTab('finance')">Fees & Invoices</button>
-        </div>
 
-        <div id="childrenContainer">
-            <div style="text-align:center; padding: 50px; color: #666;">Loading student data...</div>
+            <div class="card">
+                <div class="ledger-title">
+                    <h3>Annual Payment Ledger</h3>
+                    <strong id="disp-year">2026</strong>
+                </div>
+                
+                <div class="calendar-grid" id="calendar">
+                    </div>
+
+                <div class="legend">
+                    <div class="legend-item"><div class="dot" style="background:var(--green)"></div> Paid</div>
+                    <div class="legend-item"><div class="dot" style="background:var(--red)"></div> Due</div>
+                    <div class="legend-item"><div class="dot" style="border:1px dashed #bbb; background:white;"></div> Upcoming</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -98,140 +102,87 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const parentEmail = localStorage.getItem('userEmail');
-        const currentMonthYear = "January 2026";
 
-        let studentsData = [];
-        let paidIds = [];
+        const parentEmail = localStorage.getItem('userEmail'); 
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonthIdx = now.getMonth();
 
-        async function loadParentData() {
-            if (!parentEmail) { window.location.href = 'index.html'; return; }
-            try {
-                const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
-                const studentSnap = await getDocs(q);
-                const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-                paidIds = paySnap.docs.map(d => d.data().studentId);
-                studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderView('report');
-            } catch (e) {
-                console.error(e);
-            }
-        }
+        async function initPortal() {
+            if (!parentEmail) { window.location.href = "index.html"; return; }
 
-        window.renderView = (view) => {
-            const container = document.getElementById('childrenContainer');
-            container.innerHTML = "";
-            if (studentsData.length === 0) {
-                container.innerHTML = "<div class='child-card'>No students found linked to this email.</div>";
+            // 1. Fetch Student Details
+            const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail.toLowerCase()));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                document.getElementById('loading').innerText = "No student record found for this email.";
                 return;
             }
-            studentsData.forEach(child => {
-                const card = document.createElement('div');
-                card.className = 'child-card';
-                if (view === 'report') {
-                    const labels = getDivisionLabels(child.division);
-                    card.innerHTML = `
-                        <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
-                        <div class="progress-item">${bar(labels[0], child.levels?.c1, child.goals?.c1)}</div>
-                        <div class="progress-item">${bar(labels[1], child.levels?.c2, child.goals?.c2)}</div>
-                        <div class="progress-item">${bar(labels[2], child.levels?.c3, child.goals?.c3)}</div>
-                        <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
-                    `;
-                } else {
-                    const isPaid = paidIds.includes(child.id);
-                    const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
-                    card.innerHTML = `
-                        <h3>${child.name} - ${currentMonthYear}</h3>
-                        <table class="finance-table">
-                            <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee}</td></tr>
-                            <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
-                            <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
-                        </table>
-                        <div style="text-align:center"><div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">${isPaid ? 'Status: Paid ✅' : 'Status: Pending'}</div></div>
-                    `;
-                }
-                container.appendChild(card);
-            });
-        };
 
-        function bar(label, cur, goal) {
-            const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
-            return `<div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div><div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>`;
+            const student = { id: snap.docs[0].id, ...snap.docs[0].data() };
+            
+            // 2. Fetch Payment Records for this year
+            const payQ = query(collection(db, "payments"), 
+                where("studentId", "==", student.id), 
+                where("year", "==", currentYear)
+            );
+            const paySnap = await getDocs(payQ);
+            const paidMonths = paySnap.docs.map(d => d.data().monthIndex);
+
+            renderUI(student, paidMonths);
         }
 
-        function getDivisionLabels(div) {
-            if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
-            if (div === "Hifz") return ["Daily Sabaq", "Sabaqi (Recent)", "Ammi (Revision)"];
-            return ["Qaida Lessons", "Masnoon Duas", "Islamic Etiquettes"];
-        }
+        function renderUI(s, paidMonths) {
+            document.getElementById('loading').style.display = "none";
+            document.getElementById('content').style.display = "block";
 
-        window.switchTab = (view) => {
-            document.getElementById('btnReport').classList.toggle('active', view === 'report');
-            document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
-            renderView(view);
-        };
+            // Set Header & Progress
+            document.getElementById('disp-name').innerText = s.name;
+            document.getElementById('disp-division').innerText = s.division + " Division";
+            document.getElementById('val-eta').innerText = s.eta || "Not set";
+
+            // Set Dynamic Goal Labels
+            if (s.division === "Hifz") {
+                document.getElementById('lbl-g1').innerText = "Current Para";
+                document.getElementById('lbl-g2').innerText = "Sabaqi No.";
+                document.getElementById('lbl-g3').innerText = "Manzil Status";
+            } else if (s.division === "Nazera") {
+                document.getElementById('lbl-g1').innerText = "Para Number";
+                document.getElementById('lbl-g2').innerText = "Line Number";
+                document.getElementById('lbl-g3').innerText = "Tajweed Progress";
+            } else {
+                document.getElementById('lbl-g1').innerText = "Qaida Page";
+                document.getElementById('lbl-g2').innerText = "Dua Number";
+                document.getElementById('lbl-g3').innerText = "Islamic Studies";
+            }
+
+            document.getElementById('val-g1').innerText = s.goals[0] || "-";
+            document.getElementById('val-g2').innerText = s.goals[1] || "-";
+            document.getElementById('val-g3').innerText = s.goals[2] || "-";
+
+            // Render Payment Grid
+            const cal = document.getElementById('calendar');
+            const feeTotal = (parseInt(s.monthlyFee) || 0) + (parseInt(s.transportFee) || 0);
+            
+            cal.innerHTML = months.map((m, i) => {
+                let status = "future";
+                if (paidMonths.includes(i)) status = "paid";
+                else if (i <= currentMonthIdx) status = "due";
+
+                return `
+                    <div class="month-box ${status}">
+                        <span class="month-name">${m}</span>
+                        <span class="month-fee">¥${feeTotal}</span>
+                    </div>
+                `;
+            }).join('');
+        }
 
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
-        // 1. Notice System Logic
-            window.displayNotices = async () => {
-                try {
-                    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-                    const snap = await getDocs(q);
-                    const noticeDiv = document.getElementById('parentNoticeDisplay');
-                    const historyList = document.getElementById('historyList');
-                    
-                    noticeDiv.innerHTML = "";
-                    historyList.innerHTML = "";
-                    
-                    let count = 0;
-                    snap.forEach(docSnap => {
-                        const data = docSnap.data();
-                        
-                        if (count === 0) {
-                            noticeDiv.innerHTML = `
-                                <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
-                                    <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                                    <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
-                                </div>`;
-                        }
-                        
-                        historyList.innerHTML += `
-                            <div class="history-item" style="white-space: pre-wrap; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                                <div class="history-date" style="color:#d4af37; font-size:0.8rem; font-weight:bold;">${data.date}</div>
-                                <div style="margin-top:5px;">${data.message}</div>
-                            </div>`;
-                        
-                        count++;
-                    });
-                    
-                    if(count === 0) noticeDiv.innerHTML = "";
-                } catch (e) { 
-                    console.error("Notice Error:", e); 
-                }
-            };
-            
-            // 2. Modal Control Functions (Explicitly Global)
-            window.openHistory = () => {
-                const modal = document.getElementById('historyModal');
-                if(modal) modal.style.display = 'block';
-            };
-            
-            window.closeHistory = () => {
-                const modal = document.getElementById('historyModal');
-                if(modal) modal.style.display = 'none';
-            };
-            
-            // 3. Close modal if clicking outside the white box
-            window.addEventListener('click', (event) => {
-                const modal = document.getElementById('historyModal');
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
-            });
-        
-        loadParentData();
-        displayNotices();
+        initPortal();
     </script>
 </body>
 </html>
