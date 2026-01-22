@@ -19,7 +19,15 @@
 
         .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
         .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-
+        
+        /* Notice History PoP Up Styles */    
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
+        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
+        
         /* Finance Styles */
         .finance-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
         .finance-table td { padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 1rem; color: #444; }
@@ -50,7 +58,17 @@
             </div>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
+        
+        <div id="parentNoticeDisplay" style="margin-top: 20px;"></div>
 
+            <div id="historyModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeHistory()">&times;</span>
+                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        
         <div class="nav-tabs">
             <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
             <button class="tab" id="btnFinance" onclick="switchTab('finance')">Fees & Invoices</button>
@@ -171,23 +189,54 @@
 
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
-        loadParentData();
-
-        // Inside parent-portal.html script
-        async function displayNotices() {
-            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
-            const snap = await getDocs(q);
-            const noticeDiv = document.getElementById('parentNoticeDisplay');
+                   // Updated displayNotices with History link
+            window.displayNotices = async () => {
+                const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                const noticeDiv = document.getElementById('parentNoticeDisplay');
+                const historyList = document.getElementById('historyList');
+                
+                noticeDiv.innerHTML = "";
+                historyList.innerHTML = "";
             
-            snap.forEach(docSnap => {
-                noticeDiv.innerHTML = `
-                    <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px;">
-                        <strong>Latest Notice:</strong> ${docSnap.data().message}
-                    </div>
-                `;
-            });
-        }
-        
+                let count = 0;
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    
+                    // 1. Show only the latest one in the yellow box
+                    if (count === 0) {
+                        noticeDiv.innerHTML = `
+                            <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                                <span><strong>Latest Notice:</strong> ${data.message}</span>
+                                <button onclick="openHistory()" style="background:none; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px;">View History</button>
+                            </div>
+                        `;
+                    }
+            
+                    // 2. Add all notices to the history list
+                    historyList.innerHTML += `
+                        <div class="history-item">
+                            <div class="history-date">${data.date}</div>
+                            <div style="margin-top:5px;">${data.message}</div>
+                        </div>
+                    `;
+                    count++;
+                });
+            
+                if(count === 0) noticeDiv.innerHTML = "";
+            };
+            
+            // Modal Control Functions
+            window.openHistory = () => document.getElementById('historyModal').style.display = 'block';
+            window.closeHistory = () => document.getElementById('historyModal').style.display = 'none';
+            
+            // Close modal if clicking outside the box
+            window.onclick = (event) => {
+                const modal = document.getElementById('historyModal');
+                if (event.target == modal) modal.style.display = "none";
+            }
+        loadParentData();
+        displayNotices(); // This now handles both latest and history
     </script>
 </body>
 </html>
