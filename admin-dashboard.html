@@ -6,6 +6,37 @@
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
+                .division-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        
+        .division-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer; /* Makes it look clickable */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .division-header:hover { background: #00695c; }
+        
+        .division-content {
+            display: block; /* Shown by default */
+            padding: 10px;
+        }
+        
+        .division-table { width: 100%; border-collapse: collapse; }
+        .division-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; }
+        .division-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        
         #notices-tab .section {
             background: white;
             padding: 20px;
@@ -113,21 +144,14 @@
                 <h3>Active Students & Payments</h3>
                 <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
                 <div style="overflow-x: auto; max-height: 500px;">
-                    <table id="studentTable">
-                        <thead>
-                            <tr>
-                                <th>Student (Age)</th>
-                                <th>Parent Email</th>
-                                <th>Division</th>
-                                <th>Tuition</th>
-                                <th>Transport</th>
-                                <th>Outstanding</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentTableBody"></tbody>
-                    </table>
+                    <div class="section" style="margin-bottom: 20px;">
+                        <div style="position: relative;">
+                            <input type="text" id="studentSearch" onkeyup="searchStudents()" placeholder="🔍 Search student name..." 
+                                style="width: 100%; padding: 12px 40px; border-radius: 8px; border: 2px solid #eee; font-size: 1rem;">
+                        </div>
+                    </div>
+                    
+                    <div id="divisionContainer"></div>
                 </div>
             </div>
         </div>
@@ -238,6 +262,47 @@
             return age;
         }
 
+        // Search Student Function
+        window.searchStudents = () => {
+            const input = document.getElementById('studentSearch').value.toLowerCase();
+            const contents = document.querySelectorAll('.division-content');
+            const cards = document.querySelectorAll('.division-card');
+        
+            cards.forEach(card => {
+                const rows = card.querySelectorAll('tbody tr');
+                let foundInDivision = false;
+        
+                rows.forEach(row => {
+                    const studentName = row.cells[0].innerText.toLowerCase();
+                    if (studentName.includes(input)) {
+                        row.style.display = "";
+                        foundInDivision = true;
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+        
+                // Auto-expand/collapse logic
+                const content = card.querySelector('.division-content');
+                const icon = card.querySelector('.division-header span:last-child');
+                
+                if (input === "") {
+                    // Reset to default (expanded) when search is cleared
+                    content.style.display = "block";
+                    icon.innerText = "▼";
+                    card.style.display = "";
+                } else if (foundInDivision) {
+                    // Show card and expand it if student found
+                    card.style.display = "";
+                    content.style.display = "block";
+                    icon.innerText = "▼";
+                } else {
+                    // Hide the entire division card if no students match
+                    card.style.display = "none";
+                }
+            });
+        };
+        
         window.addStudent = async () => {
             const name = document.getElementById('sName').value.trim();
             const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
@@ -284,49 +349,93 @@
             } catch(e) { alert(e.message); }
         };
 
-        async function loadStudents() {
-            const studentSnap = await getDocs(collection(db, "students"));
-            const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+                    window.loadStudents = async () => {
+                const studentSnap = await getDocs(collection(db, "students"));
+                const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+                const paidIds = paySnap.docs.map(d => d.data().studentId);
             
-            const paidIds = paySnap.docs.map(d => d.data().studentId);
+                const container = document.getElementById('divisionContainer');
+                container.innerHTML = "";
             
-            // Render Students
-            const tbody = document.getElementById('studentTableBody');
-            tbody.innerHTML = "";
-            let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+                // 1. Group students by division
+                const groups = {};
+                studentSnap.forEach(docSnap => {
+                    const s = { id: docSnap.id, ...docSnap.data() };
+                    const div = s.division || "Unassigned";
+                    if (!groups[div]) groups[div] = [];
+                    groups[div].push(s);
+                });
             
-            studentSnap.forEach(docSnap => {
-                const s = docSnap.data();
-                const sid = docSnap.id;
-                const isPaid = paidIds.includes(sid);
-                const age = calculateAge(s.dob);
-                const tFee = s.transportFee || 0;
-                const totalDue = (parseInt(s.monthlyFee) || 0) + (parseInt(tFee) || 0);
-                stats[s.division]++;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${s.name}</strong> (${age} yrs)</td>
-                        <td>${s.parentEmail}</td>
-                        <td>
-                            <select onchange="updateDivision('${sid}', this.value)" style="padding:4px; font-size:0.8rem;">
-                                <option value="Maktab" ${s.division==='Maktab'?'selected':''}>Maktab</option>
-                                <option value="Nazera" ${s.division==='Nazera'?'selected':''}>Nazera</option>
-                                <option value="Hifz" ${s.division==='Hifz'?'selected':''}>Hifz</option>
-                            </select>
-                        </td>
-                        <td>¥${s.monthlyFee}</td>
-                        <td>¥${tFee}</td>
-                        <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${isPaid ? 0 : totalDue}</td>
-                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${sid}', '${s.name}')">Collect</button>`}</td>
-                        <td>
-                            <button class="action-btn" onclick="setTransport('${sid}', ${tFee})">🚌</button>
-                            <button class="action-btn" onclick="editAll('${sid}', '${s.name}', ${s.monthlyFee})">✏️</button>
-                            <button class="action-btn" onclick="deleteStudent('${sid}')" style="color:red">🗑️</button>
-                        </td>
-                    </tr>`;
-            });
+                // 2. Create sections for each division
+                for (const [divisionName, students] of Object.entries(groups)) {
+                    const divId = `div-${divisionName.replace(/\s+/g, '')}`;
+                    const section = document.createElement('div');
+                    section.className = 'division-card';
+            
+                    section.innerHTML = `
+                        <div class="division-header" onclick="toggleDivision('${divId}')">
+                            <span>📂 ${divisionName} Division (${students.length} Students)</span>
+                            <span id="icon-${divId}">▼</span>
+                        </div>
+                        <div class="division-content" id="${divId}">
+                            <table class="division-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student (Age)</th>
+                                        <th>Parent Email</th>
+                                        <th>Tuition</th>
+                                        <th>Transport</th>
+                                        <th>Outstanding</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${students.map(s => {
+                                        const isPaid = paidIds.includes(s.id);
+                                        const age = calculateAge(s.dob);
+                                        const tFee = s.transportFee || 0;
+                                        const totalDue = (parseInt(s.monthlyFee) || 0) + (parseInt(tFee) || 0);
+                                        
+                                        return `
+                                            <tr>
+                                                <td><strong>${s.name}</strong> (${age} yrs)</td>
+                                                <td style="font-size:0.8rem">${s.parentEmail}</td>
+                                                <td>¥${s.monthlyFee}</td>
+                                                <td>¥${tFee}</td>
+                                                <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">
+                                                    ¥${isPaid ? 0 : totalDue}
+                                                </td>
+                                                <td>
+                                                    ${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>`}
+                                                </td>
+                                                <td>
+                                                    <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
+                                                    <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${s.monthlyFee})">✏️</button>
+                                                    <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
+                                                </td>
+                                            </tr>`;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    container.appendChild(section);
+                }
+            };
+            
+            // Toggle Function for Collapse
+            window.toggleDivision = (id) => {
+                const content = document.getElementById(id);
+                const icon = document.getElementById(`icon-${id}`);
+                if (content.style.display === "none") {
+                    content.style.display = "block";
+                    icon.innerText = "▼";
+                } else {
+                    content.style.display = "none";
+                    icon.innerText = "▶";
+                }
+            };
 
             // Render Teachers
             const ttbody = document.getElementById('teacherTableBody');
