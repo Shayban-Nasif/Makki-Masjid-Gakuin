@@ -3,141 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | Makki Masjid Gakuin</title>
+    <title>Admin Hub | Makki Masjid Gakuin</title>
     <style>
-        :root { --primary: #004d40; --gold: #d4af37; --red: #c62828; --green: #2e7d32; }
-        .admin-container { max-width: 1150px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .header { background: var(--primary); color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
+        :root { --primary: #004d40; --gold: #d4af37; --bg: #f4f7f6; }
+        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .header { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         
-        /* Stats */
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--gold); }
-        .stat-val { font-size: 1.8rem; font-weight: bold; color: var(--primary); }
-        .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
-
-        /* Tabs */
-        .tab-menu { display: flex; gap: 10px; margin-top: 20px; border-bottom: 2px solid #ddd; }
-        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #eee; border-radius: 8px 8px 0 0; font-weight: bold; color: #666; transition: 0.3s; }
+        /* Stats & Tabs */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; text-align: center; border-top: 4px solid var(--gold); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tab-menu { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: #e0e0e0; border-radius: 8px 8px 0 0; font-weight: bold; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Payment Ledger Grid */
-        .ledger-container { margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; display: none; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 10px; }
-        .month-block { padding: 8px; text-align: center; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid #ddd; }
-        .month-paid { background: var(--green); color: white; border: none; }
-        .month-due { background: var(--red); color: white; border: none; }
-        .month-future { background: white; color: #999; }
 
         /* Tables */
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; border-bottom: 2px solid #eee; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.88rem; }
-
-        .division-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
-        .division-header { background: var(--primary); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        th { text-align: left; padding: 12px; background: #f8f9fa; border-bottom: 2px solid #eee; font-size: 0.85rem; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .bg-maktab { background: #e3f2fd; color: #1976d2; }
+        .bg-hifz { background: #f3e5f5; color: #7b1fa2; }
         
-        /* UI Elements */
-        .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn-pay { background: var(--green); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
-        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
+        /* Modal System */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); overflow-y: auto; }
+        .modal-content { background: white; margin: 5% auto; width: 80%; max-width: 800px; border-radius: 12px; position: relative; padding-bottom: 20px; }
+        .modal-header { background: var(--primary); color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; }
+        .modal-body { padding: 25px; }
+        .modal-tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+        .m-tab { padding: 10px 20px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: bold; }
+        .m-tab.active { border-color: var(--gold); color: var(--primary); }
+        .hidden-pane { display: none; }
+        .active-pane { display: block; }
+
+        /* Inputs */
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.75rem; font-weight: bold; color: #666; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 12px 30px; border-radius: 5px; cursor: pointer; float: right; }
     </style>
 </head>
-<body style="background: #f4f7f6;">
+<body>
 
-    <div class="admin-container">
-        <div class="header">
-            <h1>Admin Management | Makki Masjid Gakuin</h1>
-            <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
-        </div>
+    <div class="header">
+        <h2>Makki Masjid | Admin Hub</h2>
+        <button onclick="logout()">Logout</button>
+    </div>
 
+    <div class="container">
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-val" id="count-teachers">0</div><div class="stat-label">Teachers</div></div>
-            <div class="stat-card"><div class="stat-val" id="count-maktab">0</div><div class="stat-label">Maktab</div></div>
-            <div class="stat-card"><div class="stat-val" id="count-nazera">0</div><div class="stat-label">Nazera</div></div>
-            <div class="stat-card"><div class="stat-val" id="count-hifz">0</div><div class="stat-label">Hifz</div></div>
+            <div class="stat-card"><h3 id="stat-all">0</h3><small>Students</small></div>
+            <div class="stat-card"><h3 id="stat-maktab">0</h3><small>Maktab</small></div>
+            <div class="stat-card"><h3 id="stat-nazera">0</h3><small>Nazera</small></div>
+            <div class="stat-card"><h3 id="stat-hifz">0</h3><small>Hifz</small></div>
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" onclick="openTab(event, 'students-tab')">Students Management</button>
-            <button class="tab-btn" onclick="openTab(event, 'teachers-tab')">Teachers Management</button>
-            <button class="tab-btn" onclick="openTab(event, 'notices-tab')">Notice Board</button>
+            <button class="tab-btn active" onclick="showTab('list')">Student List</button>
+            <button class="tab-btn" onclick="showTab('add')">Enroll New</button>
         </div>
 
-        <div id="students-tab" class="tab-content active">
-            <div class="section">
-                <h3>Student Enrollment</h3>
-                <div class="admin-grid" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;">
-                    <div><label>Student Name</label><input type="text" id="sName"></div>
-                    <div><label>Parent Email</label><input type="email" id="sParentEmail"></div>
-                    <div><label>Date of Birth</label><input type="date" id="sDob"></div>
-                    <div><label>Division</label>
-                        <select id="sDivision" onchange="updateGoalLabels()">
-                            <option value="Maktab">Maktab</option>
-                            <option value="Nazera">Nazera</option>
-                            <option value="Hifz">Hifz</option>
-                        </select>
-                    </div>
-                    <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="0"></div>
-                </div>
-                <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                    <div><label id="lblG1">Goal (Qaida Page)</label><input type="number" id="g1"></div>
-                    <div><label id="lblG2">Goal (Dua No.)</label><input type="number" id="g2"></div>
-                    <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
-                    <div><label>Target ETA</label><input type="date" id="sEta"></div>
-                </div>
-                <button onclick="addStudent()" class="btn-primary">Enroll Student</button>
-            </div>
-
-            <div class="section">
-                <h3>Active Students & Payments</h3>
-                <input type="text" id="studentSearch" class="search-box" placeholder="🔍 Search student name..." onkeyup="searchStudents()">
-                <div id="divisionContainer"></div>
-            </div>
+        <div id="view-list" class="section">
+            <input type="text" id="search" placeholder="🔍 Search by name or email..." onkeyup="filterList()" style="margin-bottom:20px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name (Age)</th>
+                        <th>Parent Email</th>
+                        <th>Division</th>
+                        <th>Services</th>
+                        <th>Monthly Total</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list"></tbody>
+            </table>
         </div>
 
-        <div id="teachers-tab" class="tab-content">
-            <div class="section">
-                <h3>Register Teacher</h3>
-                <div class="admin-grid">
-                    <input type="text" id="tName" placeholder="Teacher Name">
-                    <input type="email" id="tEmail" placeholder="Email Address">
-                    <select id="tDivision">
+        <div id="view-add" class="section" style="display:none;">
+            <h3>New Enrollment</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="input-group"><label>Name</label><input type="text" id="new-name"></div>
+                <div class="input-group"><label>Parent Email</label><input type="email" id="new-email"></div>
+                <div class="input-group"><label>Date of Birth</label><input type="date" id="new-dob"></div>
+                <div class="input-group">
+                    <label>Division</label>
+                    <select id="new-div">
                         <option value="Maktab">Maktab</option>
                         <option value="Nazera">Nazera</option>
                         <option value="Hifz">Hifz</option>
                     </select>
-                    <button onclick="addTeacher()" class="btn-primary" style="margin-top:0;">Add Teacher</button>
                 </div>
             </div>
-            <div class="section">
-                <h3>Teacher's List</h3>
-                <table><thead><tr><th>Name</th><th>Email</th><th>Division</th><th>Actions</th></tr></thead><tbody id="teacherTableBody"></tbody></table>
-            </div>
+            <button class="btn-save" onclick="enrollStudent()">Enroll Student</button>
         </div>
+    </div>
 
-        <div id="notices-tab" class="tab-content">
-            <div class="section">
-                <h3>📢 Post New Notice</h3>
-                <textarea id="noticeMsg" placeholder="Type message..."></textarea>
-                <button onclick="sendNotice()" class="btn-primary" style="width:200px;">Send Notice</button>
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Student Profile</h3>
+                <span onclick="closeModal()" style="cursor:pointer; font-size:24px;">&times;</span>
             </div>
-            <div class="section">
-                <h3>History</h3>
-                <table><thead><tr><th>Date</th><th>Message</th><th>Action</th></tr></thead><tbody id="noticeTableBody"></tbody></table>
+            <div class="modal-tabs">
+                <div class="m-tab active" onclick="showPane('academic', this)">Academic</div>
+                <div class="m-tab" onclick="showPane('financial', this)">Financial</div>
+                <div class="m-tab" onclick="showPane('consultancy', this)">Consultancy</div>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-id">
+                
+                <div id="pane-academic" class="active-pane">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="input-group">
+                            <label>Division</label>
+                            <select id="edit-div" onchange="modalLabelRefresh()">
+                                <option value="Maktab">Maktab</option>
+                                <option value="Nazera">Nazera</option>
+                                <option value="Hifz">Hifz</option>
+                            </select>
+                        </div>
+                        <div class="input-group"><label>Target ETA</label><input type="date" id="edit-eta"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-top:10px;">
+                        <div class="input-group"><label id="lbl-g1">Goal 1</label><input type="number" id="edit-g1"></div>
+                        <div class="input-group"><label id="lbl-g2">Goal 2</label><input type="number" id="edit-g2"></div>
+                        <div class="input-group"><label id="lbl-g3">Goal 3</label><input type="number" id="edit-g3"></div>
+                    </div>
+                </div>
+
+                <div id="pane-financial" class="hidden-pane">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div class="input-group"><label>Monthly Tuition (¥)</label><input type="number" id="edit-fee"></div>
+                        <div class="input-group"><label>Transport Fee (¥)</label><input type="number" id="edit-trans"></div>
+                        <div class="input-group"><label>Daylong Study Fee (¥)</label><input type="number" id="edit-daylong"></div>
+                    </div>
+                </div>
+
+                <div id="pane-consultancy" class="hidden-pane">
+                    <label>Teacher's Feedback / Consultancy Notes</label>
+                    <textarea id="edit-feedback" rows="5" placeholder="Enter progress notes for parents..."></textarea>
+                </div>
+
+                <div style="margin-top:30px; border-top: 1px solid #eee; padding-top:20px;">
+                    <button class="btn-save" onclick="saveStudent()">Update Hub</button>
+                    <button onclick="deleteStudent()" style="background:red; color:white; border:none; padding:12px 20px; border-radius:5px; cursor:pointer;">Delete Record</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -150,177 +169,119 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonthIdx = now.getMonth(); // 0-11
 
-        window.openTab = (evt, tabId) => {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        // UI Helpers
+        window.showTab = (t) => {
+            document.getElementById('view-list').style.display = t === 'list' ? 'block' : 'none';
+            document.getElementById('view-add').style.display = t === 'add' ? 'block' : 'none';
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            evt.currentTarget.classList.add('active');
+            event.currentTarget.classList.add('active');
         };
 
-        window.updateGoalLabels = () => {
-            const div = document.getElementById('sDivision').value;
-            const l1 = document.getElementById('lblG1'), l2 = document.getElementById('lblG2'), l3 = document.getElementById('lblG3');
-            if (div === "Hifz") { l1.innerText="Goal (Para)"; l2.innerText="Goal (Sabaqi)"; l3.innerText="Goal (Manzil)"; }
-            else if (div === "Nazera") { l1.innerText="Goal (Para No.)"; l2.innerText="Goal (Line)"; l3.innerText="Goal (Tajweed)"; }
-            else { l1.innerText="Goal (Qaida Page)"; l2.innerText="Goal (Dua No.)"; l3.innerText="Goal (Islamic)"; }
+        window.showPane = (paneId, btn) => {
+            document.querySelectorAll('.hidden-pane, .active-pane').forEach(p => p.className = 'hidden-pane');
+            document.getElementById('pane-' + paneId).className = 'active-pane';
+            document.querySelectorAll('.m-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
         };
 
+        function calcAge(dob) {
+            if(!dob) return "N/A";
+            return Math.floor((new Date() - new Date(dob)) / (1000 * 60 * 60 * 24 * 365.25));
+        }
+
+        // Logic
         window.loadStudents = async () => {
+            const snap = await getDocs(collection(db, "students"));
+            const list = document.getElementById('student-list');
+            list.innerHTML = "";
+            let counts = { Maktab:0, Nazera:0, Hifz:0, Total:0 };
+
+            snap.forEach(d => {
+                const s = { id: d.id, ...d.data() };
+                counts.Total++;
+                if(counts[s.division] !== undefined) counts[s.division]++;
+
+                const totalMonth = (parseInt(s.monthlyFee)||0) + (parseInt(s.transportFee)||0) + (parseInt(s.daylongFee)||0);
+                const services = [];
+                if(s.transportFee > 0) services.push('🚌');
+                if(s.daylongFee > 0) services.push('📖');
+
+                list.innerHTML += `
+                    <tr>
+                        <td><strong>${s.name}</strong> (${calcAge(s.dob)}y)</td>
+                        <td>${s.parentEmail}</td>
+                        <td><span class="badge bg-${s.division.toLowerCase()}">${s.division}</span></td>
+                        <td>${services.join(' ')}</td>
+                        <td>¥${totalMonth}</td>
+                        <td><button class="tab-btn" style="padding:5px 10px;" onclick="openHub('${s.id}')">Edit Profile</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('stat-all').innerText = counts.Total;
+            document.getElementById('stat-maktab').innerText = counts.Maktab;
+            document.getElementById('stat-nazera').innerText = counts.Nazera;
+            document.getElementById('stat-hifz').innerText = counts.Hifz;
+        };
+
+        window.openHub = async (id) => {
             const studentSnap = await getDocs(collection(db, "students"));
-            const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
+            const s = studentSnap.docs.find(d => d.id === id).data();
             
-            // Map payments by studentId and month index
-            const paymentsMap = {};
-            paySnap.forEach(d => {
-                const p = d.data();
-                if(!paymentsMap[p.studentId]) paymentsMap[p.studentId] = [];
-                paymentsMap[p.studentId].push(p.monthIndex);
-            });
-
-            const container = document.getElementById('divisionContainer');
-            container.innerHTML = "";
-            let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            const groups = {};
-
-            studentSnap.forEach(docSnap => {
-                const s = { id: docSnap.id, ...docSnap.data() };
-                const div = s.division || "Unassigned";
-                if(!groups[div]) groups[div] = [];
-                groups[div].push(s);
-                if(stats[div] !== undefined) stats[div]++;
-            });
-
-            for (const [divName, students] of Object.entries(groups)) {
-                const divId = `div-${divName.replace(/\s+/g, '')}`;
-                const card = document.createElement('div');
-                card.className = 'division-card';
-                card.innerHTML = `
-                    <div class="division-header" onclick="toggleDivision('${divId}')">
-                        <span>📂 ${divName} Division (${students.length})</span><span id="icon-${divId}">▼</span>
-                    </div>
-                    <div class="division-content" id="${divId}">
-                        <table>
-                            <thead><tr><th>Student</th><th>Email</th><th>Yearly Status</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                ${students.map(s => {
-                                    const studentPaidMonths = paymentsMap[s.id] || [];
-                                    const mFee = parseInt(s.monthlyFee) || 0;
-                                    const tFee = parseInt(s.transportFee) || 0;
-                                    const total = mFee + tFee;
-
-                                    return `<tr>
-                                        <td><strong>${s.name}</strong></td>
-                                        <td>${s.parentEmail}</td>
-                                        <td>
-                                            <div class="calendar-grid">
-                                                ${months.map((m, i) => {
-                                                    let statusClass = "month-future";
-                                                    if(studentPaidMonths.includes(i)) statusClass = "month-paid";
-                                                    else if(i <= currentMonthIdx) statusClass = "month-due";
-                                                    
-                                                    return `<div class="month-block ${statusClass}" title="${m} ${currentYear}">
-                                                        ${m}<br>¥${total}
-                                                    </div>`;
-                                                }).join('')}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <button class="btn-pay" onclick="markAsPaid('${s.id}','${s.name}', ${currentMonthIdx})">Collect Jan</button>
-                                            <div style="margin-top:5px;">
-                                                <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
-                                                <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
-                                            </div>
-                                        </td>
-                                    </tr>`;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                container.appendChild(card);
-            }
-            document.getElementById('count-maktab').innerText = stats.Maktab;
-            document.getElementById('count-nazera').innerText = stats.Nazera;
-            document.getElementById('count-hifz').innerText = stats.Hifz;
+            document.getElementById('edit-id').value = id;
+            document.getElementById('modal-title').innerText = "Hub: " + s.name;
+            document.getElementById('edit-div').value = s.division;
+            document.getElementById('edit-eta').value = s.eta || "";
+            document.getElementById('edit-g1').value = s.goals[0] || 0;
+            document.getElementById('edit-g2').value = s.goals[1] || 0;
+            document.getElementById('edit-g3').value = s.goals[2] || 0;
+            document.getElementById('edit-fee').value = s.monthlyFee || 0;
+            document.getElementById('edit-trans').value = s.transportFee || 0;
+            document.getElementById('edit-daylong').value = s.daylongFee || 0;
+            document.getElementById('edit-feedback').value = s.feedback || "";
+            
+            modalLabelRefresh();
+            document.getElementById('editModal').style.display = 'block';
         };
 
-        window.markAsPaid = async (sid, name, mIdx) => {
-            const monthName = months[mIdx];
-            await addDoc(collection(db, "payments"), { 
-                studentId: sid, 
-                studentName: name, 
-                monthName: monthName, 
-                monthIndex: mIdx,
-                year: currentYear,
-                timestamp: new Date() 
-            });
-            alert(`Payment recorded for ${monthName} ${currentYear}`);
-            loadStudents();
+        window.modalLabelRefresh = () => {
+            const d = document.getElementById('edit-div').value;
+            const l1 = document.getElementById('lbl-g1'), l2 = document.getElementById('lbl-g2'), l3 = document.getElementById('lbl-g3');
+            if(d==='Hifz'){ l1.innerText="Para"; l2.innerText="Sabaqi"; l3.innerText="Manzil"; }
+            else if(d==='Nazera'){ l1.innerText="Para No."; l2.innerText="Line"; l3.innerText="Tajweed"; }
+            else { l1.innerText="Qaida Page"; l2.innerText="Dua No."; l3.innerText="Islamic St."; }
         };
 
-        // Standard Functions (Search, Delete, Notices, Teacher Load)
-        window.loadTeachers = async () => {
-            const snap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
-            const tbody = document.getElementById('teacherTableBody'); tbody.innerHTML = "";
-            snap.forEach(d => {
-                const t = d.data();
-                tbody.innerHTML += `<tr><td>${t.name}</td><td>${t.email}</td><td>${t.division}</td>
-                <td><button class="action-btn" onclick="deleteTeacher('${d.id}')" style="color:red">🗑️</button></td></tr>`;
+        window.saveStudent = async () => {
+            const id = document.getElementById('edit-id').value;
+            await updateDoc(doc(db, "students", id), {
+                division: document.getElementById('edit-div').value,
+                eta: document.getElementById('edit-eta').value,
+                goals: [document.getElementById('edit-g1').value, document.getElementById('edit-g2').value, document.getElementById('edit-g3').value],
+                monthlyFee: parseInt(document.getElementById('edit-fee').value),
+                transportFee: parseInt(document.getElementById('edit-trans').value),
+                daylongFee: parseInt(document.getElementById('edit-daylong').value),
+                feedback: document.getElementById('edit-feedback').value
             });
-            document.getElementById('count-teachers').innerText = snap.size;
+            closeModal(); loadStudents();
         };
 
-        window.loadNotices = async () => {
-            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-            const snap = await getDocs(q);
-            const tbody = document.getElementById('noticeTableBody'); tbody.innerHTML = "";
-            snap.forEach(d => {
-                const n = d.data();
-                tbody.innerHTML += `<tr><td>${n.date}</td><td>${n.message}</td>
-                <td><button class="action-btn" onclick="deleteNotice('${d.id}')" style="color:red">🗑️</button></td></tr>`;
-            });
-        };
-
-        window.addStudent = async () => {
-            const name = document.getElementById('sName').value;
-            if(!name) return alert("Enter Name");
+        window.enrollStudent = async () => {
             await addDoc(collection(db, "students"), {
-                name, parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
-                dob: document.getElementById('sDob').value, division: document.getElementById('sDivision').value,
-                monthlyFee: parseInt(document.getElementById('sFee').value) || 0, transportFee: 0,
-                goals: [document.getElementById('g1').value, document.getElementById('g2').value, document.getElementById('g3').value],
-                eta: document.getElementById('sEta').value
+                name: document.getElementById('new-name').value,
+                parentEmail: document.getElementById('new-email').value.toLowerCase(),
+                dob: document.getElementById('new-dob').value,
+                division: document.getElementById('new-div').value,
+                monthlyFee: 0, transportFee: 0, daylongFee: 0, goals: [0,0,0], feedback: ""
             });
-            loadStudents();
+            showTab('list'); loadStudents();
         };
 
-        window.searchStudents = () => {
-            const term = document.getElementById('studentSearch').value.toLowerCase();
-            document.querySelectorAll('.division-card').forEach(card => {
-                let match = false;
-                card.querySelectorAll('tbody tr').forEach(row => {
-                    const found = row.innerText.toLowerCase().includes(term);
-                    row.style.display = found ? "" : "none";
-                    if(found) match = true;
-                });
-                card.style.display = match ? "" : "none";
-            });
-        };
-
-        window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
-        window.deleteStudent = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
-        window.setTransport = async (sid, cur) => {
-            const val = prompt("Transport Fee:", cur);
-            if(val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); loadStudents(); }
-        };
+        window.closeModal = () => document.getElementById('editModal').style.display = 'none';
+        window.deleteStudent = async () => { if(confirm("Delete?")){ await deleteDoc(doc(db, "students", document.getElementById('edit-id').value)); closeModal(); loadStudents(); } };
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
 
-        loadStudents(); loadTeachers(); loadNotices();
+        loadStudents();
     </script>
 </body>
 </html>
