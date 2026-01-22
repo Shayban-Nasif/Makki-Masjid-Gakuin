@@ -6,92 +6,41 @@
     <title>Admin Dashboard | Makki Masjid Gakuin</title>
     <link rel="stylesheet" href="style.css">
     <style>
-                .division-card {
-            background: white;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            overflow: hidden;
-        }
-        
-        .division-header {
-            background: var(--primary);
-            color: white;
-            padding: 15px 20px;
-            cursor: pointer; /* Makes it look clickable */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-        }
-        
-        .division-header:hover { background: #00695c; }
-        
-        .division-content {
-            display: block; /* Shown by default */
-            padding: 10px;
-        }
-        
-        .division-table { width: 100%; border-collapse: collapse; }
-        .division-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; }
-        .division-table td { padding: 12px; border-bottom: 1px solid #eee; }
-        
-        
-        #notices-tab .section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-        
-        #noticeTable {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed; /* Keeps columns from expanding too much */
-        }
-        
-        #noticeTable td {
-            padding: 12px;
-            word-wrap: break-word; /* Ensures long messages stay inside the cell */
-            border-bottom: 1px solid #eee;
-        }
-        
-        #noticeMsg:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 5px rgba(0,77,64,0.2);
-        }
-        
+        :root { --primary: #004d40; --gold: #d4af37; }
         .admin-container { max-width: 1150px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
-        .header { background: #004d40; color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .header { background: var(--primary); color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
-        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
         
-        /* Tab Styling */
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid var(--gold); }
+        .stat-val { font-size: 1.8rem; font-weight: bold; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
+
+        /* Tabs */
         .tab-menu { display: flex; gap: 10px; margin-top: 20px; border-bottom: 2px solid #ddd; }
         .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #eee; border-radius: 8px 8px 0 0; font-weight: bold; color: #666; transition: 0.3s; }
-        .tab-btn.active { background: #004d40; color: white; }
+        .tab-btn.active { background: var(--primary); color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
-        .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-top: 4px solid #d4af37; }
-        .stat-val { font-size: 1.8rem; font-weight: bold; color: #004d40; }
-        .stat-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 5px; }
+        /* Student Divisions */
+        .division-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
+        .division-header { background: var(--primary); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .division-header:hover { background: #00695c; }
+        .division-content { display: block; padding: 10px; }
+        .division-table { width: 100%; border-collapse: collapse; }
+        .division-table th { text-align: left; padding: 12px; background: #f8f9fa; font-size: 0.8rem; }
+        .division-table td { padding: 12px; border-bottom: 1px solid #eee; }
 
-        .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #004d40; border-radius: 6px; font-size: 1rem; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.9rem; }
-        th { background: #f4f4f4; color: #444; position: sticky; top: 0; }
-        
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
-        .btn-primary { background: #004d40; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        /* UI Elements */
+        .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        
         .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
     </style>
 </head>
 <body style="background: #f4f7f6;">
@@ -142,17 +91,8 @@
 
             <div class="section">
                 <h3>Active Students & Payments</h3>
-                <input type="text" id="studentSearch" class="search-box" placeholder="Search by name or email..." onkeyup="filterTable()">
-                <div style="overflow-x: auto; max-height: 500px;">
-                    <div class="section" style="margin-bottom: 20px;">
-                        <div style="position: relative;">
-                            <input type="text" id="studentSearch" onkeyup="searchStudents()" placeholder="🔍 Search student name..." 
-                                style="width: 100%; padding: 12px 40px; border-radius: 8px; border: 2px solid #eee; font-size: 1rem;">
-                        </div>
-                    </div>
-                    
-                    <div id="divisionContainer"></div>
-                </div>
+                <input type="text" id="studentSearch" class="search-box" placeholder="🔍 Search student name..." onkeyup="searchStudents()">
+                <div id="divisionContainer"></div>
             </div>
         </div>
 
@@ -170,64 +110,43 @@
                     <button onclick="addTeacher()" class="btn-primary">Add Teacher</button>
                 </div>
             </div>
-
             <div class="section">
                 <h3>Staff List</h3>
                 <table id="teacherTable">
                     <thead>
-                        <tr>
-                            <th>Teacher Name</th>
-                            <th>Email Address</th>
-                            <th>Primary Division</th>
-                            <th>Actions</th>
-                        </tr>
+                        <tr><th>Teacher Name</th><th>Email Address</th><th>Primary Division</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="teacherTableBody"></tbody>
                 </table>
             </div>
         </div>
 
-    </div>
-
-    <div id="notices-tab" class="tab-content">
-    <div style="max-width: 1150px; margin: 0 auto;"> <div class="section">
-            <h3>📢 Send New Notice to Parents</h3>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <textarea id="noticeMsg" placeholder="Type your announcement here..." 
-                    style="width: 100%; height: 120px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; resize: vertical;"></textarea>
-                
-                <button onclick="sendNotice()" class="btn-primary" style="width: 200px; align-self: flex-end;">
-                    Post Notice
-                </button>
+        <div id="notices-tab" class="tab-content">
+            <div class="section">
+                <h3>📢 Send New Notice to Parents</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <textarea id="noticeMsg" placeholder="Type your announcement here..." style="height: 120px; font-family: inherit;"></textarea>
+                    <button onclick="sendNotice()" class="btn-primary" style="width: 200px; align-self: flex-end;">Post Notice</button>
+                </div>
             </div>
-        </div>
-
-        <div class="section">
-            <h3>Sent Notices</h3>
-            <div style="overflow-x: auto;">
-                <table id="noticeTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 20%;">Date</th>
-                            <th style="width: 70%;">Message</th>
-                            <th style="width: 10%;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="noticeTableBody"></tbody>
-                </table>
+            <div class="section">
+                <h3>Sent Notices</h3>
+                <div style="overflow-x: auto;">
+                    <table id="noticeTable">
+                        <thead>
+                            <tr><th style="width: 25%;">Date</th><th style="width: 65%;">Message</th><th style="width: 10%;">Action</th></tr>
+                        </thead>
+                        <tbody id="noticeTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
     </div>
-</div>
-    
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getFirestore, doc, setDoc, addDoc, collection, 
-            getDocs, query, where, deleteDoc, updateDoc, 
-            orderBy, arrayUnion 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -242,14 +161,13 @@
         const db = getFirestore(app);
         const currentMonthYear = "January 2026";
 
-        // Tab Switching Function
         window.openTab = (evt, tabId) => {
             const contents = document.getElementsByClassName("tab-content");
-            for (let i = 0; i < contents.length; i++) contents[i].style.display = "none";
+            for (let i = 0; i < contents.length; i++) contents[i].classList.remove("active");
             const btns = document.getElementsByClassName("tab-btn");
-            for (let i = 0; i < btns.length; i++) btns[i].className = btns[i].className.replace(" active", "");
-            document.getElementById(tabId).style.display = "block";
-            evt.currentTarget.className += " active";
+            for (let i = 0; i < btns.length; i++) btns[i].classList.remove("active");
+            document.getElementById(tabId).classList.add("active");
+            evt.currentTarget.classList.add("active");
         };
 
         function calculateAge(dobString) {
@@ -262,116 +180,30 @@
             return age;
         }
 
-        // Search Student Function
-        window.searchStudents = () => {
-            const input = document.getElementById('studentSearch').value.toLowerCase();
-            const contents = document.querySelectorAll('.division-content');
-            const cards = document.querySelectorAll('.division-card');
-        
-            cards.forEach(card => {
-                const rows = card.querySelectorAll('tbody tr');
-                let foundInDivision = false;
-        
-                rows.forEach(row => {
-                    const studentName = row.cells[0].innerText.toLowerCase();
-                    if (studentName.includes(input)) {
-                        row.style.display = "";
-                        foundInDivision = true;
-                    } else {
-                        row.style.display = "none";
-                    }
-                });
-        
-                // Auto-expand/collapse logic
-                const content = card.querySelector('.division-content');
-                const icon = card.querySelector('.division-header span:last-child');
-                
-                if (input === "") {
-                    // Reset to default (expanded) when search is cleared
-                    content.style.display = "block";
-                    icon.innerText = "▼";
-                    card.style.display = "";
-                } else if (foundInDivision) {
-                    // Show card and expand it if student found
-                    card.style.display = "";
-                    content.style.display = "block";
-                    icon.innerText = "▼";
-                } else {
-                    // Hide the entire division card if no students match
-                    card.style.display = "none";
-                }
-            });
-        };
-        
-        window.addStudent = async () => {
-            const name = document.getElementById('sName').value.trim();
-            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
-            const dob = document.getElementById('sDob').value;
-            const div = document.getElementById('sDivision').value;
-            const fee = parseInt(document.getElementById('sFee').value) || 0;
-            const goals = {
-                c1: parseInt(document.getElementById('g1').value) || 0,
-                c2: parseInt(document.getElementById('g2').value) || 0,
-                c3: parseInt(document.getElementById('g3').value) || 0
-            };
-            const eta = document.getElementById('sEta').value;
-
-            if(!name || !pEmail || !dob) return alert("Name, Parent Email, and DoB are required");
-
+        window.loadStudents = async () => {
             try {
-                await addDoc(collection(db, "students"), {
-                    name, parentEmail: pEmail, dob, division: div, 
-                    monthlyFee: fee, transportFee: 0, previousDues: 0,
-                    goals, levels: { c1: 0, c2: 0, c3: 0 }, eta
-                });
-                await setDoc(doc(db, "users", pEmail), {
-                    email: pEmail, role: 'parent', name: "Parent Account", 
-                    childrenList: arrayUnion(name)
-                }, { merge: true });
-                alert(`Enrolled ${name} successfully!`);
-                location.reload();
-            } catch(e) { alert("Error: " + e.message); }
-        };
-
-        window.addTeacher = async () => {
-            const name = document.getElementById('tName').value.trim();
-            const email = document.getElementById('tEmail').value.toLowerCase().trim();
-            const division = document.getElementById('tDivision').value;
-
-            if(!name || !email) return alert("All fields are required");
-
-            try {
-                await setDoc(doc(db, "users", email), {
-                    name, email, role: 'teacher', division
-                });
-                alert("Teacher registered!");
-                loadStudents();
-            } catch(e) { alert(e.message); }
-        };
-
-                    window.loadStudents = async () => {
                 const studentSnap = await getDocs(collection(db, "students"));
+                const teacherSnap = await getDocs(query(collection(db, "users"), where("role", "==", "teacher")));
                 const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
                 const paidIds = paySnap.docs.map(d => d.data().studentId);
-            
+
                 const container = document.getElementById('divisionContainer');
                 container.innerHTML = "";
-            
-                // 1. Group students by division
+                let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+
                 const groups = {};
                 studentSnap.forEach(docSnap => {
                     const s = { id: docSnap.id, ...docSnap.data() };
                     const div = s.division || "Unassigned";
                     if (!groups[div]) groups[div] = [];
                     groups[div].push(s);
+                    if(stats[div] !== undefined) stats[div]++;
                 });
-            
-                // 2. Create sections for each division
+
                 for (const [divisionName, students] of Object.entries(groups)) {
                     const divId = `div-${divisionName.replace(/\s+/g, '')}`;
                     const section = document.createElement('div');
                     section.className = 'division-card';
-            
                     section.innerHTML = `
                         <div class="division-header" onclick="toggleDivision('${divId}')">
                             <span>📂 ${divisionName} Division (${students.length} Students)</span>
@@ -380,15 +212,7 @@
                         <div class="division-content" id="${divId}">
                             <table class="division-table">
                                 <thead>
-                                    <tr>
-                                        <th>Student (Age)</th>
-                                        <th>Parent Email</th>
-                                        <th>Tuition</th>
-                                        <th>Transport</th>
-                                        <th>Outstanding</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
+                                    <tr><th>Student (Age)</th><th>Parent Email</th><th>Tuition</th><th>Transport</th><th>Outstanding</th><th>Status</th><th>Actions</th></tr>
                                 </thead>
                                 <tbody>
                                     ${students.map(s => {
@@ -396,19 +220,14 @@
                                         const age = calculateAge(s.dob);
                                         const tFee = s.transportFee || 0;
                                         const totalDue = (parseInt(s.monthlyFee) || 0) + (parseInt(tFee) || 0);
-                                        
                                         return `
                                             <tr>
                                                 <td><strong>${s.name}</strong> (${age} yrs)</td>
                                                 <td style="font-size:0.8rem">${s.parentEmail}</td>
                                                 <td>¥${s.monthlyFee}</td>
                                                 <td>¥${tFee}</td>
-                                                <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">
-                                                    ¥${isPaid ? 0 : totalDue}
-                                                </td>
-                                                <td>
-                                                    ${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>`}
-                                                </td>
+                                                <td style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">¥${isPaid ? 0 : totalDue}</td>
+                                                <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}', '${s.name}')">Collect</button>`}</td>
                                                 <td>
                                                     <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})">🚌</button>
                                                     <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${s.monthlyFee})">✏️</button>
@@ -418,153 +237,115 @@
                                     }).join('')}
                                 </tbody>
                             </table>
-                        </div>
-                    `;
+                        </div>`;
                     container.appendChild(section);
                 }
-            };
-            
-            // Toggle Function for Collapse
-            window.toggleDivision = (id) => {
-                const content = document.getElementById(id);
-                const icon = document.getElementById(`icon-${id}`);
-                if (content.style.display === "none") {
-                    content.style.display = "block";
-                    icon.innerText = "▼";
-                } else {
-                    content.style.display = "none";
-                    icon.innerText = "▶";
-                }
-            };
 
-            // Render Teachers
-            const ttbody = document.getElementById('teacherTableBody');
-            ttbody.innerHTML = "";
-            teacherSnap.forEach(docSnap => {
-                const t = docSnap.data();
-                ttbody.innerHTML += `
-                    <tr>
-                        <td>${t.name}</td>
-                        <td>${t.email}</td>
-                        <td>${t.division}</td>
-                        <td><button class="action-btn" onclick="deleteTeacher('${t.email}')" style="color:red">🗑️</button></td>
-                    </tr>`;
+                // Teachers List
+                const ttbody = document.getElementById('teacherTableBody');
+                ttbody.innerHTML = "";
+                teacherSnap.forEach(docSnap => {
+                    const t = docSnap.data();
+                    ttbody.innerHTML += `<tr><td>${t.name}</td><td>${t.email}</td><td>${t.division}</td>
+                        <td><button class="action-btn" onclick="deleteTeacher('${docSnap.id}')" style="color:red">🗑️</button></td></tr>`;
+                });
+
+                document.getElementById('count-teachers').innerText = teacherSnap.size;
+                document.getElementById('count-maktab').innerText = stats.Maktab;
+                document.getElementById('count-nazera').innerText = stats.Nazera;
+                document.getElementById('count-hifz').innerText = stats.Hifz;
+            } catch (e) { console.error(e); }
+        };
+
+        window.toggleDivision = (id) => {
+            const content = document.getElementById(id);
+            const icon = document.getElementById(`icon-${id}`);
+            if (content.style.display === "none") {
+                content.style.display = "block";
+                icon.innerText = "▼";
+            } else {
+                content.style.display = "none";
+                icon.innerText = "▶";
+            }
+        };
+
+        window.searchStudents = () => {
+            const input = document.getElementById('studentSearch').value.toLowerCase();
+            const cards = document.querySelectorAll('.division-card');
+            cards.forEach(card => {
+                const rows = card.querySelectorAll('tbody tr');
+                let found = false;
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    if (text.includes(input)) { row.style.display = ""; found = true; }
+                    else { row.style.display = "none"; }
+                });
+                card.style.display = found ? "" : "none";
+                const content = card.querySelector('.division-content');
+                if (input !== "") { content.style.display = "block"; }
             });
+        };
 
-            document.getElementById('count-teachers').innerText = teacherSnap.size;
-            document.getElementById('count-maktab').innerText = stats.Maktab;
-            document.getElementById('count-nazera').innerText = stats.Nazera;
-            document.getElementById('count-hifz').innerText = stats.Hifz;
+        window.addStudent = async () => {
+            const name = document.getElementById('sName').value.trim();
+            const pEmail = document.getElementById('sParentEmail').value.toLowerCase().trim();
+            const dob = document.getElementById('sDob').value;
+            const div = document.getElementById('sDivision').value;
+            const fee = parseInt(document.getElementById('sFee').value) || 0;
+            if(!name || !pEmail || !dob) return alert("Required fields missing");
+            try {
+                await addDoc(collection(db, "students"), { name, parentEmail: pEmail, dob, division: div, monthlyFee: fee, transportFee: 0 });
+                alert("Enrolled!"); loadStudents();
+            } catch(e) { alert(e.message); }
+        };
+
+        window.addTeacher = async () => {
+            const name = document.getElementById('tName').value.trim();
+            const email = document.getElementById('tEmail').value.toLowerCase().trim();
+            const div = document.getElementById('tDivision').value;
+            try {
+                await setDoc(doc(db, "users", email), { name, email, role: 'teacher', division: div });
+                alert("Teacher added!"); loadStudents();
+            } catch(e) { alert(e.message); }
+        };
+
+        window.sendNotice = async () => {
+            const msg = document.getElementById('noticeMsg').value.trim();
+            if(!msg) return alert("Enter message");
+            try {
+                await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
+                alert("Notice sent!"); document.getElementById('noticeMsg').value = ""; loadNotices();
+            } catch(e) { alert(e.message); }
+        };
+
+        async function loadNotices() {
+            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            const tbody = document.getElementById('noticeTableBody');
+            tbody.innerHTML = "";
+            snap.forEach(docSnap => {
+                const n = docSnap.data();
+                tbody.innerHTML += `<tr><td>${n.date}</td><td>${n.message}</td>
+                    <td><button class="action-btn" onclick="deleteNotice('${docSnap.id}')" style="color:red">🗑️</button></td></tr>`;
+            });
         }
 
-        window.filterTable = () => {
-            const input = document.getElementById("studentSearch").value.toUpperCase();
-            const tr = document.getElementById("studentTableBody").getElementsByTagName("tr");
-            for (let i = 0; i < tr.length; i++) {
-                const txtValue = tr[i].innerText;
-                tr[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
-            }
-        };
-
-        window.updateDivision = async (sid, newDiv) => {
-            await updateDoc(doc(db, "students", sid), { division: newDiv });
-            loadStudents();
-        };
-
+        window.deleteNotice = async (id) => { if(confirm("Delete?")) { await deleteDoc(doc(db, "notices", id)); loadNotices(); } };
+        window.markAsPaid = async (sid, name) => { await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, timestamp: new Date() }); loadStudents(); };
+        window.deleteStudent = async (sid) => { if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); } };
         window.setTransport = async (sid, current) => {
             const val = prompt("Enter Monthly Transport Fee (¥):", current);
-            if (val !== null) {
-                await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 });
-                loadStudents();
-            }
+            if (val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); loadStudents(); }
         };
-
         window.editAll = async (sid, oldName, oldFee) => {
-            const newName = prompt("Edit Student Name:", oldName);
-            const newFee = prompt("Edit Monthly Fee (¥):", oldFee);
-            if(newName || newFee) {
-                const updates = {};
-                if(newName) updates.name = newName;
-                if(newFee) updates.monthlyFee = parseInt(newFee);
-                await updateDoc(doc(db, "students", sid), updates);
-                loadStudents();
-            }
+            const n = prompt("Name:", oldName); const f = prompt("Fee:", oldFee);
+            if(n || f) { await updateDoc(doc(db, "students", sid), { name: n, monthlyFee: parseInt(f) }); loadStudents(); }
         };
-
-        window.markAsPaid = async (sid, name) => {
-            await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, date: new Date().toISOString() });
-            loadStudents();
-        };
-
-        window.deleteStudent = async (sid) => {
-            if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", sid)); loadStudents(); }
-        };
-
-        window.deleteTeacher = async (email) => {
-            if(confirm("Delete teacher account?")) { await deleteDoc(doc(db, "users", email)); loadStudents(); }
-        };
-
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
 
-        document.getElementById('sDivision').onchange = (e) => {
-            const labels = {
-                "Maktab": ["Qaida", "Dua", "Islamic Studies"],
-                "Nazera": ["Nazera", "Tajweed", "Dua/IS"],
-                "Hifz": ["Sabaq", "Sabaq Para", "Ammi"]
-            };
-            const selected = labels[e.target.value];
-            document.getElementById('lblG1').innerText = "Goal (" + selected[0] + ")";
-            document.getElementById('lblG2').innerText = "Goal (" + selected[1] + ")";
-            document.getElementById('lblG3').innerText = "Goal (" + selected[2] + ")";
-        };
-
+        // Initialize
         loadStudents();
-
-                    // 1. Function to post a new notice
-            window.sendNotice = async () => {
-                const msg = document.getElementById('noticeMsg').value.trim();
-                if(!msg) return alert("Please enter a message");
-            
-                try {
-                    await addDoc(collection(db, "notices"), {
-                        message: msg,
-                        date: new Date().toLocaleString(),
-                        timestamp: new Date()
-                    });
-                    alert("Notice sent to all parents!");
-                    document.getElementById('noticeMsg').value = "";
-                    loadNotices(); // Refresh the list
-                } catch(e) { alert(e.message); }
-            };
-            
-            // 2. Function to load and display notices
-            async function loadNotices() {
-                const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
-                const tbody = document.getElementById('noticeTableBody');
-                tbody.innerHTML = "";
-                
-                snap.forEach(docSnap => {
-                    const n = docSnap.data();
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${n.date}</td>
-                            <td>${n.message}</td>
-                            <td><button class="action-btn" onclick="deleteNotice('${docSnap.id}')" style="color:red">🗑️</button></td>
-                        </tr>`;
-                });
-            }
-            
-            window.deleteNotice = async (id) => {
-                if(confirm("Delete this notice?")) {
-                    await deleteDoc(doc(db, "notices", id));
-                    loadNotices();
-                }
-            };
-            
-            // Add loadNotices() to your initial loading sequence
-            loadStudents(); 
-            loadNotices();
+        loadNotices();
     </script>
 </body>
 </html>
