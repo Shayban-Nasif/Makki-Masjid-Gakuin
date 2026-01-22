@@ -55,6 +55,7 @@
         <div class="tab-menu">
             <button class="tab-btn active" onclick="openTab(event, 'students-tab')">Students Management</button>
             <button class="tab-btn" onclick="openTab(event, 'teachers-tab')">Teachers Management</button>
+            <button class="tab-btn" onclick="openTab(event, 'notices-tab')">Notice Board</button>
         </div>
 
         <div id="students-tab" class="tab-content active">
@@ -138,6 +139,30 @@
 
     </div>
 
+    <div id="notices-tab" class="tab-content">
+        <div class="section">
+            <h3>📢 Send New Notice to Parents</h3>
+            <div class="admin-grid" style="grid-template-columns: 3fr 1fr;">
+                <input type="text" id="noticeMsg" placeholder="Type your announcement here...">
+                <button onclick="sendNotice()" class="btn-primary">Post Notice</button>
+            </div>
+        </div>
+    
+        <div class="section">
+            <h3>Sent Notices</h3>
+            <table id="noticeTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Message</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="noticeTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { 
@@ -351,6 +376,52 @@
         };
 
         loadStudents();
+
+                    // 1. Function to post a new notice
+            window.sendNotice = async () => {
+                const msg = document.getElementById('noticeMsg').value.trim();
+                if(!msg) return alert("Please enter a message");
+            
+                try {
+                    await addDoc(collection(db, "notices"), {
+                        message: msg,
+                        date: new Date().toLocaleString(),
+                        timestamp: new Date()
+                    });
+                    alert("Notice sent to all parents!");
+                    document.getElementById('noticeMsg').value = "";
+                    loadNotices(); // Refresh the list
+                } catch(e) { alert(e.message); }
+            };
+            
+            // 2. Function to load and display notices
+            async function loadNotices() {
+                const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+                const tbody = document.getElementById('noticeTableBody');
+                tbody.innerHTML = "";
+                
+                snap.forEach(docSnap => {
+                    const n = docSnap.data();
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${n.date}</td>
+                            <td>${n.message}</td>
+                            <td><button class="action-btn" onclick="deleteNotice('${docSnap.id}')" style="color:red">🗑️</button></td>
+                        </tr>`;
+                });
+            }
+            
+            window.deleteNotice = async (id) => {
+                if(confirm("Delete this notice?")) {
+                    await deleteDoc(doc(db, "notices", id));
+                    loadNotices();
+                }
+            };
+            
+            // Add loadNotices() to your initial loading sequence
+            loadStudents(); 
+            loadNotices();
     </script>
 </body>
 </html>
