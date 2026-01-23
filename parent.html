@@ -88,189 +88,174 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-            authDomain: "makki-masjid-gakuin.firebaseapp.com",
-            projectId: "makki-masjid-gakuin",
-            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-            messagingSenderId: "376596641128",
-            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+    authDomain: "makki-masjid-gakuin.firebaseapp.com",
+    projectId: "makki-masjid-gakuin",
+    storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+    messagingSenderId: "376596641128",
+    appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+};
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const parentEmail = localStorage.getItem('userEmail');
+const currentMonthYear = "January 2026";
+let studentsData = [];
+let paidIds = [];
+
+// --- CORE DATA LOADING ---
+async function init() {
+    if (!parentEmail) { window.location.href = 'index.html'; return; }
+    
+    try {
+        // 1. Fetch Students
+        const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
+        const studentSnap = await getDocs(q);
+        studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 2. Fetch Payments
+        const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
+        paidIds = paySnap.docs.map(d => d.data().studentId);
+
+        // 3. Render and Load Notices
+        renderView('report');
+        displayNotices();
+    } catch (e) {
+        console.error("Initialization Error:", e);
+        document.getElementById('childrenContainer').innerHTML = "Error loading data.";
+    }
+}
+
+// --- UI RENDERING ---
+window.renderView = (view) => {
+    const container = document.getElementById('childrenContainer');
+    container.innerHTML = "";
+    
+    if (studentsData.length === 0) {
+        container.innerHTML = `<div class='child-card'>No students found linked to ${parentEmail}</div>`;
+        return;
+    }
+
+    studentsData.forEach(child => {
+        const card = document.createElement('div');
+        card.className = 'child-card';
         
-        const parentEmail = localStorage.getItem('userEmail');
-        const currentMonthYear = "January 2026";
-        let studentsData = [];
-        let paidIds = [];
+        const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
+        const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
+        const logs = child.logs || [];
 
-        async function init() {
-            if (!parentEmail) { window.location.href = 'index.html'; return; }
+        if (view === 'report') {
+            const labels = getDivisionLabels(child.division);
             
-            try {
-                // 1. Fetch Students linked to this parent email
-                const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
-                const studentSnap = await getDocs(q);
-                studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                // 2. Fetch Payments for current month
-                const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-                paidIds = paySnap.docs.map(d => d.data().studentId);
-
-                renderView('report');
-            } catch (e) {
-                console.error("Error loading data:", e);
-                document.getElementById('childrenContainer').innerHTML = "Error loading data. Please try again.";
+            let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
+            if (logs.length > 0) {
+                logsHtml += logs.slice(0, 5).map(log => `
+                    <div class="log-entry">
+                        <span class="log-date">${log.date || ''}:</span>
+                        <span>${log.text || ''}</span>
+                    </div>`).join('');
+            } else {
+                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
             }
-        }
+            logsHtml += `</div>`;
 
-        window.renderView = (view) => {
-            const container = document.getElementById('childrenContainer');
-            container.innerHTML = "";
-            
-            if (studentsData.length === 0) {
-                container.innerHTML = `<div class='child-card'>No students found linked to ${parentEmail}</div>`;
-                return;
-            }
-
-            studentsData.forEach(child => {
-                const card = document.createElement('div');
-                card.className = 'child-card';
-                
-                const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
-                const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
-                const logs = child.logs || [];
-
-                if (view === 'report') {
-                    const labels = getDivisionLabels(child.division);
-                    
-                    let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
-                    if (logs.length > 0) {
-                        logsHtml += logs.slice(0, 5).map(log => `
-                            <div class="log-entry">
-                                <span class="log-date">${log.date || ''}:</span>
-                                <span>${log.text || ''}</span>
-                            </div>`).join('');
-                    } else {
-                        logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
-                    }
-                    logsHtml += `</div>`;
-
-                    card.innerHTML = `
-                        <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
-                        <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
-                        <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
-                        <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
-                        <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
-                        ${logsHtml}
-                    `;
-                } else {
-                    const isPaid = paidIds.includes(child.id);
-                    const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
-                    card.innerHTML = `
-                        <h3>${child.name} - ${currentMonthYear}</h3>
-                        <table class="finance-table">
-                            <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee || 0}</td></tr>
-                            <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
-                            <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
-                        </table>
-                        <div style="text-align:center">
-                            <div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">
-                                ${isPaid ? 'Status: Paid ✅' : 'Status: Pending Payment'}
-                            </div>
-                        </div>
-                    `;
-                }
-                container.appendChild(card);
-            });
-        };
-
-        function bar(label, cur, goal) {
-            const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
-            return `
-                <div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div>
-                <div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>
+            card.innerHTML = `
+                <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
+                <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
+                <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
+                <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
+                <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
+                ${logsHtml}
+            `;
+        } else {
+            const isPaid = paidIds.includes(child.id);
+            const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
+            card.innerHTML = `
+                <h3>${child.name} - ${currentMonthYear}</h3>
+                <table class="finance-table">
+                    <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee || 0}</td></tr>
+                    <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
+                    <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
+                </table>
+                <div style="text-align:center">
+                    <div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">
+                        ${isPaid ? 'Status: Paid ✅' : 'Status: Pending Payment'}
+                    </div>
+                </div>
             `;
         }
+        container.appendChild(card);
+    });
+};
 
-        function getDivisionLabels(div) {
-            if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
-            if (div === "Hifz") return ["Daily Sabaq", "Sabaqi (Recent)", "Ammi (Revision)"];
-            return ["Qaida Lessons", "Masnoon Duas", "Islamic Etiquettes"];
-        }
+// --- HELPERS ---
+function bar(label, cur, goal) {
+    const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
+    return `
+        <div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>
+    `;
+}
 
-        window.switchTab = (view) => {
-            document.getElementById('btnReport').classList.toggle('active', view === 'report');
-            document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
-            renderView(view);
-        };
+function getDivisionLabels(div) {
+    if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
+    if (div === "Hifz") return ["Daily Sabaq", "Sabaqi (Recent)", "Ammi (Revision)"];
+    return ["Qaida Lessons", "Masnoon Duas", "Islamic Etiquettes"];
+}
 
-        window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
+window.switchTab = (view) => {
+    document.getElementById('btnReport').classList.toggle('active', view === 'report');
+    document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
+    renderView(view);
+};
 
-        init();
+window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
-// 1. Notice System Logic
-            window.displayNotices = async () => {
-                try {
-                    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-                    const snap = await getDocs(q);
-                    const noticeDiv = document.getElementById('parentNoticeDisplay');
-                    const historyList = document.getElementById('historyList');
-                    
-                    noticeDiv.innerHTML = "";
-                    historyList.innerHTML = "";
-                    
-                    let count = 0;
-                    snap.forEach(docSnap => {
-                        const data = docSnap.data();
-                        
-                        if (count === 0) {
-                            noticeDiv.innerHTML = `
-                                <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
-                                    <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                                    <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
-                                </div>`;
-                        }
-                        
-                        historyList.innerHTML += `
-                            <div class="history-item" style="white-space: pre-wrap; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                                <div class="history-date" style="color:#d4af37; font-size:0.8rem; font-weight:bold;">${data.date}</div>
-                                <div style="margin-top:5px;">${data.message}</div>
-                            </div>`;
-                        
-                        count++;
-                    });
-                    
-                    if(count === 0) noticeDiv.innerHTML = "";
-                } catch (e) { 
-                    console.error("Notice Error:", e); 
-                }
-            };
-            
-            // 2. Modal Control Functions (Explicitly Global)
-            window.openHistory = () => {
-                const modal = document.getElementById('historyModal');
-                if(modal) modal.style.display = 'block';
-            };
-            
-            window.closeHistory = () => {
-                const modal = document.getElementById('historyModal');
-                if(modal) modal.style.display = 'none';
-            };
-            
-            // 3. Close modal if clicking outside the white box
-            window.addEventListener('click', (event) => {
-                const modal = document.getElementById('historyModal');
-                if (event.target == modal) {
-                    modal.style.display = "none";
-                }
-            });
+// --- NOTICE SYSTEM ---
+window.displayNotices = async () => {
+    try {
+        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+        const noticeDiv = document.getElementById('parentNoticeDisplay');
+        const historyList = document.getElementById('historyList');
         
-        loadParentData();
-        displayNotices();
+        noticeDiv.innerHTML = "";
+        historyList.innerHTML = "";
+        
+        let count = 0;
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (count === 0) {
+                noticeDiv.innerHTML = `
+                    <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
+                        <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
+                        <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
+                    </div>`;
+            }
+            historyList.innerHTML += `
+                <div class="history-item">
+                    <div class="history-date">${data.date}</div>
+                    <div style="margin-top:5px;">${data.message}</div>
+                </div>`;
+            count++;
+        });
+    } catch (e) { console.error("Notice Error:", e); }
+};
+
+window.openHistory = () => { document.getElementById('historyModal').style.display = 'block'; };
+window.closeHistory = () => { document.getElementById('historyModal').style.display = 'none'; };
+
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('historyModal');
+    if (event.target == modal) modal.style.display = "none";
+});
+
+// START
+init();
         
     </script>
 </body>
