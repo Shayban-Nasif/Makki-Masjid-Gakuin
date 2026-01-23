@@ -390,38 +390,46 @@
 
     window.loadHubPayments = async () => {
     const year = parseInt(document.getElementById('hubYear').value);
-    const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId), where("year", "==", year), orderBy("timestamp", "desc"));
+    const container = document.getElementById('hubPaymentGrid');
+    const tableContainer = document.getElementById('hubPaymentTable');
+    
+    // 1. Get payments for this student
+    const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId));
     const pSnap = await getDocs(q);
     
-    const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
+    // 2. Filter locally to avoid Firebase Index errors
+    const allPayments = pSnap.docs.map(d => d.data());
+    const yearPayments = allPayments.filter(p => p.year === year);
+    const paidMonthIndices = yearPayments.map(p => p.monthIndex);
+    
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     
-    // Update the clickable Grid
-    document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
-        const isPaid = paidMonths.includes(i);
+    // 3. Update the Grid
+    container.innerHTML = months.map((m, i) => {
+        const isPaid = paidMonthIndices.includes(i);
         return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
     }).join('');
 
-    // Update the Simple Table Ledger
+    // 4. Update the Table
     let tableHtml = `<table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
-        <thead style="background:#f4f4f4;"><tr><th style="padding:5px;">Date</th><th style="padding:5px;">Month</th><th style="padding:5px;">Amount</th></tr></thead><tbody>`;
+        <tr style="background:#eee;"><th style="padding:5px;">Date</th><th style="padding:5px;">Month</th><th style="padding:5px;">Amount</th></tr>`;
     
-    if(pSnap.empty) {
-        tableHtml += `<tr><td colspan="3" style="text-align:center; padding:10px;">No records for this year</td></tr>`;
+    if(yearPayments.length === 0) {
+        tableHtml += `<tr><td colspan="3" style="text-align:center; padding:10px;">No records found</td></tr>`;
     } else {
-        pSnap.forEach(doc => {
-            const p = doc.data();
+        // Sort by date newest first
+        yearPayments.sort((a, b) => b.timestamp - a.timestamp);
+        yearPayments.forEach(p => {
             tableHtml += `<tr>
-                <td style="padding:5px; border-bottom:1px solid #eee;">${p.datePaid || 'N/A'}</td>
+                <td style="padding:5px; border-bottom:1px solid #eee;">${p.datePaid || '—'}</td>
                 <td style="padding:5px; border-bottom:1px solid #eee;">${p.monthName}</td>
                 <td style="padding:5px; border-bottom:1px solid #eee; font-weight:bold;">¥${p.amount || 0}</td>
             </tr>`;
         });
     }
-    tableHtml += `</tbody></table>`;
-    document.getElementById('hubPaymentTable').innerHTML = tableHtml;
+    tableHtml += `</table>`;
+    tableContainer.innerHTML = tableHtml;
 };
-
     window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
     if(currentlyPaid) return alert("This month is already marked as Paid.");
     
