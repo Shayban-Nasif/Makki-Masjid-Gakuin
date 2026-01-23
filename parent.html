@@ -87,8 +87,8 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, doc, getDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -103,12 +103,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const parentEmail = localStorage.getItem('userEmail');
-const currentMonthYear = "January 2026";
+const currentYear = 2026;
+const currentMonthName = "Jan"; // Match your Admin portal logic
 let studentsData = [];
-let paidIds = [];
+window.allPayments = [];
 
-// --- CORE DATA LOADING ---
-// --- UPDATED CORE DATA LOADING ---
 async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     
@@ -118,11 +117,11 @@ async function init() {
         const studentSnap = await getDocs(q);
         studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Fetch Payments (Simplified query to avoid index crash)
+        // 2. Fetch Payments (All of them for history)
         const paySnap = await getDocs(collection(db, "payments"));
         window.allPayments = paySnap.docs.map(d => d.data());
 
-        // 3. Render
+        // 3. Render Initial View
         renderView('report');
         displayNotices();
     } catch (e) {
@@ -131,7 +130,6 @@ async function init() {
     }
 }
 
-// --- UI RENDERING ---
 window.renderView = (view) => {
     const container = document.getElementById('childrenContainer');
     container.innerHTML = "";
@@ -144,12 +142,12 @@ window.renderView = (view) => {
     studentsData.forEach(child => {
         const card = document.createElement('div');
         card.className = 'child-card';
-        
-        const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
-        const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
-        const logs = child.logs || [];
 
         if (view === 'report') {
+            // --- ACADEMIC REPORT VIEW ---
+            const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
+            const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
+            const logs = child.logs || [];
             const labels = getDivisionLabels(child.division);
             
             let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
@@ -160,9 +158,22 @@ window.renderView = (view) => {
                         <span>${log.text || ''}</span>
                     </div>`).join('');
             } else {
-            // --- UPDATED FINANCE VIEW ---
-            const studentPayments = (window.allPayments || []).filter(p => p.studentId === child.id);
-            const isPaidThisMonth = studentPayments.some(p => p.monthName === "Jan" && p.year === 2026); // Match your Admin logic
+                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
+            }
+            logsHtml += `</div>`;
+
+            card.innerHTML = `
+                <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
+                <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
+                <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
+                <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
+                <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
+                ${logsHtml}
+            `;
+        } else {
+            // --- FINANCE VIEW ---
+            const studentPayments = window.allPayments.filter(p => p.studentId === child.id);
+            const isPaidThisMonth = studentPayments.some(p => p.monthName === currentMonthName && p.year === currentYear);
             
             const mFee = Number(child.monthlyFee) || 0;
             const tFee = Number(child.transportFee) || 0;
@@ -199,7 +210,7 @@ window.renderView = (view) => {
                             </tr>
                         </thead>
                         <tbody>
-                            ${studentPayments.length > 0 ? studentPayments.map(p => `
+                            ${studentPayments.length > 0 ? studentPayments.sort((a,b) => b.timestamp - a.timestamp).map(p => `
                                 <tr>
                                     <td style="padding:8px;">${p.monthName} ${p.year}</td>
                                     <td style="padding:8px;">${p.datePaid || '—'}</td>
@@ -210,28 +221,11 @@ window.renderView = (view) => {
                     </table>
                 </div>
             `;
-        } else {
-            const isPaid = paidIds.includes(child.id);
-            const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
-            card.innerHTML = `
-                <h3>${child.name} - ${currentMonthYear}</h3>
-                <table class="finance-table">
-                    <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee || 0}</td></tr>
-                    <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
-                    <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
-                </table>
-                <div style="text-align:center">
-                    <div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">
-                        ${isPaid ? 'Status: Paid ✅' : 'Status: Pending Payment'}
-                    </div>
-                </div>
-            `;
         }
         container.appendChild(card);
     });
 };
 
-// --- HELPERS ---
 function bar(label, cur, goal) {
     const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
     return `
@@ -254,17 +248,14 @@ window.switchTab = (view) => {
 
 window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
-// --- NOTICE SYSTEM ---
 window.displayNotices = async () => {
     try {
         const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
         const snap = await getDocs(q);
         const noticeDiv = document.getElementById('parentNoticeDisplay');
         const historyList = document.getElementById('historyList');
-        
         noticeDiv.innerHTML = "";
         historyList.innerHTML = "";
-        
         let count = 0;
         snap.forEach(docSnap => {
             const data = docSnap.data();
@@ -288,14 +279,7 @@ window.displayNotices = async () => {
 window.openHistory = () => { document.getElementById('historyModal').style.display = 'block'; };
 window.closeHistory = () => { document.getElementById('historyModal').style.display = 'none'; };
 
-window.addEventListener('click', (event) => {
-    const modal = document.getElementById('historyModal');
-    if (event.target == modal) modal.style.display = "none";
-});
-
-// START
 init();
-        
-    </script>
+</script>
 </body>
 </html>
