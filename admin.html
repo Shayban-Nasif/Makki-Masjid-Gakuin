@@ -30,6 +30,25 @@
 
         .division-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden; }
         .division-header { background: var(--primary); color: white; padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Modal Styles for History & Profile */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); overflow-y: auto; }
+        .modal-content { background: white; margin: 2% auto; width: 90%; max-width: 900px; border-radius: 12px; padding: 0; box-shadow: 0 5px 30px rgba(0,0,0,0.3); }
+        .modal-header { background: var(--primary); color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; }
+        .modal-body { padding: 25px; }
+        
+        /* Payment Grid for Admin */
+        .year-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 15px; }
+        .month-cell { padding: 10px; border: 1px solid #ddd; border-radius: 6px; text-align: center; cursor: pointer; font-size: 0.8rem; }
+        .month-cell.paid { background: #2e7d32; color: white; border: none; }
+        .month-cell.due { border: 2px dashed #e57373; color: #c62828; }
+    
+        /* Log/History List */
+        .log-entry { border-left: 3px solid var(--gold); padding: 8px 15px; margin-bottom: 10px; background: #f9f9f9; font-size: 0.85rem; }
+        .log-date { font-weight: bold; color: var(--primary); margin-right: 10px; }
+        
+        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .tag-transport { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
         
         /* UI Elements */
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
@@ -135,6 +154,48 @@
             </div>
         </div>
     </div>
+
+        
+            <div id="studentHub" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="hubName">Student Profile</h2>
+                    <span onclick="closeHub()" style="cursor:pointer; font-size: 2rem;">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="hub-grid">
+                        <div>
+                            <h3>Update Status</h3>
+                            <label>Current Division</label>
+                            <select id="hubDivision">
+                                <option value="Maktab">Maktab</option>
+                                <option value="Nazera">Nazera</option>
+                                <option value="Hifz">Hifz</option>
+                            </select>
+                            <button class="btn-primary" onclick="changeDivision()" style="margin-bottom: 20px;">Update Division & Log</button>
+                            
+                            <label>Progress/Level Up Note</label>
+                            <input type="text" id="levelNote" placeholder="e.g. Finished Qaida, Moved to Para 1">
+                            <button class="btn-primary" onclick="logLevelUp()" style="background:var(--gold)">Log Level Up</button>
+                            
+                            <h3>Timeline History</h3>
+                            <div id="timelineLogs" style="max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+        
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3>Payment History</h3>
+                                <select id="hubYear" onchange="loadHubPayments()">
+                                    <option>2026</option><option>2025</option>
+                                </select>
+                            </div>
+                            <div class="year-grid" id="hubPaymentGrid"></div>
+                            <p style="font-size: 0.7rem; color: #666; margin-top: 10px;">* Click a month to toggle Paid/Unpaid status</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -265,6 +326,98 @@
             });
         };
 
+        let currentHubStudentId = null;
+
+        window.openHub = async (sid) => {
+        currentHubStudentId = sid;
+        const sSnap = await getDocs(query(collection(db, "students"))); // In production, use doc get
+        const s = sSnap.docs.find(d => d.id === sid).data();
+        
+        document.getElementById('hubName').innerText = s.name + " | " + s.division;
+        document.getElementById('hubDivision').value = s.division;
+        
+        loadTimeline(s.logs || []);
+        loadHubPayments();
+        document.getElementById('studentHub').style.display = 'block';
+    };
+
+    window.closeHub = () => { document.getElementById('studentHub').style.display = 'none'; };
+
+    // --- HISTORY LOGGING LOGIC ---
+    async function addLog(msg) {
+        const log = { date: new Date().toLocaleDateString(), text: msg, timestamp: new Date() };
+        const sRef = doc(db, "students", currentHubStudentId);
+        // We fetch current logs and append
+        const sSnap = await getDocs(query(collection(db, "students"))); 
+        const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
+        const logs = s.logs || [];
+        logs.unshift(log); // Newest first
+        await updateDoc(sRef, { logs: logs });
+        loadTimeline(logs);
+    }
+
+    window.changeDivision = async () => {
+        const newDiv = document.getElementById('hubDivision').value;
+        await updateDoc(doc(db, "students", currentHubStudentId), { division: newDiv });
+        await addLog(`Division changed to ${newDiv}`);
+        alert("Division Updated");
+        loadStudents();
+    };
+
+    window.logLevelUp = async () => {
+        const note = document.getElementById('levelNote').value;
+        if(!note) return;
+        await addLog(`Level Up: ${note}`);
+        document.getElementById('levelNote').value = "";
+    };
+
+    function loadTimeline(logs) {
+        const container = document.getElementById('timelineLogs');
+        container.innerHTML = logs.map(l => `
+            <div class="log-entry">
+                <span class="log-date">${l.date}</span> ${l.text}
+            </div>
+        `).join('') || "No history logs yet.";
+    }
+
+    // --- VISUAL PAYMENT GRID LOGIC ---
+    window.loadHubPayments = async () => {
+        const year = parseInt(document.getElementById('hubYear').value);
+        const q = query(collection(db, "payments"), 
+                  where("studentId", "==", currentHubStudentId), 
+                  where("year", "==", year));
+        const pSnap = await getDocs(q);
+        const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
+        
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const grid = document.getElementById('hubPaymentGrid');
+        grid.innerHTML = months.map((m, i) => {
+            const isPaid = paidMonths.includes(i);
+            return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid})">${m}</div>`;
+        }).join('');
+    };
+
+    window.togglePayment = async (monthIndex, currentlyPaid) => {
+        const year = parseInt(document.getElementById('hubYear').value);
+        if(currentlyPaid) {
+            // Delete payment record logic here
+            alert("Payment removal requires manual database check in this version.");
+        } else {
+            await addDoc(collection(db, "payments"), {
+                studentId: currentHubStudentId,
+                monthIndex: monthIndex,
+                year: year,
+                timestamp: new Date()
+            });
+            loadHubPayments();
+            loadStudents();
+        }
+    };
+
+    // --- ENROLLMENT UPDATE ---
+    // Update your addStudent function to include an initial "Admission" log
+    // logs: [{ date: new Date().toLocaleDateString(), text: "Student Admitted", timestamp: new Date() }]
+        
         // Actions
         window.addStudent = async () => {
             const name = document.getElementById('sName').value;
