@@ -257,12 +257,19 @@
     };
 
     window.deleteUser = async (email) => {
-        if(confirm("Remove this user account?")) {
-            await deleteDoc(doc(doc(db, "users", email)));
+    if(confirm("Remove this user account?")) {
+        try {
+            // FIX: Removed the double doc() call
+            await deleteDoc(doc(db, "users", email)); 
+            
+            alert("User deleted.");
             loadTeachers();
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            alert("Could not delete user. Check console for details.");
         }
-    };
-
+    }
+};
     window.loadStudents = async () => {
         const studentSnap = await getDocs(collection(db, "students"));
         const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
