@@ -181,6 +181,9 @@
                             </select>
                         </div>
                         <div class="year-grid" id="hubPaymentGrid"></div>
+                        <h4 style="margin-top:20px; color:var(--primary); border-bottom:1px solid #ddd;">Transaction History</h4>
+                        <div id="hubPaymentTable" style="margin-top:10px; max-height:150px; overflow-y:auto; background:#fff; border-radius:4px;">
+                            </div>
                         <p style="font-size: 0.75rem; color: #666; margin-top: 15px; background: #fff9c4; padding: 10px; border-radius: 4px;">
                             <strong>Note:</strong> Click a month to mark as <b>Paid</b>. To remove a payment, you must contact support or use the manual database tool.
                         </p>
@@ -386,31 +389,74 @@
     }
 
     window.loadHubPayments = async () => {
-        const year = parseInt(document.getElementById('hubYear').value);
-        const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId), where("year", "==", year));
-        const pSnap = await getDocs(q);
-        const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
-            const isPaid = paidMonths.includes(i);
-            return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
-        }).join('');
-    };
+    const year = parseInt(document.getElementById('hubYear').value);
+    const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId), where("year", "==", year), orderBy("timestamp", "desc"));
+    const pSnap = await getDocs(q);
+    
+    const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    // Update the clickable Grid
+    document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
+        const isPaid = paidMonths.includes(i);
+        return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
+    }).join('');
+
+    // Update the Simple Table Ledger
+    let tableHtml = `<table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
+        <thead style="background:#f4f4f4;"><tr><th style="padding:5px;">Date</th><th style="padding:5px;">Month</th><th style="padding:5px;">Amount</th></tr></thead><tbody>`;
+    
+    if(pSnap.empty) {
+        tableHtml += `<tr><td colspan="3" style="text-align:center; padding:10px;">No records for this year</td></tr>`;
+    } else {
+        pSnap.forEach(doc => {
+            const p = doc.data();
+            tableHtml += `<tr>
+                <td style="padding:5px; border-bottom:1px solid #eee;">${p.datePaid || 'N/A'}</td>
+                <td style="padding:5px; border-bottom:1px solid #eee;">${p.monthName}</td>
+                <td style="padding:5px; border-bottom:1px solid #eee; font-weight:bold;">¥${p.amount || 0}</td>
+            </tr>`;
+        });
+    }
+    tableHtml += `</tbody></table>`;
+    document.getElementById('hubPaymentTable').innerHTML = tableHtml;
+};
 
     window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
-        if(currentlyPaid) return alert("This month is already marked as Paid.");
-        if(confirm(`Confirm payment for ${monthName}?`)) {
-            const year = parseInt(document.getElementById('hubYear').value);
+    if(currentlyPaid) return alert("This month is already marked as Paid.");
+    
+    if(confirm(`Confirm payment for ${monthName}?`)) {
+        const year = parseInt(document.getElementById('hubYear').value);
+        
+        // Fetch current student data to get the exact fee amounts
+        const sSnap = await getDocs(collection(db, "students"));
+        const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
+        
+        const mFee = parseInt(s.monthlyFee) || 0;
+        const tFee = parseInt(s.transportFee) || 0;
+        const totalPaid = mFee + tFee;
+
+        try {
             await addDoc(collection(db, "payments"), { 
                 studentId: currentHubStudentId, 
                 monthIndex, 
+                monthName, // Adding name for easier display
                 year, 
+                amount: totalPaid, // Storing the actual amount
+                datePaid: new Date().toLocaleDateString(),
                 timestamp: new Date() 
             });
+            
+            // Log it in the timeline
+            await addLog(`Payment of ¥${totalPaid} recorded for ${monthName} ${year}`);
+            
             loadHubPayments(); 
             loadStudents();
+        } catch (e) {
+            alert("Error recording payment");
         }
-    };
+    }
+};
 
     // --- CORE ACTIONS (FIXED FORM CLEARING & GOAL MAPPING) ---
     window.addStudent = async () => {
@@ -477,24 +523,30 @@
     };
 
     window.editAll = async (sid, oldName, oldFee) => {
-        const newName = prompt("Update Name:", oldName);
-        const newFee = prompt("Update Monthly Fee (¥):", oldFee);
-        if(newName !== null && newFee !== null) {
-            await updateDoc(doc(db, "students", sid), { 
-                name: newName, 
-                monthlyFee: parseInt(newFee) 
-            });
-            loadStudents();
-        }
-    };
+    // We fetch the current data first to get the current email and transport
+    const sSnap = await getDocs(collection(db, "students"));
+    const s = sSnap.docs.find(d => d.id === sid).data();
 
-    window.setTransport = async (sid, cur) => {
-        const val = prompt("Enter Monthly Transport Fee (¥):", cur);
-        if(val !== null) { 
-            await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); 
-            loadStudents(); 
+    const newName = prompt("Update Student Name:", s.name);
+    const newEmail = prompt("Update Parent Email:", s.parentEmail);
+    const newFee = prompt("Update Monthly Fee (¥):", s.monthlyFee);
+    const newTrans = prompt("Update Transport Fee (¥):", s.transportFee || 0);
+
+    if (newName && newEmail && newFee !== null) {
+        try {
+            await updateDoc(doc(db, "students", sid), {
+                name: newName,
+                parentEmail: newEmail.toLowerCase().trim(),
+                monthlyFee: parseInt(newFee),
+                transportFee: parseInt(newTrans)
+            });
+            alert("Student Profile Updated");
+            loadStudents();
+        } catch (e) {
+            alert("Update failed");
         }
-    };
+    }
+};
 
     window.deleteStudent = async (id) => { if(confirm("Delete student permanently?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
     window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
