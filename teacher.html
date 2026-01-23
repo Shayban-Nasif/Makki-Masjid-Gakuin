@@ -33,6 +33,12 @@
         .btn-log:hover { background: #b8962d; transform: translateY(-1px); }
         .btn-logout { background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
 
+        @media (max-height: 700px) {
+            .modal-content { padding: 15px; }
+            .subject-group { padding: 10px; margin-bottom: 10px; }
+            .btn-submit { padding: 10px; }
+        }
+        
         /* Form Styling */
         /* UPDATED: Modal Container now handles scrolling */
 #logModal { 
@@ -345,12 +351,6 @@
     window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
     init();
-
-@media (max-height: 700px) {
-    .modal-content { padding: 15px; }
-    .subject-group { padding: 10px; margin-bottom: 10px; }
-    .btn-submit { padding: 10px; }
-}
         
 </script>
 </body>
