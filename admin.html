@@ -191,245 +191,308 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, addDoc, collection, getDocs, query, where, deleteDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-            authDomain: "makki-masjid-gakuin.firebaseapp.com",
-            projectId: "makki-masjid-gakuin",
-            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-            messagingSenderId: "376596641128",
-            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+        authDomain: "makki-masjid-gakuin.firebaseapp.com",
+        projectId: "makki-masjid-gakuin",
+        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+        messagingSenderId: "376596641128",
+        appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const currentYear = 2026;
-        const currentMonthIndex = new Date().getMonth();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const currentYear = 2026;
+    const currentMonthIndex = new Date().getMonth();
 
-        window.openTab = (evt, tabId) => {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            evt.currentTarget.classList.add('active');
-        };
+    window.openTab = (evt, tabId) => {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    };
 
-        window.loadStudents = async () => {
-            const studentSnap = await getDocs(collection(db, "students"));
-            // Get payments for the current year to calculate balance
-            const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
-            
-            const container = document.getElementById('divisionContainer');
-            container.innerHTML = "";
-            let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            const groups = { Maktab: [], Nazera: [], Hifz: [] };
+    // --- TEACHER MANAGEMENT (FIXED) ---
+    window.addTeacher = async () => {
+        const name = document.getElementById('tName').value;
+        const email = document.getElementById('tEmail').value.toLowerCase().trim();
+        const div = document.getElementById('tDivision').value;
 
-            studentSnap.forEach(docSnap => {
-                const s = { id: docSnap.id, ...docSnap.data() };
-                if(groups[s.division]) groups[s.division].push(s);
-                if(stats[s.division] !== undefined) stats[s.division]++;
+        if(!name || !email) return alert("Teacher name and email required");
+
+        try {
+            await setDoc(doc(db, "users", email), {
+                name: name,
+                email: email,
+                role: 'teacher',
+                division: div
             });
+            alert("Teacher registered!");
+            document.getElementById('tName').value = "";
+            document.getElementById('tEmail').value = "";
+            loadTeachers();
+        } catch (e) { alert("Error adding teacher"); }
+    };
 
-            for (const [divName, students] of Object.entries(groups)) {
-                if(students.length === 0) continue;
-                const divId = `div-${divName}`;
-                const card = document.createElement('div');
-                card.className = 'division-card';
-                card.innerHTML = `
-                    <div class="division-header" onclick="toggleDivision('${divId}')">
-                        <span>📂 ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
-                    </div>
-                    <div class="division-content" id="${divId}">
-                        <table>
-                            <thead><tr><th>Name</th><th>Parent Email</th><th>Fee</th><th>Transport</th><th>Balance</th><th>Actions</th></tr></thead>
-                            <tbody>
-                                ${students.map(s => {
-                                    const mFee = parseInt(s.monthlyFee) || 0;
-                                    const tFee = parseInt(s.transportFee) || 0;
-                                    const hasPaidThisMonth = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
-                                    const balance = hasPaidThisMonth ? 0 : (mFee + tFee);
-
-                                    return `<tr>
-                                        <td><strong>${s.name}</strong></td>
-                                        <td>${s.parentEmail}</td>
-                                        <td>¥${mFee}</td>
-                                        <td>¥${tFee}</td>
-                                        <td style="color:${balance > 0 ? 'red' : 'green'}; font-weight:bold">¥${balance}</td>
-                                        <td>
-                                            <button class="action-btn" onclick="openHub('${s.id}')" title="Profile & Payments">📂</button>
-                                            <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
-                                            <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})" title="Transport Fee">🚌</button>
-                                            <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
-                                        </td>
-                                    </tr>`;
-                                }).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                container.appendChild(card);
-            }
-            document.getElementById('count-maktab').innerText = stats.Maktab;
-            document.getElementById('count-nazera').innerText = stats.Nazera;
-            document.getElementById('count-hifz').innerText = stats.Hifz;
-        };
-
-        // --- DYNAMIC LABEL LOGIC ---
-        window.updateGoalLabels = () => {
-            const div = document.getElementById('sDivision').value;
-            const l1 = document.getElementById('lblG1');
-            const l2 = document.getElementById('lblG2');
-            const l3 = document.getElementById('lblG3');
-
-            if (div === "Hifz") {
-                l1.innerText = "Goal (Para)";
-                l2.innerText = "Goal (Tajweed)";
-                l3.innerText = "Goal (Islamic Studies)";
-            } else if (div === "Nazera") {
-                l1.innerText = "Goal (Para)";
-                l2.innerText = "Goal (Tajweed)";
-                l3.innerText = "Goal (Islamic Studies)";
-            } else {
-                l1.innerText = "Goal (Qaida)";
-                l2.innerText = "Goal (Dua)";
-                l3.innerText = "Goal (Islamic Studies)";
-            }
-        };
-
+    window.loadTeachers = async () => {
+        const q = query(collection(db, "users"), where("role", "==", "teacher"));
+        const snap = await getDocs(q);
+        const tbody = document.getElementById('teacherTableBody');
+        tbody.innerHTML = "";
         
-        // --- HUB / PROFILE LOGIC ---
-        let currentHubStudentId = null;
-        window.openHub = async (sid) => {
-            currentHubStudentId = sid;
-            const sSnap = await getDocs(collection(db, "students"));
-            const s = sSnap.docs.find(d => d.id === sid).data();
-            document.getElementById('hubName').innerText = s.name;
-            document.getElementById('hubDivision').value = s.division;
-            loadTimeline(s.logs || []);
-            loadHubPayments();
-            document.getElementById('studentHub').style.display = 'block';
-        };
+        snap.forEach(d => {
+            const t = d.data();
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.name}</td>
+                    <td>${t.email}</td>
+                    <td>${t.division}</td>
+                    <td><button class="action-btn" onclick="deleteUser('${d.id}')" style="color:red">🗑️</button></td>
+                </tr>`;
+        });
+        document.getElementById('count-teachers').innerText = snap.size;
+    };
 
-        window.closeHub = () => { document.getElementById('studentHub').style.display = 'none'; };
-
-        async function addLog(msg) {
-            const log = { date: new Date().toLocaleDateString(), text: msg, timestamp: new Date() };
-            const sRef = doc(db, "students", currentHubStudentId);
-            const sSnap = await getDocs(collection(db, "students"));
-            const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
-            const logs = s.logs || [];
-            logs.unshift(log);
-            await updateDoc(sRef, { logs: logs });
-            loadTimeline(logs);
+    window.deleteUser = async (email) => {
+        if(confirm("Remove this user account?")) {
+            await deleteDoc(doc(doc(db, "users", email)));
+            loadTeachers();
         }
+    };
 
-        window.changeDivision = async () => {
-            const newDiv = document.getElementById('hubDivision').value;
-            await updateDoc(doc(db, "students", currentHubStudentId), { division: newDiv });
-            await addLog(`Division changed to ${newDiv} (by Admin)`);
-            alert("Updated!"); loadStudents();
-        };
+    window.loadStudents = async () => {
+        const studentSnap = await getDocs(collection(db, "students"));
+        const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
+        
+        const container = document.getElementById('divisionContainer');
+        container.innerHTML = "";
+        let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+        const groups = { Maktab: [], Nazera: [], Hifz: [] };
 
-        function loadTimeline(logs) {
-            document.getElementById('timelineLogs').innerHTML = logs.map(l => `
-                <div class="log-entry"><span class="log-date">${l.date}</span> ${l.text}</div>
-            `).join('') || "No logs available.";
+        studentSnap.forEach(docSnap => {
+            const s = { id: docSnap.id, ...docSnap.data() };
+            if(groups[s.division]) groups[s.division].push(s);
+            if(stats[s.division] !== undefined) stats[s.division]++;
+        });
+
+        for (const [divName, students] of Object.entries(groups)) {
+            if(students.length === 0) continue;
+            const divId = `div-${divName}`;
+            const card = document.createElement('div');
+            card.className = 'division-card';
+            card.innerHTML = `
+                <div class="division-header" onclick="toggleDivision('${divId}')">
+                    <span>📂 ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
+                </div>
+                <div class="division-content" id="${divId}">
+                    <table>
+                        <thead><tr><th>Name</th><th>Parent Email</th><th>Fee</th><th>Transport</th><th>Balance</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            ${students.map(s => {
+                                const mFee = parseInt(s.monthlyFee) || 0;
+                                const tFee = parseInt(s.transportFee) || 0;
+                                const hasPaidThisMonth = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
+                                const balance = hasPaidThisMonth ? 0 : (mFee + tFee);
+
+                                return `<tr>
+                                    <td><strong>${s.name}</strong></td>
+                                    <td>${s.parentEmail}</td>
+                                    <td>¥${mFee}</td>
+                                    <td>¥${tFee}</td>
+                                    <td style="color:${balance > 0 ? 'red' : 'green'}; font-weight:bold">¥${balance}</td>
+                                    <td>
+                                        <button class="action-btn" onclick="openHub('${s.id}')" title="Profile & Payments">📂</button>
+                                        <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
+                                        <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})" title="Transport Fee">🚌</button>
+                                        <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            container.appendChild(card);
         }
+        document.getElementById('count-maktab').innerText = stats.Maktab;
+        document.getElementById('count-nazera').innerText = stats.Nazera;
+        document.getElementById('count-hifz').innerText = stats.Hifz;
+    };
 
-        window.loadHubPayments = async () => {
+    // --- DYNAMIC LABEL LOGIC ---
+    window.updateGoalLabels = () => {
+        const div = document.getElementById('sDivision').value;
+        const l1 = document.getElementById('lblG1');
+        const l2 = document.getElementById('lblG2');
+        const l3 = document.getElementById('lblG3');
+
+        if (div === "Hifz" || div === "Nazera") {
+            l1.innerText = "Goal (Para)";
+            l2.innerText = "Goal (Tajweed)";
+            l3.innerText = "Goal (Islamic Studies)";
+        } else {
+            l1.innerText = "Goal (Qaida)";
+            l2.innerText = "Goal (Dua)";
+            l3.innerText = "Goal (Islamic Studies)";
+        }
+    };
+
+    // --- HUB / PROFILE LOGIC ---
+    let currentHubStudentId = null;
+    window.openHub = async (sid) => {
+        currentHubStudentId = sid;
+        const sSnap = await getDocs(collection(db, "students"));
+        const s = sSnap.docs.find(d => d.id === sid).data();
+        document.getElementById('hubName').innerText = s.name;
+        document.getElementById('hubDivision').value = s.division;
+        loadTimeline(s.logs || []);
+        loadHubPayments();
+        document.getElementById('studentHub').style.display = 'block';
+    };
+
+    window.closeHub = () => { document.getElementById('studentHub').style.display = 'none'; };
+
+    async function addLog(msg) {
+        const log = { date: new Date().toLocaleDateString(), text: msg, timestamp: new Date() };
+        const sRef = doc(db, "students", currentHubStudentId);
+        const sSnap = await getDocs(collection(db, "students"));
+        const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
+        const logs = s.logs || [];
+        logs.unshift(log);
+        await updateDoc(sRef, { logs: logs });
+        loadTimeline(logs);
+    }
+
+    window.changeDivision = async () => {
+        const newDiv = document.getElementById('hubDivision').value;
+        await updateDoc(doc(db, "students", currentHubStudentId), { division: newDiv });
+        await addLog(`Division changed to ${newDiv} (by Admin)`);
+        alert("Updated!"); loadStudents();
+    };
+
+    function loadTimeline(logs) {
+        document.getElementById('timelineLogs').innerHTML = logs.map(l => `
+            <div class="log-entry"><span class="log-date">${l.date}</span> ${l.text}</div>
+        `).join('') || "No logs available.";
+    }
+
+    window.loadHubPayments = async () => {
+        const year = parseInt(document.getElementById('hubYear').value);
+        const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId), where("year", "==", year));
+        const pSnap = await getDocs(q);
+        const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
+            const isPaid = paidMonths.includes(i);
+            return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
+        }).join('');
+    };
+
+    window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
+        if(currentlyPaid) return alert("This month is already marked as Paid.");
+        if(confirm(`Confirm payment for ${monthName}?`)) {
             const year = parseInt(document.getElementById('hubYear').value);
-            const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId), where("year", "==", year));
-            const pSnap = await getDocs(q);
-            const paidMonths = pSnap.docs.map(d => d.data().monthIndex);
-            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
-                const isPaid = paidMonths.includes(i);
-                return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
-            }).join('');
-        };
+            await addDoc(collection(db, "payments"), { 
+                studentId: currentHubStudentId, 
+                monthIndex, 
+                year, 
+                timestamp: new Date() 
+            });
+            loadHubPayments(); 
+            loadStudents();
+        }
+    };
 
-        window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
-            if(currentlyPaid) return alert("This month is already marked as Paid.");
-            
-            if(confirm(`Confirm payment for ${monthName}?`)) {
-                const year = parseInt(document.getElementById('hubYear').value);
-                await addDoc(collection(db, "payments"), { 
-                    studentId: currentHubStudentId, 
-                    monthIndex, 
-                    year, 
-                    timestamp: new Date() 
-                });
-                loadHubPayments(); 
-                loadStudents();
-            }
-        };
+    // --- CORE ACTIONS (FIXED TO ADD USER) ---
+    window.addStudent = async () => {
+        const name = document.getElementById('sName').value;
+        const email = document.getElementById('sParentEmail').value.toLowerCase().trim();
+        if(!name || !email) return alert("Enter Name and Parent Email");
 
-        // --- CORE ACTIONS ---
-        window.addStudent = async () => {
-            const name = document.getElementById('sName').value;
-            if(!name) return alert("Enter Name");
+        try {
+            // 1. Add to students collection
             await addDoc(collection(db, "students"), {
                 name,
-                parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
+                parentEmail: email,
                 dob: document.getElementById('sDob').value,
                 division: document.getElementById('sDivision').value,
                 monthlyFee: parseInt(document.getElementById('sFee').value) || 0,
                 transportFee: 0,
-                goals: [document.getElementById('g1').value, document.getElementById('g2').value, document.getElementById('g3').value],
-                eta: document.getElementById('sEta').value
+                goals: [
+                    document.getElementById('g1') ? document.getElementById('g1').value : "", 
+                    document.getElementById('g2') ? document.getElementById('g2').value : "", 
+                    document.getElementById('g3') ? document.getElementById('g3').value : ""
+                ],
+                eta: document.getElementById('sEta') ? document.getElementById('sEta').value : "",
+                logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
             });
-            alert("Success!"); loadStudents();
-        };
 
-        window.editAll = async (sid, oldName, oldFee) => {
-            const newName = prompt("Update Name:", oldName);
-            const newFee = prompt("Update Monthly Fee (¥):", oldFee);
-            if(newName !== null && newFee !== null) {
-                await updateDoc(doc(db, "students", sid), { 
-                    name: newName, 
-                    monthlyFee: parseInt(newFee) 
-                });
-                loadStudents();
-            }
-        };
+            // 2. Add/Sync to users collection for login
+            await setDoc(doc(db, "users", email), {
+                email: email,
+                role: 'parent',
+                name: "Parent of " + name
+            }, { merge: true });
 
-        window.setTransport = async (sid, cur) => {
-            const val = prompt("Enter Monthly Transport Fee (¥):", cur);
-            if(val !== null) { 
-                await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); 
-                loadStudents(); 
-            }
-        };
+            alert("Success! Student enrolled and Parent account created."); 
+            loadStudents();
+        } catch (e) { console.error(e); alert("Enrollment failed."); }
+    };
 
-        window.deleteStudent = async (id) => { if(confirm("Delete student permanently?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
-        window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
-        window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
-
-        // Search logic
-        window.searchStudents = () => {
-            const term = document.getElementById('studentSearch').value.toLowerCase();
-            document.querySelectorAll('tbody tr').forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(term) ? "" : "none";
+    window.editAll = async (sid, oldName, oldFee) => {
+        const newName = prompt("Update Name:", oldName);
+        const newFee = prompt("Update Monthly Fee (¥):", oldFee);
+        if(newName !== null && newFee !== null) {
+            await updateDoc(doc(db, "students", sid), { 
+                name: newName, 
+                monthlyFee: parseInt(newFee) 
             });
-        };
+            loadStudents();
+        }
+    };
 
-        // Notice logic
-        window.sendNotice = async () => {
-            const msg = document.getElementById('noticeMsg').value;
-            if(!msg) return;
-            await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
-            document.getElementById('noticeMsg').value = ""; loadNotices();
-        };
-        window.loadNotices = async () => {
-            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-            const snap = await getDocs(q);
-            document.getElementById('noticeTableBody').innerHTML = snap.docs.map(d => `
-                <tr><td>${d.data().date}</td><td>${d.data().message}</td><td><button onclick="deleteNotice('${d.id}')">🗑️</button></td></tr>
-            `).join('');
-        };
-        window.deleteNotice = async (id) => { await deleteDoc(doc(db, "notices", id)); loadNotices(); };
+    window.setTransport = async (sid, cur) => {
+        const val = prompt("Enter Monthly Transport Fee (¥):", cur);
+        if(val !== null) { 
+            await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); 
+            loadStudents(); 
+        }
+    };
 
-        loadStudents(); loadNotices();
-    </script>
+    window.deleteStudent = async (id) => { if(confirm("Delete student permanently?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
+    window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
+    window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
+
+    window.searchStudents = () => {
+        const term = document.getElementById('studentSearch').value.toLowerCase();
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(term) ? "" : "none";
+        });
+    };
+
+    window.sendNotice = async () => {
+        const msg = document.getElementById('noticeMsg').value;
+        if(!msg) return;
+        await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
+        document.getElementById('noticeMsg').value = ""; loadNotices();
+    };
+
+    window.loadNotices = async () => {
+        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+        document.getElementById('noticeTableBody').innerHTML = snap.docs.map(d => `
+            <tr><td>${d.data().date}</td><td>${d.data().message}</td><td><button onclick="deleteNotice('${d.id}')">🗑️</button></td></tr>
+        `).join('');
+    };
+
+    window.deleteNotice = async (id) => { await deleteDoc(doc(db, "notices", id)); loadNotices(); };
+
+    // Initial Loads
+    loadStudents(); 
+    loadNotices();
+    loadTeachers();
+</script>
 </body>
 </html>
