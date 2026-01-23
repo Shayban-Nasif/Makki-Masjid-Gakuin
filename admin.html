@@ -220,25 +220,35 @@
 
     // --- TEACHER MANAGEMENT (FIXED) ---
     window.addTeacher = async () => {
-        const name = document.getElementById('tName').value;
-        const email = document.getElementById('tEmail').value.toLowerCase().trim();
-        const div = document.getElementById('tDivision').value;
+    const name = document.getElementById('tName').value;
+    const email = document.getElementById('tEmail').value.toLowerCase().trim();
+    const div = document.getElementById('tDivision').value;
 
-        if(!name || !email) return alert("Teacher name and email required");
+    if(!name || !email) return alert("Teacher name and email required");
 
+    try {
+        await setDoc(doc(db, "users", email), {
+            name: name,
+            email: email,
+            role: 'teacher',
+            division: div
+        });
+        alert("Teacher registered!");
+        document.getElementById('tName').value = "";
+        document.getElementById('tEmail').value = "";
+        loadTeachers();
+    } catch (e) { alert("Error adding teacher"); }
+};
+
+window.deleteUser = async (email) => {
+    if(confirm("Remove this user account?")) {
         try {
-            await setDoc(doc(db, "users", email), {
-                name: name,
-                email: email,
-                role: 'teacher',
-                division: div
-            });
-            alert("Teacher registered!");
-            document.getElementById('tName').value = "";
-            document.getElementById('tEmail').value = "";
+            await deleteDoc(doc(db, "users", email)); 
+            alert("User deleted.");
             loadTeachers();
-        } catch (e) { alert("Error adding teacher"); }
-    };
+        } catch (error) { alert("Could not delete user."); }
+    }
+};
 
     window.loadTeachers = async () => {
         const q = query(collection(db, "users"), where("role", "==", "teacher"));
@@ -259,20 +269,6 @@
         document.getElementById('count-teachers').innerText = snap.size;
     };
 
-    window.deleteUser = async (email) => {
-    if(confirm("Remove this user account?")) {
-        try {
-            // FIX: Removed the double doc() call
-            await deleteDoc(doc(db, "users", email)); 
-            
-            alert("User deleted.");
-            loadTeachers();
-        } catch (error) {
-            console.error("Error deleting user:", error);
-            alert("Could not delete user. Check console for details.");
-        }
-    }
-};
     window.loadStudents = async () => {
         const studentSnap = await getDocs(collection(db, "students"));
         const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
@@ -393,43 +389,36 @@
     const container = document.getElementById('hubPaymentGrid');
     const tableContainer = document.getElementById('hubPaymentTable');
     
-    // 1. Get payments for this student
     const q = query(collection(db, "payments"), where("studentId", "==", currentHubStudentId));
     const pSnap = await getDocs(q);
     
-    // 2. Filter locally to avoid Firebase Index errors
-    const allPayments = pSnap.docs.map(d => d.data());
-    const yearPayments = allPayments.filter(p => p.year === year);
-    const paidMonthIndices = yearPayments.map(p => p.monthIndex);
+    const yearPayments = pSnap.docs
+        .map(d => d.data())
+        .filter(p => p.year === year);
     
+    const paidIndices = yearPayments.map(p => p.monthIndex);
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     
-    // 3. Update the Grid
     container.innerHTML = months.map((m, i) => {
-        const isPaid = paidMonthIndices.includes(i);
+        const isPaid = paidIndices.includes(i);
         return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
     }).join('');
 
-    // 4. Update the Table
     let tableHtml = `<table style="width:100%; font-size:0.8rem; border-collapse:collapse;">
-        <tr style="background:#eee;"><th style="padding:5px;">Date</th><th style="padding:5px;">Month</th><th style="padding:5px;">Amount</th></tr>`;
+        <tr style="background:#eee;"><th style="padding:5px;">Date</th><th>Month</th><th>Amount</th></tr>`;
     
-    if(yearPayments.length === 0) {
-        tableHtml += `<tr><td colspan="3" style="text-align:center; padding:10px;">No records found</td></tr>`;
-    } else {
-        // Sort by date newest first
-        yearPayments.sort((a, b) => b.timestamp - a.timestamp);
-        yearPayments.forEach(p => {
-            tableHtml += `<tr>
-                <td style="padding:5px; border-bottom:1px solid #eee;">${p.datePaid || '—'}</td>
-                <td style="padding:5px; border-bottom:1px solid #eee;">${p.monthName}</td>
-                <td style="padding:5px; border-bottom:1px solid #eee; font-weight:bold;">¥${p.amount || 0}</td>
-            </tr>`;
-        });
-    }
-    tableHtml += `</table>`;
-    tableContainer.innerHTML = tableHtml;
+    yearPayments.sort((a, b) => b.timestamp - a.timestamp);
+    yearPayments.forEach(p => {
+        tableHtml += `<tr>
+            <td style="padding:5px; border-bottom:1px solid #eee;">${p.datePaid || '—'}</td>
+            <td style="padding:5px; border-bottom:1px solid #eee;">${p.monthName}</td>
+            <td style="padding:5px; border-bottom:1px solid #eee; font-weight:bold;">¥${p.amount || 0}</td>
+        </tr>`;
+    });
+    tableContainer.innerHTML = tableHtml + `</table>`;
 };
+
+        
     window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
     if(currentlyPaid) return alert("This month is already marked as Paid.");
     
@@ -468,67 +457,58 @@
 
     // --- CORE ACTIONS (FIXED FORM CLEARING & GOAL MAPPING) ---
     window.addStudent = async () => {
-        // Get form elements
-        const nameEl = document.getElementById('sName');
-        const emailEl = document.getElementById('sParentEmail');
-        const dobEl = document.getElementById('sDob');
-        const divEl = document.getElementById('sDivision');
-        const feeEl = document.getElementById('sFee');
-        const g1El = document.getElementById('g1');
-        const g2El = document.getElementById('g2');
-        const g3El = document.getElementById('g3');
-        const etaEl = document.getElementById('sEta');
-
-        const name = nameEl.value;
-        const email = emailEl.value.toLowerCase().trim();
-
-        if(!name || !email) return alert("Enter Name and Parent Email");
-
-        try {
-            // 1. Add to students collection
-            // We store goals as an object {c1, c2, c3} to match Teacher Portal levels
-            await addDoc(collection(db, "students"), {
-                name,
-                parentEmail: email,
-                dob: dobEl.value,
-                division: divEl.value,
-                monthlyFee: parseInt(feeEl.value) || 0,
-                transportFee: 0,
-                goals: {
-                    c1: parseInt(g1El.value) || 0,
-                    c2: parseInt(g2El.value) || 0,
-                    c3: parseInt(g3El.value) || 0
-                },
-                levels: { c1: 0, c2: 0, c3: 0 }, // Initialize levels at 0
-                eta: etaEl ? etaEl.value : "",
-                logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
-            });
-
-            // 2. Add/Sync to users collection for login
-            await setDoc(doc(db, "users", email), {
-                email: email,
-                role: 'parent',
-                name: "Parent of " + name
-            }, { merge: true });
-
-            alert("Success! Student enrolled and form cleared.");
-
-            // --- CLEAN FORM DATA ---
-            nameEl.value = "";
-            emailEl.value = "";
-            dobEl.value = "";
-            feeEl.value = "";
-            if(g1El) g1El.value = "";
-            if(g2El) g2El.value = "";
-            if(g3El) g3El.value = "";
-            if(etaEl) etaEl.value = "";
-            
-            loadStudents();
-        } catch (e) { 
-            console.error(e); 
-            alert("Enrollment failed. Check console for details."); 
-        }
+    const fields = {
+        name: document.getElementById('sName'),
+        email: document.getElementById('sParentEmail'),
+        dob: document.getElementById('sDob'),
+        div: document.getElementById('sDivision'),
+        fee: document.getElementById('sFee'),
+        g1: document.getElementById('g1'),
+        g2: document.getElementById('g2'),
+        g3: document.getElementById('g3'),
+        eta: document.getElementById('sEta')
     };
+
+    if(!fields.name.value || !fields.email.value) return alert("Enter Name and Parent Email");
+
+    try {
+        const parentEmail = fields.email.value.toLowerCase().trim();
+        
+        // 1. Save Student Data
+        await addDoc(collection(db, "students"), {
+            name: fields.name.value,
+            parentEmail: parentEmail,
+            dob: fields.dob.value,
+            division: fields.div.value,
+            monthlyFee: parseInt(fields.fee.value) || 0,
+            transportFee: 0,
+            goals: {
+                c1: parseInt(fields.g1.value) || 0,
+                c2: parseInt(fields.g2.value) || 0,
+                c3: parseInt(fields.g3.value) || 0
+            },
+            levels: { c1: 0, c2: 0, c3: 0 },
+            eta: fields.eta ? fields.eta.value : "",
+            logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
+        });
+
+        // 2. Sync Parent Account
+        await setDoc(doc(db, "users", parentEmail), {
+            email: parentEmail,
+            role: 'parent',
+            name: "Parent of " + fields.name.value
+        }, { merge: true });
+
+        alert("Success! Student enrolled.");
+
+        // 3. Clear all inputs
+        Object.values(fields).forEach(el => { if(el) el.value = ""; });
+        loadStudents();
+    } catch (e) {
+        console.error("Enrollment error:", e);
+        alert("Enrollment failed.");
+    }
+};
 
     window.editAll = async (sid, oldName, oldFee) => {
     // We fetch the current data first to get the current email and transport
@@ -568,20 +548,30 @@
     };
 
     window.sendNotice = async () => {
-        const msg = document.getElementById('noticeMsg').value;
-        if(!msg) return;
-        await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
-        document.getElementById('noticeMsg').value = ""; loadNotices();
-    };
+    const msg = document.getElementById('noticeMsg').value;
+    if(!msg) return;
+    try {
+        await addDoc(collection(db, "notices"), { 
+            message: msg, 
+            date: new Date().toLocaleString(), 
+            timestamp: new Date() 
+        });
+        document.getElementById('noticeMsg').value = ""; 
+        loadNotices();
+    } catch (e) { alert("Error sending notice"); }
+};
 
-    window.loadNotices = async () => {
-        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        document.getElementById('noticeTableBody').innerHTML = snap.docs.map(d => `
-            <tr><td>${d.data().date}</td><td>${d.data().message}</td><td><button onclick="deleteNotice('${d.id}')">🗑️</button></td></tr>
-        `).join('');
-    };
-
+window.loadNotices = async () => {
+    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+    const snap = await getDocs(q);
+    document.getElementById('noticeTableBody').innerHTML = snap.docs.map(d => `
+        <tr>
+            <td>${d.data().date}</td>
+            <td>${d.data().message}</td>
+            <td><button class="action-btn" onclick="deleteNotice('${d.id}')">🗑️</button></td>
+        </tr>
+    `).join('');
+};
     window.deleteNotice = async (id) => { await deleteDoc(doc(db, "notices", id)); loadNotices(); };
 
     // Initial Loads
