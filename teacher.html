@@ -171,34 +171,56 @@
             }
         }
 
-        async function loadStudents() {
-            const q = query(collection(db, "students"), where("division", "==", teacherData.division));
-            const snap = await getDocs(q);
-            const list = document.getElementById('myStudentList');
-            list.innerHTML = "";
+        async function loadStudents(division) {
+    const q = query(collection(db, "students"), where("division", "==", division));
+    const snap = await getDocs(q);
+    const list = document.getElementById('myStudentList');
+    list.innerHTML = "";
 
-            snap.forEach(docSnap => {
-                const s = docSnap.data();
-                const id = docSnap.id;
-                const lv = s.levels || { c1: 0, c2: 0, c3: 0 };
-                const gl = s.goals || [0, 0, 0]; // Array from Admin
+    // Get the right labels for the subjects (e.g., Qaida, Dua, etc.)
+    const labels = divisionLabels[teacherData.division] || ["Sub 1", "Sub 2", "Sub 3"];
 
-                // Use array goals if available, otherwise fallback
-                const target = gl[0] || 30; 
-                const percentage = Math.min(Math.round((lv.c1 / target) * 100), 100);
+    snap.forEach(docSnap => {
+        const s = docSnap.data();
+        const id = docSnap.id;
+        
+        // Safety check for data
+        const l = s.levels || { c1: 0, c2: 0, c3: 0 };
+        const g = s.goals || { c1: 1, c2: 1, c3: 1 };
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${s.name}</strong></td>
-                    <td>
-                        <div class="progress-bar-bg"><div class="progress-fill" style="width:${percentage}%"></div></div>
-                        <span class="badge badge-info">${lv.c1} / ${target}</span>
-                    </td>
-                    <td><button class="btn-log" onclick="openUpdateModal('${id}', '${s.name}', ${lv.c1}, ${lv.c2}, ${lv.c3})">Daily Update</button></td>
-                `;
-                list.appendChild(tr);
-            });
-        }
+        // Helper function to create a small progress bar for the table
+        const createMiniBar = (cur, goal, label) => {
+            const perc = Math.min(Math.round((cur / (goal || 1)) * 100), 100);
+            return `
+                <div style="margin-bottom: 5px;">
+                    <div style="display:flex; justify-content:space-between; font-size:10px; color:#666;">
+                        <span>${label}</span>
+                        <span>${cur}/${goal}</span>
+                    </div>
+                    <div style="background:#eee; height:6px; border-radius:3px; width:120px;">
+                        <div style="background:var(--gold); width:${perc}%; height:100%; border-radius:3px;"></div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="vertical-align: top;"><strong>${s.name}</strong></td>
+            <td>
+                ${createMiniBar(l.c1, g.c1, labels[0])}
+                ${createMiniBar(l.c2, g.c2, labels[1])}
+                ${createMiniBar(l.c3, g.c3, labels[2])}
+            </td>
+            <td style="vertical-align: top;">
+                <button class="btn-log" onclick="openLogModal('${id}', '${s.name}', ${JSON.stringify(l)})">
+                    Update Progress
+                </button>
+            </td>
+        `;
+        list.appendChild(tr);
+    });
+}
 
         window.openUpdateModal = (id, name, l1, l2, l3) => {
             document.getElementById('logStudentId').value = id;
