@@ -39,20 +39,21 @@
         
         /* Payment Grid */
         .year-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 15px; }
-        .month-cell { padding: 10px; border: 1px solid #ddd; border-radius: 6px; text-align: center; cursor: pointer; font-size: 0.8rem; }
-        .month-cell.paid { background: #2e7d32; color: white; border: none; }
+        .month-cell { padding: 10px; border: 1px solid #ddd; border-radius: 6px; text-align: center; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
+        .month-cell.paid { background: #2e7d32; color: white; border: none; font-weight: bold; }
         .month-cell.due { border: 2px dashed #e57373; color: #c62828; }
+        .month-cell:hover { opacity: 0.8; transform: scale(1.02); }
 
         /* Log Entry */
         .log-entry { border-left: 3px solid var(--gold); padding: 8px 15px; margin-bottom: 10px; background: #f9f9f9; font-size: 0.85rem; }
         .log-date { font-weight: bold; color: var(--primary); margin-right: 10px; }
-        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .hub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         
         /* UI Elements */
         .search-box { width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
         .btn-primary { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn-pay { background: #2e7d32; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-        .action-btn { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; margin-right: 2px; }
+        .action-btn { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 10px; cursor: pointer; border-radius: 4px; margin-right: 4px; transition: 0.2s; }
+        .action-btn:hover { background: #e0e0e0; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         label { font-size: 0.75rem; color: #666; font-weight: bold; display: block; margin-bottom: 4px; }
         .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 15px; }
@@ -62,7 +63,7 @@
 
     <div class="admin-container">
         <div class="header">
-            <h1>Admin Management | Makki Masjid Gakuin</h1>
+            <h1>Admin Dashboard | Makki Masjid Gakuin</h1>
             <button onclick="logout()" style="background:#c62828; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Logout</button>
         </div>
 
@@ -88,26 +89,20 @@
                     <div><label>Date of Birth</label><input type="date" id="sDob"></div>
                     <div>
                         <label>Division</label>
-                        <select id="sDivision" onchange="updateGoalLabels()">
+                        <select id="sDivision">
                             <option value="Maktab">Maktab</option>
                             <option value="Nazera">Nazera</option>
                             <option value="Hifz">Hifz</option>
                         </select>
                     </div>
-                    <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="0"></div>
-                </div>
-                <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-                    <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
-                    <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
-                    <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
-                    <div><label>Target ETA</label><input type="date" id="sEta"></div>
+                    <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="3000"></div>
                 </div>
                 <button onclick="addStudent()" class="btn-primary">Enroll Student</button>
             </div>
 
             <div class="section">
-                <h3>Active Students & Payments</h3>
-                <input type="text" id="studentSearch" class="search-box" placeholder="🔍 Search student name..." onkeyup="searchStudents()">
+                <h3>Student Directory</h3>
+                <input type="text" id="studentSearch" class="search-box" placeholder="🔍 Search by name or email..." onkeyup="searchStudents()">
                 <div id="divisionContainer"></div>
             </div>
         </div>
@@ -129,9 +124,7 @@
             <div class="section">
                 <h3>Teacher's List</h3>
                 <table id="teacherTable">
-                    <thead>
-                        <tr><th>Name</th><th>Email</th><th>Division</th><th>Actions</th></tr>
-                    </thead>
+                    <thead><tr><th>Name</th><th>Email</th><th>Division</th><th>Actions</th></tr></thead>
                     <tbody id="teacherTableBody"></tbody>
                 </table>
             </div>
@@ -144,9 +137,9 @@
                 <button onclick="sendNotice()" class="btn-primary" style="width:200px; margin-top:0;">Send Notice</button>
             </div>
             <div class="section">
-                <h3>History</h3>
-                <table>
-                    <thead><tr><th style="width:20%">Date</th><th>Message</th><th style="width:10%">Action</th></tr></thead>
+                <h3>Notice History</h3>
+                <table id="noticeTable">
+                    <thead><tr><th>Date</th><th>Message</th><th>Action</th></tr></thead>
                     <tbody id="noticeTableBody"></tbody>
                 </table>
             </div>
@@ -162,31 +155,29 @@
             <div class="modal-body">
                 <div class="hub-grid">
                     <div>
-                        <h3>Update Status</h3>
+                        <h3>Admin Controls</h3>
                         <label>Current Division</label>
                         <select id="hubDivision">
                             <option value="Maktab">Maktab</option>
                             <option value="Nazera">Nazera</option>
                             <option value="Hifz">Hifz</option>
                         </select>
-                        <button class="btn-primary" onclick="changeDivision()" style="margin-bottom: 20px;">Update Division & Log</button>
+                        <button class="btn-primary" onclick="changeDivision()">Update Division & Log</button>
                         
-                        <label>Progress/Level Up Note</label>
-                        <input type="text" id="levelNote" placeholder="e.g. Finished Qaida, Moved to Para 1">
-                        <button class="btn-primary" onclick="logLevelUp()" style="background:var(--gold)">Log Level Up</button>
-                        
-                        <h3>Timeline History</h3>
-                        <div id="timelineLogs" style="max-height: 250px; overflow-y: auto; border:1px solid #eee; padding:10px;"></div>
+                        <h3 style="margin-top:30px;">Timeline History</h3>
+                        <div id="timelineLogs" style="max-height: 250px; overflow-y: auto; border:1px solid #eee; padding:10px; background:#fff;"></div>
                     </div>
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3>Payment History</h3>
-                            <select id="hubYear" onchange="loadHubPayments()">
+                            <h3>Payment Records</h3>
+                            <select id="hubYear" onchange="loadHubPayments()" style="width:100px;">
                                 <option>2026</option><option>2025</option>
                             </select>
                         </div>
                         <div class="year-grid" id="hubPaymentGrid"></div>
-                        <p style="font-size: 0.7rem; color: #666; margin-top: 10px;">* Click a month to toggle Paid/Unpaid status</p>
+                        <p style="font-size: 0.75rem; color: #666; margin-top: 15px; background: #fff9c4; padding: 10px; border-radius: 4px;">
+                            <strong>Note:</strong> Click a month to mark as <b>Paid</b>. To remove a payment, you must contact support or use the manual database tool.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -208,7 +199,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const currentMonthYear = "January 2026";
+        const currentYear = 2026;
+        const currentMonthIndex = new Date().getMonth();
 
         window.openTab = (evt, tabId) => {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -217,61 +209,51 @@
             evt.currentTarget.classList.add('active');
         };
 
-        window.updateGoalLabels = () => {
-            const div = document.getElementById('sDivision').value;
-            const l1 = document.getElementById('lblG1');
-            const l2 = document.getElementById('lblG2');
-            const l3 = document.getElementById('lblG3');
-            if (div === "Hifz" || div === "Nazera") {
-                l1.innerText = "Goal (Para)"; l2.innerText = "Goal (Tajweed)"; l3.innerText = "Goal (Islamic Studies)";
-            } else {
-                l1.innerText = "Goal (Qaida)"; l2.innerText = "Goal (Dua)"; l3.innerText = "Goal (Islamic Studies)";
-            }
-        };
-
         window.loadStudents = async () => {
             const studentSnap = await getDocs(collection(db, "students"));
-            const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-            const paidIds = paySnap.docs.map(d => d.data().studentId);
+            // Get payments for the current year to calculate balance
+            const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
             
             const container = document.getElementById('divisionContainer');
             container.innerHTML = "";
             let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-            const groups = {};
+            const groups = { Maktab: [], Nazera: [], Hifz: [] };
 
             studentSnap.forEach(docSnap => {
                 const s = { id: docSnap.id, ...docSnap.data() };
-                const div = s.division || "Unassigned";
-                if(!groups[div]) groups[div] = [];
-                groups[div].push(s);
-                if(stats[div] !== undefined) stats[div]++;
+                if(groups[s.division]) groups[s.division].push(s);
+                if(stats[s.division] !== undefined) stats[s.division]++;
             });
 
             for (const [divName, students] of Object.entries(groups)) {
-                const divId = `div-${divName.replace(/\s+/g, '')}`;
+                if(students.length === 0) continue;
+                const divId = `div-${divName}`;
                 const card = document.createElement('div');
                 card.className = 'division-card';
                 card.innerHTML = `
                     <div class="division-header" onclick="toggleDivision('${divId}')">
-                        <span>📂 ${divName} Division (${students.length})</span><span id="icon-${divId}">▼</span>
+                        <span>📂 ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
                     </div>
                     <div class="division-content" id="${divId}">
                         <table>
-                            <thead><tr><th>Student</th><th>Email</th><th>Fee</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+                            <thead><tr><th>Name</th><th>Parent Email</th><th>Fee</th><th>Transport</th><th>Balance</th><th>Actions</th></tr></thead>
                             <tbody>
                                 ${students.map(s => {
-                                    const isPaid = paidIds.includes(s.id);
-                                    const total = (parseInt(s.monthlyFee)||0) + (parseInt(s.transportFee)||0);
+                                    const mFee = parseInt(s.monthlyFee) || 0;
+                                    const tFee = parseInt(s.transportFee) || 0;
+                                    const hasPaidThisMonth = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
+                                    const balance = hasPaidThisMonth ? 0 : (mFee + tFee);
+
                                     return `<tr>
-                                        <td><strong>${s.name}</strong> ${s.transportFee > 0 ? '🚌' : ''}</td>
+                                        <td><strong>${s.name}</strong></td>
                                         <td>${s.parentEmail}</td>
-                                        <td>¥${s.monthlyFee} ${s.transportFee > 0 ? `(+¥${s.transportFee})` : ''}</td>
-                                        <td style="color:${isPaid?'green':'red'}; font-weight:bold">¥${isPaid ? 0 : total}</td>
-                                        <td>${isPaid ? '✅ PAID' : `<button class="btn-pay" onclick="markAsPaid('${s.id}','${s.name}')">Collect</button>`}</td>
+                                        <td>¥${mFee}</td>
+                                        <td>¥${tFee}</td>
+                                        <td style="color:${balance > 0 ? 'red' : 'green'}; font-weight:bold">¥${balance}</td>
                                         <td>
-                                            <button class="action-btn" onclick="openHub('${s.id}')" title="Profile & History">📂</button>
-                                            <button class="action-btn" onclick="setTransport('${s.id}', ${s.transportFee||0})">🚌</button>
-                                            <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${s.monthlyFee})">✏️</button>
+                                            <button class="action-btn" onclick="openHub('${s.id}')" title="Profile & Payments">📂</button>
+                                            <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
+                                            <button class="action-btn" onclick="setTransport('${s.id}', ${tFee})" title="Transport Fee">🚌</button>
                                             <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
                                         </td>
                                     </tr>`;
@@ -286,13 +268,13 @@
             document.getElementById('count-hifz').innerText = stats.Hifz;
         };
 
-        // --- HUB LOGIC ---
+        // --- HUB / PROFILE LOGIC ---
         let currentHubStudentId = null;
         window.openHub = async (sid) => {
             currentHubStudentId = sid;
             const sSnap = await getDocs(collection(db, "students"));
             const s = sSnap.docs.find(d => d.id === sid).data();
-            document.getElementById('hubName').innerText = s.name + " | " + s.division;
+            document.getElementById('hubName').innerText = s.name;
             document.getElementById('hubDivision').value = s.division;
             loadTimeline(s.logs || []);
             loadHubPayments();
@@ -315,21 +297,14 @@
         window.changeDivision = async () => {
             const newDiv = document.getElementById('hubDivision').value;
             await updateDoc(doc(db, "students", currentHubStudentId), { division: newDiv });
-            await addLog(`Division changed to ${newDiv}`);
+            await addLog(`Division changed to ${newDiv} (by Admin)`);
             alert("Updated!"); loadStudents();
-        };
-
-        window.logLevelUp = async () => {
-            const note = document.getElementById('levelNote').value;
-            if(!note) return;
-            await addLog(`Progress: ${note}`);
-            document.getElementById('levelNote').value = "";
         };
 
         function loadTimeline(logs) {
             document.getElementById('timelineLogs').innerHTML = logs.map(l => `
                 <div class="log-entry"><span class="log-date">${l.date}</span> ${l.text}</div>
-            `).join('') || "No logs yet.";
+            `).join('') || "No logs available.";
         }
 
         window.loadHubPayments = async () => {
@@ -340,51 +315,93 @@
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             document.getElementById('hubPaymentGrid').innerHTML = months.map((m, i) => {
                 const isPaid = paidMonths.includes(i);
-                return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid})">${m}</div>`;
+                return `<div class="month-cell ${isPaid?'paid':'due'}" onclick="togglePayment(${i}, ${isPaid}, '${m}')">${m}</div>`;
             }).join('');
         };
 
-        window.togglePayment = async (monthIndex, currentlyPaid) => {
-            if(currentlyPaid) return alert("Paid records cannot be deleted from here.");
-            const year = parseInt(document.getElementById('hubYear').value);
-            await addDoc(collection(db, "payments"), { studentId: currentHubStudentId, monthIndex, year, timestamp: new Date() });
-            loadHubPayments(); loadStudents();
+        window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
+            if(currentlyPaid) return alert("This month is already marked as Paid.");
+            
+            if(confirm(`Confirm payment for ${monthName}?`)) {
+                const year = parseInt(document.getElementById('hubYear').value);
+                await addDoc(collection(db, "payments"), { 
+                    studentId: currentHubStudentId, 
+                    monthIndex, 
+                    year, 
+                    timestamp: new Date() 
+                });
+                loadHubPayments(); 
+                loadStudents();
+            }
         };
 
-        // Standard Actions
+        // --- CORE ACTIONS ---
         window.addStudent = async () => {
             const name = document.getElementById('sName').value;
-            if(!name) return alert("Enter Name");
+            const email = document.getElementById('sParentEmail').value.toLowerCase();
+            if(!name || !email) return alert("Name and Email are required");
+            
             await addDoc(collection(db, "students"), {
-                name, parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
-                dob: document.getElementById('sDob').value, division: document.getElementById('sDivision').value,
-                monthlyFee: parseInt(document.getElementById('sFee').value) || 0, transportFee: 0,
+                name, parentEmail: email,
+                dob: document.getElementById('sDob').value, 
+                division: document.getElementById('sDivision').value,
+                monthlyFee: parseInt(document.getElementById('sFee').value) || 0, 
+                transportFee: 0,
                 logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
             });
-            alert("Success!"); loadStudents();
-        };
-
-        window.addTeacher = async () => {
-            const email = document.getElementById('tEmail').value.toLowerCase();
-            await setDoc(doc(db, "users", email), { name: document.getElementById('tName').value, email, role: 'teacher', division: document.getElementById('tDivision').value });
-            loadTeachers();
-        };
-
-        window.markAsPaid = async (sid, name) => {
-            await addDoc(collection(db, "payments"), { studentId: sid, studentName: name, month: currentMonthYear, monthIndex: new Date().getMonth(), year: 2026, timestamp: new Date() });
+            alert("Student added!"); 
             loadStudents();
         };
 
-        window.setTransport = async (sid, cur) => {
-            const val = prompt("Monthly Transport Fee:", cur);
-            if(val !== null) { await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); loadStudents(); }
+        window.editAll = async (sid, oldName, oldFee) => {
+            const newName = prompt("Update Name:", oldName);
+            const newFee = prompt("Update Monthly Fee (¥):", oldFee);
+            if(newName !== null && newFee !== null) {
+                await updateDoc(doc(db, "students", sid), { 
+                    name: newName, 
+                    monthlyFee: parseInt(newFee) 
+                });
+                loadStudents();
+            }
         };
 
-        window.deleteStudent = async (id) => { if(confirm("Delete student?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
+        window.setTransport = async (sid, cur) => {
+            const val = prompt("Enter Monthly Transport Fee (¥):", cur);
+            if(val !== null) { 
+                await updateDoc(doc(db, "students", sid), { transportFee: parseInt(val) || 0 }); 
+                loadStudents(); 
+            }
+        };
+
+        window.deleteStudent = async (id) => { if(confirm("Delete student permanently?")) { await deleteDoc(doc(db, "students", id)); loadStudents(); } };
         window.toggleDivision = (id) => { const el = document.getElementById(id); el.style.display = el.style.display === "none" ? "block" : "none"; };
         window.logout = () => { localStorage.clear(); window.location.href='index.html'; };
 
-        loadStudents(); loadTeachers();
+        // Search logic
+        window.searchStudents = () => {
+            const term = document.getElementById('studentSearch').value.toLowerCase();
+            document.querySelectorAll('tbody tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(term) ? "" : "none";
+            });
+        };
+
+        // Notice logic
+        window.sendNotice = async () => {
+            const msg = document.getElementById('noticeMsg').value;
+            if(!msg) return;
+            await addDoc(collection(db, "notices"), { message: msg, date: new Date().toLocaleString(), timestamp: new Date() });
+            document.getElementById('noticeMsg').value = ""; loadNotices();
+        };
+        window.loadNotices = async () => {
+            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            document.getElementById('noticeTableBody').innerHTML = snap.docs.map(d => `
+                <tr><td>${d.data().date}</td><td>${d.data().message}</td><td><button onclick="deleteNotice('${d.id}')">🗑️</button></td></tr>
+            `).join('');
+        };
+        window.deleteNotice = async (id) => { await deleteDoc(doc(db, "notices", id)); loadNotices(); };
+
+        loadStudents(); loadNotices();
     </script>
 </body>
 </html>
