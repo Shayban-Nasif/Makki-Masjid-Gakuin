@@ -315,10 +315,11 @@
         const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
         const s1 = document.getElementById('sabaq1').value;
         const s2 = document.getElementById('sabaq2').value;
+        const s3 = document.getElementById('sabaq3').value;
         const performance = document.getElementById('logPerformance').value;
 
         // Create a readable summary for parents
-        const detail = `${labels[0]}: ${s1 || 'N/A'} | ${labels[1]}: ${s2 || 'N/A'}`;
+        const detail = `${labels[0]}: ${s1 || 'N/A'} | ${labels[1]}: ${s2 || 'N/A'} | ${labels[1]}: ${s3 || 'N/A'}`;
 
         try {
             const sRef = doc(db, "students", sid);
