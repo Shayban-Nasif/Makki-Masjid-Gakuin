@@ -89,13 +89,19 @@
                     <div><label>Date of Birth</label><input type="date" id="sDob"></div>
                     <div>
                         <label>Division</label>
-                        <select id="sDivision">
+                        <select id="sDivision" onchange="updateGoalLabels()">
                             <option value="Maktab">Maktab</option>
                             <option value="Nazera">Nazera</option>
                             <option value="Hifz">Hifz</option>
                         </select>
                     </div>
-                    <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="3000"></div>
+                    <div><label>Monthly Fee (¥)</label><input type="number" id="sFee" value="0"></div>
+                </div>
+                <div class="admin-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+                    <div><label id="lblG1">Goal (Qaida)</label><input type="number" id="g1"></div>
+                    <div><label id="lblG2">Goal (Dua)</label><input type="number" id="g2"></div>
+                    <div><label id="lblG3">Goal (Islamic Studies)</label><input type="number" id="g3"></div>
+                    <div><label>Target ETA</label><input type="date" id="sEta"></div>
                 </div>
                 <button onclick="addStudent()" class="btn-primary">Enroll Student</button>
             </div>
@@ -268,6 +274,29 @@
             document.getElementById('count-hifz').innerText = stats.Hifz;
         };
 
+        // --- DYNAMIC LABEL LOGIC ---
+        window.updateGoalLabels = () => {
+            const div = document.getElementById('sDivision').value;
+            const l1 = document.getElementById('lblG1');
+            const l2 = document.getElementById('lblG2');
+            const l3 = document.getElementById('lblG3');
+
+            if (div === "Hifz") {
+                l1.innerText = "Goal (Para)";
+                l2.innerText = "Goal (Tajweed)";
+                l3.innerText = "Goal (Islamic Studies)";
+            } else if (div === "Nazera") {
+                l1.innerText = "Goal (Para)";
+                l2.innerText = "Goal (Tajweed)";
+                l3.innerText = "Goal (Islamic Studies)";
+            } else {
+                l1.innerText = "Goal (Qaida)";
+                l2.innerText = "Goal (Dua)";
+                l3.innerText = "Goal (Islamic Studies)";
+            }
+        };
+
+        
         // --- HUB / PROFILE LOGIC ---
         let currentHubStudentId = null;
         window.openHub = async (sid) => {
@@ -338,19 +367,18 @@
         // --- CORE ACTIONS ---
         window.addStudent = async () => {
             const name = document.getElementById('sName').value;
-            const email = document.getElementById('sParentEmail').value.toLowerCase();
-            if(!name || !email) return alert("Name and Email are required");
-            
+            if(!name) return alert("Enter Name");
             await addDoc(collection(db, "students"), {
-                name, parentEmail: email,
-                dob: document.getElementById('sDob').value, 
+                name,
+                parentEmail: document.getElementById('sParentEmail').value.toLowerCase(),
+                dob: document.getElementById('sDob').value,
                 division: document.getElementById('sDivision').value,
-                monthlyFee: parseInt(document.getElementById('sFee').value) || 0, 
+                monthlyFee: parseInt(document.getElementById('sFee').value) || 0,
                 transportFee: 0,
-                logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
+                goals: [document.getElementById('g1').value, document.getElementById('g2').value, document.getElementById('g3').value],
+                eta: document.getElementById('sEta').value
             });
-            alert("Student added!"); 
-            loadStudents();
+            alert("Success!"); loadStudents();
         };
 
         window.editAll = async (sid, oldName, oldFee) => {
