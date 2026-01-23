@@ -108,6 +108,7 @@ let studentsData = [];
 let paidIds = [];
 
 // --- CORE DATA LOADING ---
+// --- UPDATED CORE DATA LOADING ---
 async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     
@@ -117,9 +118,11 @@ async function init() {
         const studentSnap = await getDocs(q);
         studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Fetch Payments
-        const paySnap = await getDocs(query(collection(db, "payments"), where("month", "==", currentMonthYear)));
-        paidIds = paySnap.docs.map(d => d.data().studentId);
+        // 2. Fetch ALL Payments for these students (to show history)
+        const allPaymentsQuery = query(collection(db, "payments"), orderBy("timestamp", "desc"));
+        const paySnap = await getDocs(allPaymentsQuery);
+        // Store as a global variable so renderView can access it
+        window.allPayments = paySnap.docs.map(d => d.data());
 
         // 3. Render and Load Notices
         renderView('report');
@@ -159,17 +162,55 @@ window.renderView = (view) => {
                         <span>${log.text || ''}</span>
                     </div>`).join('');
             } else {
-                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
-            }
-            logsHtml += `</div>`;
+            // --- UPDATED FINANCE VIEW ---
+            const studentPayments = (window.allPayments || []).filter(p => p.studentId === child.id);
+            const isPaidThisMonth = studentPayments.some(p => p.monthName === "Jan" && p.year === 2026); // Match your Admin logic
+            
+            const mFee = Number(child.monthlyFee) || 0;
+            const tFee = Number(child.transportFee) || 0;
+            const totalDue = mFee + tFee;
 
             card.innerHTML = `
-                <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
-                <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
-                <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
-                <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
-                <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
-                ${logsHtml}
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                    <h3 style="margin:0;">${child.name}</h3>
+                    <div class="status-badge ${isPaidThisMonth ? 'paid' : 'unpaid'}" style="margin:0; font-size:0.8rem;">
+                        ${isPaidThisMonth ? 'Current Month: Paid ✅' : 'Current Month: Due'}
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div style="background:#f9f9f9; padding:15px; border-radius:8px; border-left:4px solid var(--primary);">
+                        <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Monthly Commitment</label>
+                        <div style="font-weight:bold; color:var(--primary);">¥${totalDue.toLocaleString()}</div>
+                        <div style="font-size:0.7rem; color:#888;">(Tuition: ¥${mFee} + Transport: ¥${tFee})</div>
+                    </div>
+                    <div style="background:#f9f9f9; padding:15px; border-radius:8px; border-left:4px solid ${isPaidThisMonth ? '#2e7d32' : '#c62828'};">
+                        <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Balance Due</label>
+                        <div style="font-weight:bold; color:${isPaidThisMonth ? '#2e7d32' : '#c62828'};">¥${isPaidThisMonth ? '0' : totalDue.toLocaleString()}</div>
+                    </div>
+                </div>
+
+                <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:10px;">Payment History</h4>
+                <div style="overflow-x:auto;">
+                    <table class="finance-table" style="font-size:0.85rem;">
+                        <thead>
+                            <tr style="text-align:left; background:#eee;">
+                                <th style="padding:8px;">Month</th>
+                                <th style="padding:8px;">Date Paid</th>
+                                <th style="padding:8px; text-align:right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${studentPayments.length > 0 ? studentPayments.map(p => `
+                                <tr>
+                                    <td style="padding:8px;">${p.monthName} ${p.year}</td>
+                                    <td style="padding:8px;">${p.datePaid || '—'}</td>
+                                    <td style="padding:8px; text-align:right; font-weight:bold;">¥${(p.amount || 0).toLocaleString()}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#999;">No payment records found.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
             `;
         } else {
             const isPaid = paidIds.includes(child.id);
