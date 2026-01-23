@@ -405,27 +405,41 @@
         }
     };
 
-    // --- CORE ACTIONS (FIXED TO ADD USER) ---
+    // --- CORE ACTIONS (FIXED FORM CLEARING & GOAL MAPPING) ---
     window.addStudent = async () => {
-        const name = document.getElementById('sName').value;
-        const email = document.getElementById('sParentEmail').value.toLowerCase().trim();
+        // Get form elements
+        const nameEl = document.getElementById('sName');
+        const emailEl = document.getElementById('sParentEmail');
+        const dobEl = document.getElementById('sDob');
+        const divEl = document.getElementById('sDivision');
+        const feeEl = document.getElementById('sFee');
+        const g1El = document.getElementById('g1');
+        const g2El = document.getElementById('g2');
+        const g3El = document.getElementById('g3');
+        const etaEl = document.getElementById('sEta');
+
+        const name = nameEl.value;
+        const email = emailEl.value.toLowerCase().trim();
+
         if(!name || !email) return alert("Enter Name and Parent Email");
 
         try {
             // 1. Add to students collection
+            // We store goals as an object {c1, c2, c3} to match Teacher Portal levels
             await addDoc(collection(db, "students"), {
                 name,
                 parentEmail: email,
-                dob: document.getElementById('sDob').value,
-                division: document.getElementById('sDivision').value,
-                monthlyFee: parseInt(document.getElementById('sFee').value) || 0,
+                dob: dobEl.value,
+                division: divEl.value,
+                monthlyFee: parseInt(feeEl.value) || 0,
                 transportFee: 0,
-                goals: [
-                    document.getElementById('g1') ? document.getElementById('g1').value : "", 
-                    document.getElementById('g2') ? document.getElementById('g2').value : "", 
-                    document.getElementById('g3') ? document.getElementById('g3').value : ""
-                ],
-                eta: document.getElementById('sEta') ? document.getElementById('sEta').value : "",
+                goals: {
+                    c1: parseInt(g1El.value) || 0,
+                    c2: parseInt(g2El.value) || 0,
+                    c3: parseInt(g3El.value) || 0
+                },
+                levels: { c1: 0, c2: 0, c3: 0 }, // Initialize levels at 0
+                eta: etaEl ? etaEl.value : "",
                 logs: [{ date: new Date().toLocaleDateString(), text: "Student Enrolled", timestamp: new Date() }]
             });
 
@@ -436,9 +450,23 @@
                 name: "Parent of " + name
             }, { merge: true });
 
-            alert("Success! Student enrolled and Parent account created."); 
+            alert("Success! Student enrolled and form cleared.");
+
+            // --- CLEAN FORM DATA ---
+            nameEl.value = "";
+            emailEl.value = "";
+            dobEl.value = "";
+            feeEl.value = "";
+            if(g1El) g1El.value = "";
+            if(g2El) g2El.value = "";
+            if(g3El) g3El.value = "";
+            if(etaEl) etaEl.value = "";
+            
             loadStudents();
-        } catch (e) { console.error(e); alert("Enrollment failed."); }
+        } catch (e) { 
+            console.error(e); 
+            alert("Enrollment failed. Check console for details."); 
+        }
     };
 
     window.editAll = async (sid, oldName, oldFee) => {
