@@ -13,62 +13,62 @@
 
     // Updated renderView function to show Logs in the Progress Tab
     window.renderView = (view) => {
-        const container = document.getElementById('childrenContainer');
-        container.innerHTML = "";
+    const container = document.getElementById('childrenContainer');
+    container.innerHTML = "";
+    
+    if (!studentsData || studentsData.length === 0) {
+        container.innerHTML = "<div class='child-card'>No students found linked to: " + parentEmail + "</div>";
+        return;
+    }
+
+    studentsData.forEach(child => {
+        const card = document.createElement('div');
+        card.className = 'child-card';
         
-        if (studentsData.length === 0) {
-            container.innerHTML = "<div class='child-card'>No students found linked to this email.</div>";
-            return;
-        }
+        // Safety check for missing objects
+        const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
+        const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
+        const logs = child.logs || [];
 
-        studentsData.forEach(child => {
-            const card = document.createElement('div');
-            card.className = 'child-card';
+        if (view === 'report') {
+            const labels = getDivisionLabels(child.division);
             
-            if (view === 'report') {
-                const labels = getDivisionLabels(child.division);
-                
-                // Generate HTML for Logs
-                let logsHtml = "";
-                if (child.logs && child.logs.length > 0) {
-                    logsHtml = `<div class="log-container">
-                        <span class="log-title">Latest Daily Updates</span>
-                        ${child.logs.slice(0, 5).map(log => `
-                            <div class="log-entry">
-                                <span class="log-date">${log.date}:</span>
-                                <span>${log.text}</span>
-                            </div>
-                        `).join('')}
-                    </div>`;
-                } else {
-                    logsHtml = `<div class="log-container"><span class="log-title">No daily updates yet.</span></div>`;
-                }
-
-                card.innerHTML = `
-                    <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
-                    <div class="progress-item">${bar(labels[0], child.levels?.c1, child.goals?.c1)}</div>
-                    <div class="progress-item">${bar(labels[1], child.levels?.c2, child.goals?.c2)}</div>
-                    <div class="progress-item">${bar(labels[2], child.levels?.c3, child.goals?.c3)}</div>
-                    <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
-                    ${logsHtml}
-                `;
+            let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
+            if (logs.length > 0) {
+                logsHtml += logs.slice(0, 5).map(log => `
+                    <div class="log-entry">
+                        <span class="log-date">${log.date || ''}:</span>
+                        <span>${log.text || ''}</span>
+                    </div>`).join('');
             } else {
-                // Keep your existing Finance View code exactly as it was
-                const isPaid = paidIds.includes(child.id);
-                const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
-                card.innerHTML = `
-                    <h3>${child.name} - ${currentMonthYear}</h3>
-                    <table class="finance-table">
-                        <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee}</td></tr>
-                        <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
-                        <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
-                    </table>
-                    <div style="text-align:center"><div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">${isPaid ? 'Status: Paid ✅' : 'Status: Pending'}</div></div>
-                `;
+                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
             }
-            container.appendChild(card);
-        });
-    };
+            logsHtml += `</div>`;
 
+            card.innerHTML = `
+                <h3>${child.name || 'New Student'} <small style="color:#666; font-weight:normal;">| ${child.division || 'Unassigned'}</small></h3>
+                <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
+                <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
+                <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
+                <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
+                ${logsHtml}
+            `;
+        } else {
+            // Finance View
+            const isPaid = paidIds.includes(child.id);
+            const total = isPaid ? 0 : (Number(child.monthlyFee) || 0) + (Number(child.transportFee) || 0);
+            card.innerHTML = `
+                <h3>${child.name} - ${currentMonthYear}</h3>
+                <table class="finance-table">
+                    <tr><td>Monthly Tuition</td><td style="text-align:right">¥${child.monthlyFee || 0}</td></tr>
+                    <tr><td>Transportation</td><td style="text-align:right">¥${child.transportFee || 0}</td></tr>
+                    <tr class="total-row"><td>Total Balance</td><td style="text-align:right">¥${total}</td></tr>
+                </table>
+                <div style="text-align:center"><div class="status-badge ${isPaid ? 'paid' : 'unpaid'}">${isPaid ? 'Status: Paid ✅' : 'Status: Pending'}</div></div>
+            `;
+        }
+        container.appendChild(card);
+    });
+};
     // ... (keep the rest of your existing functions: bar, getDivisionLabels, switchTab, logout, displayNotices, etc.)
 </script>
