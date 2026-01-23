@@ -118,18 +118,16 @@ async function init() {
         const studentSnap = await getDocs(q);
         studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Fetch ALL Payments for these students (to show history)
-        const allPaymentsQuery = query(collection(db, "payments"), orderBy("timestamp", "desc"));
-        const paySnap = await getDocs(allPaymentsQuery);
-        // Store as a global variable so renderView can access it
+        // 2. Fetch Payments (Simplified query to avoid index crash)
+        const paySnap = await getDocs(collection(db, "payments"));
         window.allPayments = paySnap.docs.map(d => d.data());
 
-        // 3. Render and Load Notices
+        // 3. Render
         renderView('report');
         displayNotices();
     } catch (e) {
         console.error("Initialization Error:", e);
-        document.getElementById('childrenContainer').innerHTML = "Error loading data.";
+        document.getElementById('childrenContainer').innerHTML = "Error loading data. Please refresh.";
     }
 }
 
