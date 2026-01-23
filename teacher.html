@@ -129,149 +129,196 @@
     
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
-            authDomain: "makki-masjid-gakuin.firebaseapp.com",
-            projectId: "makki-masjid-gakuin",
-            storageBucket: "makki-masjid-gakuin.firebasestorage.app",
-            messagingSenderId: "376596641128",
-            appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
+        authDomain: "makki-masjid-gakuin.firebaseapp.com",
+        projectId: "makki-masjid-gakuin",
+        storageBucket: "makki-masjid-gakuin.firebasestorage.app",
+        messagingSenderId: "376596641128",
+        appId: "1:376596641128:web:b49c1233aaed64ae6552dd"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        const divisionLabels = {
-            "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
-            "Nazera": ["Quran Reading", "Tajweed Rule", "Memorization"],
-            "Hifz": ["New Sabaq", "Sabaqi (Revision)", "Manzil (Old Revision)"]
-        };
+    const divisionLabels = {
+        "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
+        "Nazera": ["Quran Reading", "Tajweed Rule", "Memorization"],
+        "Hifz": ["New Sabaq", "Sabaqi", "Manzil"]
+    };
 
-        const teacherEmail = localStorage.getItem('userEmail');
-        let teacherData = null;
+    const teacherEmail = localStorage.getItem('userEmail');
+    let teacherData = null;
 
-        async function init() {
-            if (!teacherEmail) { window.location.href = 'index.html'; return; }
-            
+    async function init() {
+        if (!teacherEmail) { 
+            window.location.href = 'index.html'; 
+            return; 
+        }
+        
+        try {
             const tDoc = await getDoc(doc(db, "users", teacherEmail));
             if (tDoc.exists()) {
                 teacherData = tDoc.data();
-                document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + teacherData.name;
-                document.getElementById('divisionInfo').innerText = "Class: " + teacherData.division;
+                document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + (teacherData.name || "Teacher");
+                document.getElementById('divisionInfo').innerText = "Division: " + (teacherData.division || "Not Assigned");
                 
+                // Update Modal Labels based on division
                 const labels = divisionLabels[teacherData.division] || ["Subject 1", "Subject 2", "Subject 3"];
                 document.getElementById('lblS1').innerText = labels[0];
                 document.getElementById('lblS2').innerText = labels[1];
                 document.getElementById('lblS3').innerText = labels[2];
 
                 loadStudents();
+            } else {
+                alert("Teacher profile not found. Please contact Admin.");
             }
+        } catch (err) {
+            console.error("Init Error:", err);
         }
+    }
 
-        async function loadStudents(division) {
-    const q = query(collection(db, "students"), where("division", "==", division));
-    const snap = await getDocs(q);
-    const list = document.getElementById('myStudentList');
-    list.innerHTML = "";
+    async function loadStudents() {
+        const list = document.getElementById('myStudentList');
+        try {
+            // Check if teacher has a division
+            if (!teacherData || !teacherData.division) {
+                list.innerHTML = "<tr><td colspan='3'>No division assigned to your account.</td></tr>";
+                return;
+            }
 
-    // Get the right labels for the subjects (e.g., Qaida, Dua, etc.)
-    const labels = divisionLabels[teacherData.division] || ["Sub 1", "Sub 2", "Sub 3"];
-
-    snap.forEach(docSnap => {
-        const s = docSnap.data();
-        const id = docSnap.id;
-        
-        // Safety check for data
-        const l = s.levels || { c1: 0, c2: 0, c3: 0 };
-        const g = s.goals || { c1: 1, c2: 1, c3: 1 };
-
-        // Helper function to create a small progress bar for the table
-        const createMiniBar = (cur, goal, label) => {
-            const perc = Math.min(Math.round((cur / (goal || 1)) * 100), 100);
-            return `
-                <div style="margin-bottom: 5px;">
-                    <div style="display:flex; justify-content:space-between; font-size:10px; color:#666;">
-                        <span>${label}</span>
-                        <span>${cur}/${goal}</span>
-                    </div>
-                    <div style="background:#eee; height:6px; border-radius:3px; width:120px;">
-                        <div style="background:var(--gold); width:${perc}%; height:100%; border-radius:3px;"></div>
-                    </div>
-                </div>
-            `;
-        };
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="vertical-align: top;"><strong>${s.name}</strong></td>
-            <td>
-                ${createMiniBar(l.c1, g.c1, labels[0])}
-                ${createMiniBar(l.c2, g.c2, labels[1])}
-                ${createMiniBar(l.c3, g.c3, labels[2])}
-            </td>
-            <td style="vertical-align: top;">
-                <button class="btn-log" onclick="openLogModal('${id}', '${s.name}', ${JSON.stringify(l)})">
-                    Update Progress
-                </button>
-            </td>
-        `;
-        list.appendChild(tr);
-    });
-}
-
-        window.openUpdateModal = (id, name, l1, l2, l3) => {
-            document.getElementById('logStudentId').value = id;
-            document.getElementById('modalStudentName').innerText = name;
-            document.getElementById('level1').value = l1;
-            document.getElementById('level2').value = l2;
-            document.getElementById('level3').value = l3;
-            document.getElementById('logDate').valueAsDate = new Date();
-            document.getElementById('logModal').style.display = 'block';
-        };
-
-        window.closeModal = () => { document.getElementById('logModal').style.display = 'none'; };
-
-        document.getElementById('progressForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const sid = document.getElementById('logStudentId').value;
+            const q = query(collection(db, "students"), where("division", "==", teacherData.division));
+            const snap = await getDocs(q);
             
-            const upLevels = {
-                c1: parseInt(document.getElementById('level1').value) || 0,
-                c2: parseInt(document.getElementById('level2').value) || 0,
-                c3: parseInt(document.getElementById('level3').value) || 0
-            };
+            list.innerHTML = "";
+
+            if (snap.empty) {
+                list.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No students found in this division.</td></tr>";
+                return;
+            }
 
             const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-            const detail = `${labels[0]}: ${document.getElementById('sabaq1').value} | ${labels[1]}: ${document.getElementById('sabaq2').value}`;
 
-            try {
-                // 1. Add to the timeline/logs (Admin & Parent see this)
-                const sRef = doc(db, "students", sid);
-                const sSnap = await getDoc(sRef);
-                const logs = sSnap.data().logs || [];
-                logs.unshift({
-                    date: document.getElementById('logDate').value,
-                    text: `[${document.getElementById('logPerformance').value}] ${detail}`,
-                    timestamp: new Date()
-                });
+            snap.forEach(docSnap => {
+                const s = docSnap.data();
+                const id = docSnap.id;
+                
+                // CRASH PROTECTION: Ensure levels and goals exist as objects
+                const lv = s.levels || { c1: 0, c2: 0, c3: 0 };
+                const gl = s.goals || { c1: 1, c2: 1, c3: 1 };
 
-                // 2. Update the Student Document
-                await updateDoc(sRef, {
-                    levels: upLevels,
-                    logs: logs.slice(0, 50) // Keep last 50 logs to save space
-                });
+                const createMiniBar = (cur, goal, label) => {
+                    const safeGoal = goal > 0 ? goal : 1;
+                    const perc = Math.min(Math.round((cur / safeGoal) * 100), 100);
+                    return `
+                        <div style="margin-bottom: 8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:11px; color:#555; margin-bottom:2px;">
+                                <span>${label}</span>
+                                <span>${cur}/${goal}</span>
+                            </div>
+                            <div style="background:#eee; height:6px; border-radius:3px; width:150px;">
+                                <div style="background:var(--gold); width:${perc}%; height:100%; border-radius:3px;"></div>
+                            </div>
+                        </div>
+                    `;
+                };
 
-                alert("Progress saved!");
-                closeModal();
-                loadStudents();
-            } catch (err) { alert("Error saving: " + err.message); }
-        });
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="vertical-align: middle;"><strong>${s.name}</strong></td>
+                    <td>
+                        ${createMiniBar(lv.c1 || 0, gl.c1 || 0, labels[0])}
+                        ${createMiniBar(lv.c2 || 0, gl.c2 || 0, labels[1])}
+                        ${createMiniBar(lv.c3 || 0, gl.c3 || 0, labels[2])}
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <button class="btn-log">Update Progress</button>
+                    </td>
+                `;
 
-        window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-        init();
-    </script>
+                // Set Click Event for Modal
+                tr.querySelector('.btn-log').onclick = () => {
+                    openUpdateModal(id, s.name, lv.c1, lv.c2, lv.c3);
+                };
+
+                list.appendChild(tr);
+            });
+        } catch (err) {
+            console.error("Load Students Error:", err);
+            list.innerHTML = "<tr><td colspan='3'>Error loading student list.</td></tr>";
+        }
+    }
+
+    window.openUpdateModal = (id, name, l1, l2, l3) => {
+        document.getElementById('logStudentId').value = id;
+        document.getElementById('modalStudentName').innerText = "Progress: " + name;
+        document.getElementById('level1').value = l1 || 0;
+        document.getElementById('level2').value = l2 || 0;
+        document.getElementById('level3').value = l3 || 0;
+        document.getElementById('logDate').valueAsDate = new Date();
+        document.getElementById('logModal').style.display = 'block';
+    };
+
+    window.closeModal = () => {
+        document.getElementById('logModal').style.display = 'none';
+        document.getElementById('progressForm').reset();
+    };
+
+    document.getElementById('progressForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sid = document.getElementById('logStudentId').value;
+        const btn = e.submitter;
+        btn.disabled = true;
+        btn.innerText = "Saving...";
+        
+        const upLevels = {
+            c1: parseInt(document.getElementById('level1').value) || 0,
+            c2: parseInt(document.getElementById('level2').value) || 0,
+            c3: parseInt(document.getElementById('level3').value) || 0
+        };
+
+        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+        const s1 = document.getElementById('sabaq1').value;
+        const s2 = document.getElementById('sabaq2').value;
+        const performance = document.getElementById('logPerformance').value;
+
+        // Create a readable summary for parents
+        const detail = `${labels[0]}: ${s1 || 'N/A'} | ${labels[1]}: ${s2 || 'N/A'}`;
+
+        try {
+            const sRef = doc(db, "students", sid);
+            const sSnap = await getDoc(sRef);
+            const currentData = sSnap.data();
+            const logs = currentData.logs || [];
+            
+            logs.unshift({
+                date: document.getElementById('logDate').value,
+                text: `[${performance}] ${detail}`,
+                timestamp: new Date()
+            });
+
+            await updateDoc(sRef, {
+                levels: upLevels,
+                logs: logs.slice(0, 50) 
+            });
+
+            alert("Progress Saved Successfully!");
+            closeModal();
+            loadStudents();
+        } catch (err) {
+            alert("Error saving: " + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Save Today's Progress";
+        }
+    });
+
+    window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
+
+    init();
+</script>
 </body>
 </html>
