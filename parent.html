@@ -32,6 +32,18 @@
         .bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; }
         .bar-fill { background: var(--gold); height: 100%; transition: 0.5s; }
 
+         /* Notice History PoP Up Styles */    
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
+        .history-item { 
+            border-bottom: 1px solid #eee; 
+            padding: 15px 0; 
+            white-space: pre-wrap; /* This preserves your line breaks */
+        }
+        .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
+        
         /* Finance Styles */
         .finance-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .finance-table td { padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -54,6 +66,16 @@
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
+        <div id="parentNoticeDisplay" style="margin-top: 20px;"></div>
+
+            <div id="historyModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeHistory()">&times;</span>
+                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        
         <div class="nav-tabs">
             <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
             <button class="tab" id="btnFinance" onclick="switchTab('finance')">Fees & Invoices</button>
@@ -189,6 +211,67 @@
         window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
 
         init();
+
+// 1. Notice System Logic
+            window.displayNotices = async () => {
+                try {
+                    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+                    const snap = await getDocs(q);
+                    const noticeDiv = document.getElementById('parentNoticeDisplay');
+                    const historyList = document.getElementById('historyList');
+                    
+                    noticeDiv.innerHTML = "";
+                    historyList.innerHTML = "";
+                    
+                    let count = 0;
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        
+                        if (count === 0) {
+                            noticeDiv.innerHTML = `
+                                <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
+                                    <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
+                                    <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
+                                </div>`;
+                        }
+                        
+                        historyList.innerHTML += `
+                            <div class="history-item" style="white-space: pre-wrap; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                <div class="history-date" style="color:#d4af37; font-size:0.8rem; font-weight:bold;">${data.date}</div>
+                                <div style="margin-top:5px;">${data.message}</div>
+                            </div>`;
+                        
+                        count++;
+                    });
+                    
+                    if(count === 0) noticeDiv.innerHTML = "";
+                } catch (e) { 
+                    console.error("Notice Error:", e); 
+                }
+            };
+            
+            // 2. Modal Control Functions (Explicitly Global)
+            window.openHistory = () => {
+                const modal = document.getElementById('historyModal');
+                if(modal) modal.style.display = 'block';
+            };
+            
+            window.closeHistory = () => {
+                const modal = document.getElementById('historyModal');
+                if(modal) modal.style.display = 'none';
+            };
+            
+            // 3. Close modal if clicking outside the white box
+            window.addEventListener('click', (event) => {
+                const modal = document.getElementById('historyModal');
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            });
+        
+        loadParentData();
+        displayNotices();
+        
     </script>
 </body>
 </html>
