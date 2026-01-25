@@ -91,7 +91,7 @@
                     <tbody id="batchTableBody"></tbody>
                 </table>
             </div>
-            <button class="btn-submit" id="saveAllBtn">Submit All Records</button>
+            <button class="btn-submit" id="saveAllBtn" onclick="saveAllBatch()">Submit All Records</button>
         </div>
     </div>
 
@@ -136,22 +136,19 @@
     const teacherEmail = localStorage.getItem('userEmail');
     let teacherData = null;
 
-    // --- INITIALIZATION ---
     async function init() {
         if (!teacherEmail) { 
             window.location.href = 'index.html'; 
             return; 
         }
-        
         try {
             const tDoc = await getDoc(doc(db, "users", teacherEmail));
             if (tDoc.exists()) {
                 teacherData = tDoc.data();
                 document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + (teacherData.name || "Teacher");
                 document.getElementById('divisionInfo').innerText = "Division: " + (teacherData.division || "Not Assigned");
-                
                 loadNotice();
-                loadStudents(); // Loads the dashboard
+                loadStudents();
             } else {
                 alert("Teacher profile not found.");
             }
@@ -160,34 +157,27 @@
         }
     }
 
-    // --- TAB SWITCHING ---
     window.switchTab = (tabId) => {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         document.getElementById('btn-' + tabId).classList.add('active');
-
         if(tabId === 'dashboard') loadStudents();
         if(tabId === 'inputTab') renderBatchTable();
         if(tabId === 'historyTab') populateHistoryDropdown();
     };
 
-    // --- DASHBOARD: PROGRESS LIST ---
     async function loadStudents() {
         const list = document.getElementById('myStudentList');
-        if (!teacherData.division) return;
-
+        if (!teacherData || !teacherData.division) return;
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
         list.innerHTML = "";
-
         const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-
         snap.forEach(docSnap => {
             const s = docSnap.data();
             const lv = s.levels || { c1: 0, c2: 0, c3: 0 };
             const gl = s.goals || { c1: 1, c2: 1, c3: 1 };
-
             const createBar = (cur, goal, lbl) => {
                 const perc = Math.min(Math.round((cur / (goal || 1)) * 100), 100);
                 return `<div style="margin-bottom:5px; font-size:11px;">
@@ -195,7 +185,6 @@
                             <div class="progress-bar-bg"><div class="progress-fill" style="width:${perc}%"></div></div>
                         </div>`;
             };
-
             const tr = document.createElement('tr');
             tr.innerHTML = `<td><strong>${s.name}</strong></td>
                             <td>${createBar(lv.c1, gl.c1, labels[0])} ${createBar(lv.c2, gl.c2, labels[1])} ${createBar(lv.c3, gl.c3, labels[2])}</td>`;
@@ -203,7 +192,6 @@
         });
     }
 
-    // --- BATCH INPUT LOGIC ---
     async function renderBatchTable() {
         const tbody = document.getElementById('batchTableBody');
         document.getElementById('batchDate').valueAsDate = new Date();
@@ -211,10 +199,8 @@
         document.getElementById('h-s1').innerText = labels[0];
         document.getElementById('h-s2').innerText = labels[1];
         document.getElementById('h-s3').innerText = labels[2];
-
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
-        
         let html = "";
         let i = 1;
         snap.forEach(doc => {
@@ -236,14 +222,21 @@
         tbody.innerHTML = html;
     }
 
+    // --- UPDATED SAVE FUNCTION ---
     window.saveAllBatch = async () => {
         const rows = document.querySelectorAll('#batchTableBody tr');
-        const date = document.getElementById('batchDate').value;
+        const dateInput = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
         const labels = divisionLabels[teacherData.division];
 
+        if (rows.length === 0) return;
+
+        // 1. POPUP CONFIRMATION
+        const isConfirmed = confirm(`Are you sure you want to submit records for ${rows.length} students for date ${dateInput}?`);
+        if (!isConfirmed) return;
+
         btn.disabled = true;
-        btn.innerText = "Saving...";
+        btn.innerText = "Processing Updates...";
 
         try {
             for (let row of rows) {
@@ -261,24 +254,29 @@
 
                 await updateDoc(sRef, {
                     levels: lv,
-                    logs: [{ date: date, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
+                    logs: [{ date: dateInput, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
                 });
             }
-            alert("All progress saved!");
-            switchTab('dashboard');
-        } catch (e) { alert("Error: " + e.message); }
-        btn.disabled = false;
-        btn.innerText = "Submit All Records";
+            
+            // 2. SUCCESS MESSAGE
+            alert("🎉 Alhamdulillah! All progress records have been saved successfully.");
+            window.switchTab('dashboard');
+            
+        } catch (e) { 
+            console.error(e);
+            alert("An error occurred: " + e.message); 
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Submit All Records";
+        }
     };
 
-    // --- HISTORY LOGIC ---
     async function populateHistoryDropdown() {
         const sel = document.getElementById('historyStudentSelect');
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
         sel.innerHTML = '<option value="">-- Choose Student --</option>' + 
             snap.docs.map(d => `<option value="${d.id}">${d.data().name}</option>`).join('');
-        
         sel.onchange = loadStudentHistory;
     }
 
@@ -286,13 +284,11 @@
         const sid = document.getElementById('historyStudentSelect').value;
         const res = document.getElementById('historyResult');
         if(!sid) return;
-
         const sDoc = await getDoc(doc(db, "students", sid));
         const logs = sDoc.data().logs || [];
         res.innerHTML = logs.length ? `<table><tr style="background:#eee;"><th>Date</th><th>Report</th></tr>${logs.map(l => `<tr><td>${l.date}</td><td>${l.text}</td></tr>`).join('')}</table>` : "<p>No logs found.</p>";
     }
 
-    // --- NOTICE LOGIC ---
     async function loadNotice() {
         const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
         const snap = await getDocs(q);
