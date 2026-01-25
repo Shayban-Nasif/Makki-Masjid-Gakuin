@@ -192,6 +192,7 @@
         });
     }
 
+// --- BATCH INPUT RENDERING WITH PAGE DROPDOWNS ---
     async function renderBatchTable() {
         const tbody = document.getElementById('batchTableBody');
         document.getElementById('batchDate').valueAsDate = new Date();
@@ -199,8 +200,16 @@
         document.getElementById('h-s1').innerText = labels[0];
         document.getElementById('h-s2').innerText = labels[1];
         document.getElementById('h-s3').innerText = labels[2];
+
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
+        
+        // Helper to create page dropdown options 1-20
+        let pageOptions = `<option value="-">-</option>`;
+        for(let p=1; p<=20; p++) {
+            pageOptions += `<option value="${p}">${p}</option>`;
+        }
+
         let html = "";
         let i = 1;
         snap.forEach(doc => {
@@ -209,36 +218,52 @@
             html += `<tr data-sid="${doc.id}" data-name="${s.name}">
                 <td>${i++}</td>
                 <td><b>${s.name}</b></td>
-                <td><select class="batch-input attn" style="width:50px;"><option value="P">P</option><option value="A">A</option><option value="L">L</option></select></td>
+                <td>
+                    <select class="batch-input attn" style="width:50px;">
+                        <option value="P">P</option>
+                        <option value="A">A</option>
+                        <option value="L">L</option>
+                    </select>
+                </td>
                 <td><input type="number" class="batch-input l1" value="${lv.c1}" style="width:55px;"></td>
-                <td><input type="text" class="batch-input p1" placeholder="Page" style="width:80px;"></td>
+                <td><select class="batch-input p1" style="width:70px;">${pageOptions}</select></td>
+                
                 <td><input type="number" class="batch-input l2" value="${lv.c2}" style="width:55px;"></td>
-                <td><input type="text" class="batch-input p2" placeholder="Page" style="width:80px;"></td>
+                <td><select class="batch-input p2" style="width:70px;">${pageOptions}</select></td>
+                
                 <td><input type="number" class="batch-input l3" value="${lv.c3}" style="width:55px;"></td>
-                <td><input type="text" class="batch-input p3" placeholder="Page" style="width:80px;"></td>
-                <td><select class="batch-input perf"><option value="Excellent">Excellent</option><option value="Good" selected>Good</option><option value="Average">Average</option><option value="Poor">Poor</option></select></td>
+                <td><select class="batch-input p3" style="width:70px;">${pageOptions}</select></td>
+                
+                <td>
+                    <select class="batch-input perf">
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good" selected>Good</option>
+                        <option value="Average">Average</option>
+                        <option value="Poor">Poor</option>
+                    </select>
+                </td>
             </tr>`;
         });
         tbody.innerHTML = html;
     }
 
-    // --- UPDATED SAVE FUNCTION ---
+    // --- SUBMIT ALL RECORDS ---
     window.saveAllBatch = async () => {
         const rows = document.querySelectorAll('#batchTableBody tr');
-        const dateInput = document.getElementById('batchDate').value;
+        const logDate = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
-        const labels = divisionLabels[teacherData.division];
-
+        
         if (rows.length === 0) return;
 
-        // 1. POPUP CONFIRMATION
-        const isConfirmed = confirm(`Are you sure you want to submit records for ${rows.length} students for date ${dateInput}?`);
-        if (!isConfirmed) return;
+        const confirmSave = confirm(`Submit records for ${rows.length} students?`);
+        if (!confirmSave) return;
 
         btn.disabled = true;
-        btn.innerText = "Processing Updates...";
+        btn.innerText = "Saving...";
 
         try {
+            const labels = divisionLabels[teacherData.division];
+
             for (let row of rows) {
                 const sid = row.dataset.sid;
                 const lv = {
@@ -246,7 +271,15 @@
                     c2: parseInt(row.querySelector('.l2').value) || 0,
                     c3: parseInt(row.querySelector('.l3').value) || 0
                 };
-                const logText = `[Attn: ${row.querySelector('.attn').value}] [${row.querySelector('.perf').value}] ${labels[0]}: ${row.querySelector('.p1').value || '-'} | ${labels[1]}: ${row.querySelector('.p2').value || '-'} | ${labels[2]}: ${row.querySelector('.p3').value || '-'}`;
+                
+                // Reading values from dropdowns instead of text inputs
+                const p1 = row.querySelector('.p1').value;
+                const p2 = row.querySelector('.p2').value;
+                const p3 = row.querySelector('.p3').value;
+                const attn = row.querySelector('.attn').value;
+                const perf = row.querySelector('.perf').value;
+
+                const logText = `[Attn: ${attn}] [${perf}] ${labels[0]}: Pg ${p1} | ${labels[1]}: Pg ${p2} | ${labels[2]}: Pg ${p3}`;
                 
                 const sRef = doc(db, "students", sid);
                 const sSnap = await getDoc(sRef);
@@ -254,23 +287,21 @@
 
                 await updateDoc(sRef, {
                     levels: lv,
-                    logs: [{ date: dateInput, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
+                    logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
                 });
             }
             
-            // 2. SUCCESS MESSAGE
-            alert("🎉 Alhamdulillah! All progress records have been saved successfully.");
+            alert("🎉 Alhamdulillah! Records saved.");
             window.switchTab('dashboard');
             
         } catch (e) { 
-            console.error(e);
-            alert("An error occurred: " + e.message); 
+            alert("Error: " + e.message); 
         } finally {
             btn.disabled = false;
             btn.innerText = "Submit All Records";
         }
     };
-
+    
     async function populateHistoryDropdown() {
         const sel = document.getElementById('historyStudentSelect');
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
