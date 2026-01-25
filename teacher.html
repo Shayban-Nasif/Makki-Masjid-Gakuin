@@ -7,88 +7,39 @@
     <style>
         :root { --primary: #004d40; --gold: #d4af37; --bg: #f4f7f6; }
         body { background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; }
-        .teacher-container { max-width: 1000px; margin: 20px auto; padding: 15px; }
+        .teacher-container { max-width: 1100px; margin: 20px auto; padding: 15px; }
         
-        /* Header Card */
         .header { background: var(--primary); color: white; padding: 25px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .header h1 { margin: 0; font-size: 1.5rem; }
-        .header p { margin: 5px 0 0 0; opacity: 0.9; }
-
-        /* Student List Section */
+        
         .section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 25px; }
         .section h3 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-top: 0; }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 15px 12px; border-bottom: 1px solid #eee; }
-
-        /* Progress Visuals */
-        .progress-bar-bg { background: #eee; height: 8px; border-radius: 4px; width: 100px; display: inline-block; margin-right: 10px; }
-        .progress-fill { background: var(--gold); height: 100%; border-radius: 4px; transition: 0.3s; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-        .badge-info { background: #e3f2fd; color: #1976d2; }
-
-        /* Buttons */
-        .btn-log { background: var(--gold); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-log:hover { background: #b8962d; transform: translateY(-1px); }
-        .btn-logout { background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-
-        @media (max-height: 700px) {
-            .modal-content { padding: 15px; }
-            .subject-group { padding: 10px; margin-bottom: 10px; }
-            .btn-submit { padding: 10px; }
-        }
-        
-        /* Form Styling */
-        /* UPDATED: Modal Container now handles scrolling */
-#logModal { 
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
-    left: 0; 
-    top: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(0,0,0,0.6); 
-    backdrop-filter: blur(3px);
-    /* Add these two lines: */
-    overflow-y: auto; 
-    padding: 20px 0;
-}
-
-/* UPDATED: Modal Content margins */
-.modal-content { 
-    background: white; 
-    margin: 0 auto; /* Changed from 30px to 0 for better control with parent padding */
-    padding: 30px; 
-    width: 90%; 
-    max-width: 500px; 
-    border-radius: 15px; 
-    position: relative; 
-    /* Add this to prevent it from getting stuck at the top: */
-    margin-bottom: 50px; 
-}       
-        .subject-group { background: #fdfaf0; border: 1px solid #f1e4bc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; font-size: 0.9rem; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
-        .btn-submit { background: var(--primary); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-size: 0.75rem; text-transform: uppercase; border: 1px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #eee; border: 1px solid #eee; }
 
         .tab-btn { padding: 12px 20px; border: none; border-radius: 8px 8px 0 0; cursor: pointer; background: #e0e0e0; font-weight: bold; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
-        .tab-content { display: none; padding-top: 20px; }
+        .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .batch-input { width: 100%; border: 1px solid #ddd; padding: 6px; border-radius: 4px; }
-    
+
+        .btn-logout { background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-submit { background: var(--primary); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; margin-top: 20px; }
+        .batch-input { width: 100%; border: 1px solid #ddd; padding: 6px; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Progress Bars */
+        .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 120px; display: inline-block; }
+        .progress-fill { background: var(--gold); height: 100%; border-radius: 3px; }
     </style>
 </head>
+<body>
 
-    <body>
-
-    <div class="teacher-container">
+<div class="teacher-container">
     <div class="header">
         <div>
             <h1 id="teacherGreeting">Assalamu Alaikum</h1>
-            <p id="divisionInfo">Division: ---</p>
+            <p id="divisionInfo" style="margin:5px 0 0 0; opacity:0.9;">Division: Loading...</p>
         </div>
         <button class="btn-logout" onclick="logout()">Logout</button>
     </div>
@@ -97,21 +48,21 @@
         <marquee id="noticeText" behavior="scroll" direction="left" style="font-weight:bold; color:#856404;"></marquee>
     </div>
 
-    <div style="margin-top:25px; display:flex; gap:10px; border-bottom:2px solid #ddd; padding-bottom:10px;">
-        <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Progress List</button>
-        <button class="tab-btn" onclick="switchTab('inputTab')">✍️ Daily Input</button>
-        <button class="tab-btn" onclick="switchTab('historyTab')">📜 Daily Records</button>
+    <div style="margin-top:25px; display:flex; gap:10px; border-bottom:2px solid #ddd; padding-bottom:0;">
+        <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">📊 Progress List</button>
+        <button class="tab-btn" id="btn-inputTab" onclick="switchTab('inputTab')">✍️ Daily Input</button>
+        <button class="tab-btn" id="btn-historyTab" onclick="switchTab('historyTab')">📜 Daily Records</button>
     </div>
 
     <div id="dashboard" class="tab-content active">
         <div class="section">
             <h3>📖 Student Progress Overview</h3>
-            <table>
+            <table id="progressTable">
                 <thead>
-                    <tr><th>Student Name</th><th>Level Progress</th><th>Status</th></tr>
+                    <tr><th>Student Name</th><th>Level Progress</th></tr>
                 </thead>
                 <tbody id="myStudentList">
-                    <tr><td colspan="3" style="text-align:center;">Loading students...</td></tr>
+                    <tr><td colspan="2" style="text-align:center;">Loading students...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -140,7 +91,7 @@
                     <tbody id="batchTableBody"></tbody>
                 </table>
             </div>
-            <button class="btn-submit" id="saveAllBtn" onclick="saveAllBatch()">Submit All Records</button>
+            <button class="btn-submit" id="saveAllBtn">Submit All Records</button>
         </div>
     </div>
 
@@ -149,7 +100,7 @@
             <h3>📜 Individual Student History</h3>
             <div style="margin-bottom:20px;">
                 <label>Select Student: </label>
-                <select id="historyStudentSelect" onchange="loadStudentHistory()" style="padding:10px; width:100%; max-width:300px;">
+                <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px;">
                     <option value="">-- Choose Student --</option>
                 </select>
             </div>
@@ -159,11 +110,10 @@
         </div>
     </div>
 </div>
-    
 
-    <script type="module">
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, getDocs, collection, query, where, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -186,6 +136,7 @@
     const teacherEmail = localStorage.getItem('userEmail');
     let teacherData = null;
 
+    // --- INITIALIZATION ---
     async function init() {
         if (!teacherEmail) { 
             window.location.href = 'index.html'; 
@@ -199,131 +150,77 @@
                 document.getElementById('teacherGreeting').innerText = "Assalamu Alaikum, " + (teacherData.name || "Teacher");
                 document.getElementById('divisionInfo').innerText = "Division: " + (teacherData.division || "Not Assigned");
                 
-                // Update Modal Labels based on division
-                const labels = divisionLabels[teacherData.division] || ["Subject 1", "Subject 2", "Subject 3"];
-                document.getElementById('lblS1').innerText = labels[0];
-                document.getElementById('lblS2').innerText = labels[1];
-                document.getElementById('lblS3').innerText = labels[2];
-
-                loadStudents();
+                loadNotice();
+                loadStudents(); // Loads the dashboard
             } else {
-                alert("Teacher profile not found. Please contact Admin.");
+                alert("Teacher profile not found.");
             }
         } catch (err) {
             console.error("Init Error:", err);
         }
     }
 
+    // --- TAB SWITCHING ---
+    window.switchTab = (tabId) => {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.getElementById('btn-' + tabId).classList.add('active');
+
+        if(tabId === 'dashboard') loadStudents();
+        if(tabId === 'inputTab') renderBatchTable();
+        if(tabId === 'historyTab') populateHistoryDropdown();
+    };
+
+    // --- DASHBOARD: PROGRESS LIST ---
     async function loadStudents() {
         const list = document.getElementById('myStudentList');
-        try {
-            // Check if teacher has a division
-            if (!teacherData || !teacherData.division) {
-                list.innerHTML = "<tr><td colspan='3'>No division assigned to your account.</td></tr>";
-                return;
-            }
+        if (!teacherData.division) return;
 
-            const q = query(collection(db, "students"), where("division", "==", teacherData.division));
-            const snap = await getDocs(q);
-            
-            list.innerHTML = "";
+        const q = query(collection(db, "students"), where("division", "==", teacherData.division));
+        const snap = await getDocs(q);
+        list.innerHTML = "";
 
-            if (snap.empty) {
-                list.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No students found in this division.</td></tr>";
-                return;
-            }
+        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
 
-            const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+        snap.forEach(docSnap => {
+            const s = docSnap.data();
+            const lv = s.levels || { c1: 0, c2: 0, c3: 0 };
+            const gl = s.goals || { c1: 1, c2: 1, c3: 1 };
 
-            snap.forEach(docSnap => {
-                const s = docSnap.data();
-                const id = docSnap.id;
-                
-                // CRASH PROTECTION: Ensure levels and goals exist as objects
-                const lv = s.levels || { c1: 0, c2: 0, c3: 0 };
-                const gl = s.goals || { c1: 1, c2: 1, c3: 1 };
+            const createBar = (cur, goal, lbl) => {
+                const perc = Math.min(Math.round((cur / (goal || 1)) * 100), 100);
+                return `<div style="margin-bottom:5px; font-size:11px;">
+                            ${lbl}: ${cur}/${goal} 
+                            <div class="progress-bar-bg"><div class="progress-fill" style="width:${perc}%"></div></div>
+                        </div>`;
+            };
 
-                const createMiniBar = (cur, goal, label) => {
-                    const safeGoal = goal > 0 ? goal : 1;
-                    const perc = Math.min(Math.round((cur / safeGoal) * 100), 100);
-                    return `
-                        <div style="margin-bottom: 8px;">
-                            <div style="display:flex; justify-content:space-between; font-size:11px; color:#555; margin-bottom:2px;">
-                                <span>${label}</span>
-                                <span>${cur}/${goal}</span>
-                            </div>
-                            <div style="background:#eee; height:6px; border-radius:3px; width:150px;">
-                                <div style="background:var(--gold); width:${perc}%; height:100%; border-radius:3px;"></div>
-                            </div>
-                        </div>
-                    `;
-                };
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="vertical-align: middle;"><strong>${s.name}</strong></td>
-                    <td>
-                        ${createMiniBar(lv.c1 || 0, gl.c1 || 0, labels[0])}
-                        ${createMiniBar(lv.c2 || 0, gl.c2 || 0, labels[1])}
-                        ${createMiniBar(lv.c3 || 0, gl.c3 || 0, labels[2])}
-                    </td>
-                    <td style="vertical-align: middle;">
-                        <button class="btn-log">Update Progress</button>
-                    </td>
-                `;
-
-                // Set Click Event for Modal
-                tr.querySelector('.btn-log').onclick = () => {
-                    openUpdateModal(id, s.name, lv.c1, lv.c2, lv.c3);
-                };
-
-                list.appendChild(tr);
-            });
-        } catch (err) {
-            console.error("Load Students Error:", err);
-            list.innerHTML = "<tr><td colspan='3'>Error loading student list.</td></tr>";
-        }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><strong>${s.name}</strong></td>
+                            <td>${createBar(lv.c1, gl.c1, labels[0])} ${createBar(lv.c2, gl.c2, labels[1])} ${createBar(lv.c3, gl.c3, labels[2])}</td>`;
+            list.appendChild(tr);
+        });
     }
 
-    // --- TAB SWITCHING LOGIC ---
-window.switchTab = (tabId) => {
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
+    // --- BATCH INPUT LOGIC ---
+    async function renderBatchTable() {
+        const tbody = document.getElementById('batchTableBody');
+        document.getElementById('batchDate').valueAsDate = new Date();
+        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+        document.getElementById('h-s1').innerText = labels[0];
+        document.getElementById('h-s2').innerText = labels[1];
+        document.getElementById('h-s3').innerText = labels[2];
 
-    if(tabId === 'inputTab') renderBatchTable();
-    if(tabId === 'historyTab') populateHistoryDropdown();
-};
-
-// --- NOTICE LOGIC ---
-async function loadNotice() {
-    const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-        document.getElementById('noticeBar').style.display = 'block';
-        document.getElementById('noticeText').innerText = snap.docs[0].data().message;
-    }
-}
-
-// --- BATCH INPUT RENDERING ---
-async function renderBatchTable() {
-    const tbody = document.getElementById('batchTableBody');
-    document.getElementById('batchDate').valueAsDate = new Date();
-    
-    const q = query(collection(db, "students"), where("division", "==", teacherData.division));
-    const snap = await getDocs(q);
-    
-    const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-    ['h-s1', 'h-s2', 'h-s3'].forEach((id, i) => document.getElementById(id).innerText = labels[i]);
-
-    let html = "";
-    let i = 1;
-    snap.forEach(doc => {
-        const s = doc.data();
-        const lv = s.levels || {c1:0, c2:0, c3:0};
-        html += `
-            <tr data-sid="${doc.id}" data-name="${s.name}">
+        const q = query(collection(db, "students"), where("division", "==", teacherData.division));
+        const snap = await getDocs(q);
+        
+        let html = "";
+        let i = 1;
+        snap.forEach(doc => {
+            const s = doc.data();
+            const lv = s.levels || {c1:0, c2:0, c3:0};
+            html += `<tr data-sid="${doc.id}" data-name="${s.name}">
                 <td>${i++}</td>
                 <td><b>${s.name}</b></td>
                 <td><select class="batch-input attn" style="width:50px;"><option value="P">P</option><option value="A">A</option><option value="L">L</option></select></td>
@@ -335,114 +232,79 @@ async function renderBatchTable() {
                 <td><input type="text" class="batch-input p3" placeholder="Page" style="width:80px;"></td>
                 <td><select class="batch-input perf"><option value="Excellent">Excellent</option><option value="Good" selected>Good</option><option value="Average">Average</option><option value="Poor">Poor</option></select></td>
             </tr>`;
-    });
-    tbody.innerHTML = html;
-}
-
-// --- HISTORY LOGIC ---
-async function populateHistoryDropdown() {
-    const sel = document.getElementById('historyStudentSelect');
-    const q = query(collection(db, "students"), where("division", "==", teacherData.division));
-    const snap = await getDocs(q);
-    sel.innerHTML = '<option value="">-- Choose Student --</option>' + 
-        snap.docs.map(d => `<option value="${d.id}">${d.data().name}</option>`).join('');
-}
-
-window.loadStudentHistory = async () => {
-    const sid = document.getElementById('historyStudentSelect').value;
-    const res = document.getElementById('historyResult');
-    if(!sid) return;
-
-    const sDoc = await getDoc(doc(db, "students", sid));
-    const logs = sDoc.data().logs || [];
-    
-    if(logs.length === 0) {
-        res.innerHTML = "<p>No records found for this student.</p>";
-        return;
+        });
+        tbody.innerHTML = html;
     }
 
-    res.innerHTML = `<table style="font-size:0.8rem;">
-        <tr style="background:#eee;"><th>Date</th><th>Report Details</th></tr>
-        ${logs.map(l => `<tr><td>${l.date}</td><td>${l.text}</td></tr>`).join('')}
-    </table>`;
-};
+    window.saveAllBatch = async () => {
+        const rows = document.querySelectorAll('#batchTableBody tr');
+        const date = document.getElementById('batchDate').value;
+        const btn = document.getElementById('saveAllBtn');
+        const labels = divisionLabels[teacherData.division];
 
-// Update init to include Notice
-async function init() {
-    // ... existing login checks ...
-    loadNotice();
-    // ... rest of init
-}
-        
-    window.openUpdateModal = (id, name, l1, l2, l3) => {
-        document.getElementById('logStudentId').value = id;
-        document.getElementById('modalStudentName').innerText = "Progress: " + name;
-        document.getElementById('level1').value = l1 || 0;
-        document.getElementById('level2').value = l2 || 0;
-        document.getElementById('level3').value = l3 || 0;
-        document.getElementById('logDate').valueAsDate = new Date();
-        document.getElementById('logModal').style.display = 'block';
-    };
-
-    window.closeModal = () => {
-        document.getElementById('logModal').style.display = 'none';
-        document.getElementById('progressForm').reset();
-    };
-
-    document.getElementById('progressForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const sid = document.getElementById('logStudentId').value;
-        const btn = e.submitter;
         btn.disabled = true;
         btn.innerText = "Saving...";
-        
-        const upLevels = {
-            c1: parseInt(document.getElementById('level1').value) || 0,
-            c2: parseInt(document.getElementById('level2').value) || 0,
-            c3: parseInt(document.getElementById('level3').value) || 0
-        };
-
-        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-        const s1 = document.getElementById('sabaq1').value;
-        const s2 = document.getElementById('sabaq2').value;
-        const s3 = document.getElementById('sabaq3').value;
-        const performance = document.getElementById('logPerformance').value;
-
-        // Create a readable summary for parents
-        const detail = `${labels[0]}: ${s1 || 'N/A'} | ${labels[1]}: ${s2 || 'N/A'} | ${labels[1]}: ${s3 || 'N/A'}`;
 
         try {
-            const sRef = doc(db, "students", sid);
-            const sSnap = await getDoc(sRef);
-            const currentData = sSnap.data();
-            const logs = currentData.logs || [];
-            
-            logs.unshift({
-                date: document.getElementById('logDate').value,
-                text: `[${performance}] ${detail}`,
-                timestamp: new Date()
-            });
+            for (let row of rows) {
+                const sid = row.dataset.sid;
+                const lv = {
+                    c1: parseInt(row.querySelector('.l1').value) || 0,
+                    c2: parseInt(row.querySelector('.l2').value) || 0,
+                    c3: parseInt(row.querySelector('.l3').value) || 0
+                };
+                const logText = `[Attn: ${row.querySelector('.attn').value}] [${row.querySelector('.perf').value}] ${labels[0]}: ${row.querySelector('.p1').value || '-'} | ${labels[1]}: ${row.querySelector('.p2').value || '-'} | ${labels[2]}: ${row.querySelector('.p3').value || '-'}`;
+                
+                const sRef = doc(db, "students", sid);
+                const sSnap = await getDoc(sRef);
+                const currentLogs = sSnap.data().logs || [];
 
-            await updateDoc(sRef, {
-                levels: upLevels,
-                logs: logs.slice(0, 50) 
-            });
+                await updateDoc(sRef, {
+                    levels: lv,
+                    logs: [{ date: date, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
+                });
+            }
+            alert("All progress saved!");
+            switchTab('dashboard');
+        } catch (e) { alert("Error: " + e.message); }
+        btn.disabled = false;
+        btn.innerText = "Submit All Records";
+    };
 
-            alert("Progress Saved Successfully!");
-            closeModal();
-            loadStudents();
-        } catch (err) {
-            alert("Error saving: " + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Save Today's Progress";
+    // --- HISTORY LOGIC ---
+    async function populateHistoryDropdown() {
+        const sel = document.getElementById('historyStudentSelect');
+        const q = query(collection(db, "students"), where("division", "==", teacherData.division));
+        const snap = await getDocs(q);
+        sel.innerHTML = '<option value="">-- Choose Student --</option>' + 
+            snap.docs.map(d => `<option value="${d.id}">${d.data().name}</option>`).join('');
+        
+        sel.onchange = loadStudentHistory;
+    }
+
+    async function loadStudentHistory() {
+        const sid = document.getElementById('historyStudentSelect').value;
+        const res = document.getElementById('historyResult');
+        if(!sid) return;
+
+        const sDoc = await getDoc(doc(db, "students", sid));
+        const logs = sDoc.data().logs || [];
+        res.innerHTML = logs.length ? `<table><tr style="background:#eee;"><th>Date</th><th>Report</th></tr>${logs.map(l => `<tr><td>${l.date}</td><td>${l.text}</td></tr>`).join('')}</table>` : "<p>No logs found.</p>";
+    }
+
+    // --- NOTICE LOGIC ---
+    async function loadNotice() {
+        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            document.getElementById('noticeBar').style.display = 'block';
+            document.getElementById('noticeText').innerText = snap.docs[0].data().message;
         }
-    });
+    }
 
     window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-
+    
     init();
-        
 </script>
 </body>
 </html>
