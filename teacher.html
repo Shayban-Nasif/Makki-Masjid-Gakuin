@@ -203,6 +203,18 @@
         }
     }
 
+    // Function to quickly mark all students as Present
+    window.markAllPresent = () => {
+        const selects = document.querySelectorAll('.attn');
+        if (selects.length === 0) {
+            console.warn("No attendance dropdowns found. Is the table loaded?");
+            return;
+        }
+        selects.forEach(select => {
+            select.value = 'P';
+        });
+    };
+    
     window.switchTab = (tabId) => {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
