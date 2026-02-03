@@ -28,51 +28,20 @@
         .btn-submit { background: var(--primary); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; margin-top: 20px; }
         .batch-input { width: 100%; border: 1px solid #ddd; padding: 6px; border-radius: 4px; box-sizing: border-box; }
 
-
         .cell-p { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; text-align: center; }
         .cell-a { background-color: #ffebee; color: #c62828; font-weight: bold; text-align: center; }
         
-        /* Progress Bars */
         .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 120px; display: inline-block; }
         .progress-fill { background: var(--gold); height: 100%; border-radius: 3px; }
 
-        /* Mobile Table Container */
-            .table-wrapper {
-                overflow-x: auto;
-                background: white;
-                border-radius: 8px;
-                position: relative;
-            }
-            
-            /* Sticky Student Name Column Logic */
-            #batchTableBody td:nth-child(2), 
-            #inputTab thead tr th:nth-child(2) {
-                position: sticky;
-                left: 0;
-                background: white;
-                z-index: 2;
-                min-width: 120px;
-                box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-            }
-            
-            /* Ensure the header of the sticky column stays on top */
-            #inputTab thead tr:first-child th:nth-child(2) {
-                z-index: 3;
-                background: #f8f9fa;
-            }
-            
-            /* Adjusting padding for smaller screens */
-            .batch-input {
-                font-size: 14px; /* Prevents iOS auto-zoom on focus */
-                padding: 4px;
-            }
-            
-            /* Highlight the sticky column to distinguish it */
-            #batchTableBody td:nth-child(2) {
-                background: #fffdf5; /* Light cream to show it's separate */
-                font-weight: 600;
-            }
-    
+        .table-wrapper { overflow-x: auto; background: white; border-radius: 8px; position: relative; }
+        
+        #batchTableBody td:nth-child(2), #inputTab thead tr th:nth-child(2) {
+            position: sticky; left: 0; background: white; z-index: 2; min-width: 120px; box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        
+        #inputTab thead tr:first-child th:nth-child(2) { z-index: 3; background: #f8f9fa; }
+        #batchTableBody td:nth-child(2) { background: #fffdf5; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -93,7 +62,7 @@
     <div style="margin-top:25px; display:flex; gap:10px; border-bottom:2px solid #ddd; padding-bottom:0;">
         <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">📊 Progress List</button>
         <button class="tab-btn" id="btn-inputTab" onclick="switchTab('inputTab')">✍️ Daily Input</button>
-        <button class="tab-btn" id="btn-historyTab" onclick="switchTab('historyTab')">📜 Daily Records</button>
+        <button class="tab-btn" id="btn-historyTab" onclick="switchTab('historyTab')">📜 Academic History</button>
     </div>
 
     <div id="dashboard" class="tab-content active">
@@ -145,9 +114,10 @@
         <button class="btn-submit" id="saveAllBtn" onclick="saveAllBatch()">Submit All Records</button>
     </div>
 </div>
-    <div id="historyTab" class="tab-content">
+
+<div id="historyTab" class="tab-content">
     <div class="section">
-        <h3>📜 Individual Student History</h3>
+        <h3>📜 Academic Performance History</h3>
         <div style="margin-bottom:20px;">
             <label>Select Student: </label>
             <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px; border-radius: 8px; border: 1px solid #ddd;">
@@ -156,7 +126,6 @@
         </div>
 
         <div id="monthlyHistoryContainer" style="display:none; margin-top:20px;">
-            <h4 id="monthlyTableTitle" style="color: var(--primary); margin-bottom:10px;">📅 Monthly Detailed Report</h4>
             <div class="table-wrapper" style="overflow-x: auto;">
                 <table style="min-width: 800px; font-size: 0.85rem; border-collapse: collapse;">
                     <thead>
@@ -173,15 +142,11 @@
                 </table>
             </div>
         </div>
-
-        <div style="margin-top:30px;">
-            <h4 style="color: var(--primary); margin-bottom:10px;">📜 Raw Activity Logs (Scrollable)</h4>
-            <div id="historyResult" style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fff;">
-                <p style="color:#666;">Select a student to view logs.</p>
-            </div>
-        </div>
+        <div id="noHistoryMsg" style="display:none; padding:20px; text-align:center; color:#666;">No academic records found for this student.</div>
     </div>
 </div>
+</div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -306,9 +271,14 @@
 
     window.saveAllBatch = async () => {
         const rows = document.querySelectorAll('#batchTableBody tr');
-        const logDate = document.getElementById('batchDate').value;
+        const rawDate = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
         if (rows.length === 0) return;
+        
+        // Convert input date to Japanese Format
+        const dateObj = rawDate ? new Date(rawDate) : new Date();
+        const formattedDate = dateObj.toLocaleDateString('ja-JP');
+
         if (!confirm(`Submit records for ${rows.length} students?`)) return;
 
         btn.disabled = true; btn.innerText = "Saving...";
@@ -328,7 +298,6 @@
                 const attn = row.querySelector('.attn').value;
                 const perf = row.querySelector('.perf').value;
 
-                // Standardized log string for perfect parsing
                 const logText = `[Attn: ${attn}] [Perf: ${perf}] ${labels[0]}: Lv ${lv.c1} Pg ${p1} | ${labels[1]}: Lv ${lv.c2} Pg ${p2} | ${labels[2]}: Lv ${lv.c3} Pg ${p3}`;
                 
                 const sRef = doc(db, "students", sid);
@@ -337,7 +306,8 @@
 
                 await updateDoc(sRef, {
                     levels: lv,
-                    logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
+                    // Added type: "academic" to filter out payments later
+                    logs: [{ date: formattedDate, text: logText, type: "academic", timestamp: new Date() }, ...currentLogs].slice(0, 50)
                 });
             }
             alert("🎉 Alhamdulillah! Records saved.");
@@ -357,28 +327,35 @@
 
     async function loadStudentHistory() {
         const sid = document.getElementById('historyStudentSelect').value;
-        const res = document.getElementById('historyResult');
         const monthlyContainer = document.getElementById('monthlyHistoryContainer');
         const monthlyBody = document.getElementById('monthlyHistoryBody');
+        const noHistoryMsg = document.getElementById('noHistoryMsg');
         
-        if(!sid) { monthlyContainer.style.display = 'none'; res.innerHTML = "<p>Select a student.</p>"; return; }
+        if(!sid) { 
+            monthlyContainer.style.display = 'none'; 
+            noHistoryMsg.style.display = 'none';
+            return; 
+        }
 
         const sDoc = await getDoc(doc(db, "students", sid));
-        const logs = sDoc.data().logs || [];
+        const allLogs = sDoc.data().logs || [];
+        
+        // FILTER: Only show academic records (exclude payments)
+        const academicLogs = allLogs.filter(log => log.type === "academic");
+        
         const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-
         document.getElementById('th-s1').innerText = labels[0];
         document.getElementById('th-s2').innerText = labels[1];
         document.getElementById('th-s3').innerText = labels[2];
 
-        if (logs.length > 0) {
+        if (academicLogs.length > 0) {
+            noHistoryMsg.style.display = 'none';
             monthlyContainer.style.display = 'block';
-            monthlyBody.innerHTML = logs.map(log => {
+            monthlyBody.innerHTML = academicLogs.map(log => {
                 const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
                 const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
                 const parts = log.text.split('|');
                 
-                // Extracting specifically what comes after the labels
                 const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
                 const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
                 const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
@@ -390,13 +367,9 @@
                     <td>${perf}</td>
                 </tr>`;
             }).join('');
-
-            res.innerHTML = `<table><tr style="background:#eee;"><th>Date</th><th>Full Summary</th></tr>
-                ${logs.map(l => `<tr><td>${l.date}</td><td style="font-size:0.8rem;">${l.text}</td></tr>`).join('')}
-            </table>`;
         } else {
             monthlyContainer.style.display = 'none';
-            res.innerHTML = "<p>No logs found.</p>";
+            noHistoryMsg.style.display = 'block';
         }
     }
 
@@ -412,6 +385,5 @@
     window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
     init();
 </script>
-
 </body>
 </html>
