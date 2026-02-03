@@ -19,78 +19,27 @@
         .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
         .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
-        /* Log Styles */
-        .log-container { margin-top: 20px; background: #f9f9f9; border-radius: 8px; padding: 15px; }
         .log-title { font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; display: block; border-bottom: 1px solid #ddd; }
-        .log-entry { font-size: 0.85rem; padding: 8px 0; border-bottom: 1px dashed #ccc; }
-        .log-entry:last-child { border-bottom: none; }
-        .log-date { color: var(--gold); font-weight: bold; margin-right: 8px; }
-
-        /* Progress Bar Styles */
-        .progress-item { margin: 15px 0; }
+        
         .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
-        .bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; }
+        .bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 15px; }
         .bar-fill { background: var(--gold); height: 100%; transition: 0.5s; }
 
-         /* Notice History PoP Up Styles */    
-        /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
         .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
-        .history-item { 
-            border-bottom: 1px solid #eee; 
-            padding: 15px 0; 
-            white-space: pre-wrap; /* This preserves your line breaks */
-        }
-        .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
-        
-        /* Finance Styles */
-        .finance-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .finance-table td { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .total-row { font-weight: bold; color: var(--primary); font-size: 1.1rem; }
-        .status-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-top: 15px; }
-        .paid { background: #e8f5e9; color: #2e7d32; }
-        .unpaid { background: #ffebee; color: #c62828; }
+        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; white-space: pre-wrap; }
 
-        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
-                /* Scrollable Container for Daily Updates */
-        .scroll-container {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 10px;
-            background: #fff;
-        }
-        
-        /* Monthly Table Styling */
-        .monthly-table-wrapper {
-            overflow-x: auto;
-            margin-top: 15px;
-        }
-        
-        .monthly-table {
-            width: 100%;
-            font-size: 0.8rem;
-            border-collapse: collapse;
-        }
-        
-        .monthly-table th, .monthly-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        
-        .monthly-table th {
-            background-color: var(--primary);
-            color: white;
-            position: sticky;
-            top: 0;
-        }
-        
-        /* Color coding for attendance in the table */
+        .monthly-table-wrapper { overflow-x: auto; margin-top: 15px; }
+        .monthly-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+        .monthly-table th, .monthly-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .monthly-table th { background-color: var(--primary); color: white; }
         .cell-p { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
         .cell-a { background-color: #ffebee; color: #c62828; font-weight: bold; }
+
+        .invoice-card { border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .paid-badge { background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -99,20 +48,20 @@
         <div class="header">
             <div>
                 <h2 id="parentGreeting">Parent Portal</h2>
-                <span id="currentMonthYear" style="opacity: 0.8;">January 2026</span>
+                <span id="currentDateDisplay" style="opacity: 0.8;"></span>
             </div>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
         <div id="parentNoticeDisplay" style="margin-top: 20px;"></div>
 
-            <div id="historyModal" class="modal">
-                <div class="modal-content">
-                    <span class="close-modal" onclick="closeHistory()">&times;</span>
-                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
-                    <div id="historyList"></div>
-                </div>
+        <div id="historyModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeHistory()">&times;</span>
+                <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
+                <div id="historyList"></div>
             </div>
+        </div>
         
         <div class="nav-tabs">
             <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
@@ -124,9 +73,9 @@
         </div>
     </div>
 
-    <script type="module">
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -145,6 +94,7 @@ let studentsData = [];
 
 async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
+    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('ja-JP');
     try {
         const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
         const studentSnap = await getDocs(q);
@@ -153,12 +103,12 @@ async function init() {
         renderView('report');
         displayNotices();
     } catch (e) {
-        console.error("Initialization Error:", e);
+        console.error(e);
         document.getElementById('childrenContainer').innerHTML = "Error loading data.";
     }
 }
 
-window.renderView = (view) => {
+window.renderView = async (view) => {
     const container = document.getElementById('childrenContainer');
     container.innerHTML = "";
     
@@ -167,101 +117,74 @@ window.renderView = (view) => {
         return;
     }
 
-    studentsData.forEach(child => {
+    for (const child of studentsData) {
         const card = document.createElement('div');
         card.className = 'child-card';
 
         if (view === 'report') {
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
             const gl = child.goals || { c1: 1, c2: 1, c3: 1 };
-            const logs = child.logs || [];
             const labels = getDivisionLabels(child.division);
             
-            // --- 1. BUILD SCROLLABLE DAILY LOGS ---
-            let logsHtml = `
-                <div style="margin-top:20px;">
-                    <span class="log-title">📜 Daily Summary (Recent)</span>
-                    <div class="scroll-container">`;
-            
-            if (logs.length > 0) {
-                logsHtml += logs.slice(0, 10).map(log => `
-                    <div class="log-entry">
-                        <span class="log-date">${log.date}:</span>
-                        <span>${log.text}</span>
-                    </div>`).join('');
-            } else {
-                logsHtml += `<div class="log-entry">No records yet.</div>`;
-            }
-            logsHtml += `</div></div>`;
+            // FILTER ONLY ACADEMIC LOGS
+            const academicLogs = (child.logs || []).filter(l => l.type === "academic");
 
-            // --- 2. BUILD MONTHLY TABLE (Extracted from String) ---
-            const currentMonth = new Date().getMonth();
-            const currentYearNum = new Date().getFullYear();
-            const monthLogs = logs.filter(log => {
-                const d = new Date(log.date);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYearNum;
-            });
+            let tableRows = academicLogs.length > 0 ? academicLogs.map(log => {
+                const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+                const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
+                const parts = log.text.split('|');
+                const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
+                const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
+                const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
 
-            let monthlyTableHtml = `
-                <div style="margin-top:25px;">
-                    <span class="log-title">📅 ${new Date().toLocaleString('default', { month: 'long' })} Report</span>
-                    <div class="monthly-table-wrapper">
-                        <table class="monthly-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Attn</th>
-                                    <th>${labels[0]}</th>
-                                    <th>${labels[1]}</th>
-                                    <th>${labels[2]}</th>
-                                    <th>Perf.</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-            
-            if (monthLogs.length > 0) {
-                monthlyTableHtml += monthLogs.map(log => {
-                    // Extracting using standard format [Attn: P] [Perf: Good] ...
-                    const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
-                    const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
-                    const parts = log.text.split('|');
-                    
-                    const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
-                    const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
-                    const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
-
-                    return `<tr>
-                        <td>${log.date.split('-')[2]}/${log.date.split('-')[1]}</td>
-                        <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                        <td>${s1}</td><td>${s2}</td><td>${s3}</td>
-                        <td style="font-size:0.7rem;">${perf}</td>
-                    </tr>`;
-                }).join('');
-            } else {
-                monthlyTableHtml += `<tr><td colspan="6">No records for this month.</td></tr>`;
-            }
-            monthlyTableHtml += `</tbody></table></div></div>`;
+                return `<tr>
+                    <td>${log.date}</td>
+                    <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                    <td>${s1}</td><td>${s2}</td><td>${s3}</td>
+                    <td>${perf}</td>
+                </tr>`;
+            }).join('') : `<tr><td colspan="6">No academic records found.</td></tr>`;
 
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="margin:0;">${child.name}</h3>
-                    <span style="font-size:0.8rem; color:var(--primary); font-weight:bold;">${child.division}</span>
-                </div>
-                <div style="margin: 20px 0;">
-                    ${bar(labels[0], lv.c1, gl.c1)}
-                    ${bar(labels[1], lv.c2, gl.c2)}
-                    ${bar(labels[2], lv.c3, gl.c3)}
-                </div>
-                <hr style="border:0; border-top:1px solid #eee;">
-                ${logsHtml}
-                ${monthlyTableHtml}
-            `;
+                <h3>${child.name} <small style="float:right; color:#666; font-size:0.8rem;">${child.division}</small></h3>
+                ${bar(labels[0], lv.c1, gl.c1)}
+                ${bar(labels[1], lv.c2, gl.c2)}
+                ${bar(labels[2], lv.c3, gl.c3)}
+                <div class="monthly-table-wrapper">
+                    <span class="log-title">📅 Academic Record Table</span>
+                    <table class="monthly-table">
+                        <thead><tr><th>Date</th><th>Attn</th><th>${labels[0]}</th><th>${labels[1]}</th><th>${labels[2]}</th><th>Perf.</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`;
         } else {
-            // Finance View - Keep this simplified for parents
-            card.innerHTML = `<h3>${child.name} - Billing</h3><p>Please check the Admin office for invoice details.</p>`;
+            // FINANCE VIEW - Fetching from 'payments' collection
+            const payQuery = query(collection(db, "payments"), where("studentId", "==", child.id), orderBy("timestamp", "desc"));
+            const paySnap = await getDocs(payQuery);
+            
+            let payHtml = `<span class="log-title">💳 Payment History</span>`;
+            if (paySnap.empty) {
+                payHtml += `<p style="color:#666;">No payment records found.</p>`;
+            } else {
+                paySnap.forEach(pDoc => {
+                    const p = pDoc.data();
+                    payHtml += `
+                        <div class="invoice-card">
+                            <div>
+                                <strong>${p.monthName} ${p.year}</strong><br>
+                                <small>Paid on: ${p.datePaid || p.date || '-'}</small>
+                            </div>
+                            <div>
+                                <span style="font-weight:bold; margin-right:10px;">¥${p.amount}</span>
+                                <span class="paid-badge">PAID</span>
+                            </div>
+                        </div>`;
+                });
+            }
+            card.innerHTML = `<h3>${child.name} - Invoices</h3>${payHtml}`;
         }
         container.appendChild(card);
-    });
+    }
 };
 
 function bar(label, cur, goal) {
@@ -273,10 +196,12 @@ function bar(label, cur, goal) {
 }
 
 function getDivisionLabels(div) {
-    if (div === "Maktab") return ["Qaida/Quran", "Dua", "Islamic Studies"];
-    if (div === "Nazera") return ["Quran Reading", "Tajweed Rule", "Memorization"];
-    if (div === "Hifz") return ["New Sabaq", "Sabaqi", "Manzil"];
-    return ["Subject 1", "Subject 2", "Subject 3"];
+    const labels = {
+        "Maktab": ["Qaida/Quran", "Dua", "Islamic Studies"],
+        "Nazera": ["Quran Reading", "Tajweed Rule", "Memorization"],
+        "Hifz": ["New Sabaq", "Sabaqi", "Manzil"]
+    };
+    return labels[div] || ["S1", "S2", "S3"];
 }
 
 window.switchTab = (view) => {
@@ -299,9 +224,9 @@ window.displayNotices = async () => {
         snap.forEach(docSnap => {
             const data = docSnap.data();
             if (i === 0) {
-                noticeDiv.innerHTML = `<div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between;">
+                noticeDiv.innerHTML = `<div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="white-space: pre-wrap;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                    <button onclick="window.openHistory()" style="height:30px; cursor:pointer;">History</button>
+                    <button onclick="window.openHistory()" style="padding:5px 10px; cursor:pointer;">History</button>
                 </div>`;
             }
             historyList.innerHTML += `<div class="history-item"><b>${data.date}</b><br>${data.message}</div>`;
@@ -315,6 +240,5 @@ window.closeHistory = () => { document.getElementById('historyModal').style.disp
 
 init();
 </script>
-
 </body>
 </html>
