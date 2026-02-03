@@ -15,9 +15,9 @@
         .section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 25px; }
         .section h3 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-top: 0; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; font-size: 0.75rem; text-transform: uppercase; border: 1px solid #eee; }
-        td { padding: 12px; border-bottom: 1px solid #eee; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        th { text-align: left; padding: 12px; background: #f8f9fa; color: #333; font-size: 0.75rem; text-transform: uppercase; border: 1px solid #ddd; }
+        td { padding: 10px; border: 1px solid #eee; word-wrap: break-word; }
 
         .tab-btn { padding: 12px 20px; border: none; border-radius: 8px 8px 0 0; cursor: pointer; background: #e0e0e0; font-weight: bold; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
@@ -29,17 +29,20 @@
         .batch-input { width: 100%; border: 1px solid #ddd; padding: 6px; border-radius: 4px; box-sizing: border-box; }
         
         /* Progress Bars */
-        .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 120px; display: inline-block; }
+        .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 100%; display: inline-block; }
         .progress-fill { background: var(--gold); height: 100%; border-radius: 3px; }
 
         /* Monthly Record Specific Styles */
-        .attn-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
+        .attn-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; display: block; text-align: center; }
         .attn-P { background: #e8f5e9; color: #2e7d32; }
         .attn-A { background: #ffebee; color: #c62828; }
         .attn-L { background: #fff3e0; color: #ef6c00; }
         
-        .hist-table th { text-align: center; vertical-align: middle; }
-        .hist-table td { text-align: center; }
+        .hist-table th { text-align: center !important; color: #ffffff !important; }
+        .hist-table td { text-align: center; font-size: 0.85rem; }
+
+        .filter-container { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-container select { padding: 10px; border-radius: 6px; border: 1px solid #ddd; flex: 1; min-width: 200px; }
     </style>
 </head>
 <body>
@@ -66,9 +69,9 @@
     <div id="dashboard" class="tab-content active">
         <div class="section">
             <h3>📖 Student Progress Overview</h3>
-            <table id="progressTable">
+            <table id="progressTable" style="table-layout: auto;">
                 <thead>
-                    <tr><th>Student Name</th><th>Level Progress</th></tr>
+                    <tr><th style="width: 30%;">Student Name</th><th>Level Progress</th></tr>
                 </thead>
                 <tbody id="myStudentList">
                     <tr><td colspan="2" style="text-align:center;">Loading students...</td></tr>
@@ -87,14 +90,18 @@
                 <table style="min-width:1100px; font-size: 0.85rem;">
                     <thead>
                         <tr style="background:#f8f9fa;">
-                            <th>Sl</th><th>Name</th><th>Attn</th>
-                            <th colspan="2" id="h-s1" style="background:#e3f2fd;">S1</th>
-                            <th colspan="2" id="h-s2" style="background:#f1f8e9;">S2</th>
-                            <th colspan="2" id="h-s3" style="background:#fff3e0;">S3</th>
-                            <th>Perf.</th>
+                            <th style="width:40px;">Sl</th><th style="width:150px;">Name</th><th style="width:70px;">Attn</th>
+                            <th colspan="2" id="h-s1" style="background:#e3f2fd; text-align:center;">S1</th>
+                            <th colspan="2" id="h-s2" style="background:#f1f8e9; text-align:center;">S2</th>
+                            <th colspan="2" id="h-s3" style="background:#fff3e0; text-align:center;">S3</th>
+                            <th style="width:120px;">Perf.</th>
                         </tr>
                         <tr style="font-size:0.7rem; background:#eee;">
-                            <th colspan="3"></th><th>Lvl</th><th>Page</th><th>Lvl</th><th>Page</th><th>Lvl</th><th>Page</th><th>Remark</th>
+                            <th colspan="3"></th>
+                            <th style="text-align:center;">Lvl</th><th style="text-align:center;">Page</th>
+                            <th style="text-align:center;">Lvl</th><th style="text-align:center;">Page</th>
+                            <th style="text-align:center;">Lvl</th><th style="text-align:center;">Page</th>
+                            <th style="text-align:center;">Remark</th>
                         </tr>
                     </thead>
                     <tbody id="batchTableBody"></tbody>
@@ -107,10 +114,18 @@
     <div id="historyTab" class="tab-content">
         <div class="section">
             <h3>📜 Monthly Academic Record</h3>
-            <div style="margin-bottom:20px;">
-                <label>Select Student: </label>
-                <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px;">
+            <div class="filter-container">
+                <select id="historyStudentSelect">
                     <option value="">-- Choose Student --</option>
+                </select>
+                <select id="historyMonthFilter">
+                    <option value="all">Show All Months</option>
+                    <option value="01">January</option><option value="02">February</option>
+                    <option value="03">March</option><option value="04">April</option>
+                    <option value="05">May</option><option value="06">June</option>
+                    <option value="07">July</option><option value="08">August</option>
+                    <option value="09">September</option><option value="10">October</option>
+                    <option value="11">November</option><option value="12">December</option>
                 </select>
             </div>
             <div id="historyResult" style="overflow-x: auto;">
@@ -189,8 +204,8 @@
             const gl = s.goals || { c1: 1, c2: 1, c3: 1 };
             const createBar = (cur, goal, lbl) => {
                 const perc = Math.min(Math.round((cur / (goal || 1)) * 100), 100);
-                return `<div style="margin-bottom:5px; font-size:11px;">
-                            ${lbl}: ${cur}/${goal} 
+                return `<div style="margin-bottom:8px; font-size:11px;">
+                            <strong>${lbl}</strong>: ${cur}/${goal} 
                             <div class="progress-bar-bg"><div class="progress-fill" style="width:${perc}%"></div></div>
                         </div>`;
             };
@@ -213,7 +228,7 @@
         const snap = await getDocs(q);
         
         let pageOptions = `<option value="-">-</option>`;
-        for(let p=1; p<=20; p++) {
+        for(let p=1; p<=30; p++) {
             pageOptions += `<option value="${p}">${p}</option>`;
         }
 
@@ -223,24 +238,21 @@
             const s = doc.data();
             const lv = s.levels || {c1:0, c2:0, c3:0};
             html += `<tr data-sid="${doc.id}" data-name="${s.name}">
-                <td>${i++}</td>
-                <td><b>${s.name}</b></td>
+                <td style="text-align:center;">${i++}</td>
+                <td><strong>${s.name}</strong></td>
                 <td>
-                    <select class="batch-input attn" style="width:50px;">
+                    <select class="batch-input attn">
                         <option value="P">P</option>
                         <option value="A">A</option>
                         <option value="L">L</option>
                     </select>
                 </td>
-                <td><input type="number" class="batch-input l1" value="${lv.c1}" style="width:55px;"></td>
-                <td><select class="batch-input p1" style="width:70px;">${pageOptions}</select></td>
-                
-                <td><input type="number" class="batch-input l2" value="${lv.c2}" style="width:55px;"></td>
-                <td><select class="batch-input p2" style="width:70px;">${pageOptions}</select></td>
-                
-                <td><input type="number" class="batch-input l3" value="${lv.c3}" style="width:55px;"></td>
-                <td><select class="batch-input p3" style="width:70px;">${pageOptions}</select></td>
-                
+                <td><input type="number" class="batch-input l1" value="${lv.c1}"></td>
+                <td><select class="batch-input p1">${pageOptions}</select></td>
+                <td><input type="number" class="batch-input l2" value="${lv.c2}"></td>
+                <td><select class="batch-input p2">${pageOptions}</select></td>
+                <td><input type="number" class="batch-input l3" value="${lv.c3}"></td>
+                <td><select class="batch-input p3">${pageOptions}</select></td>
                 <td>
                     <select class="batch-input perf">
                         <option value="Excellent">Excellent</option>
@@ -258,7 +270,7 @@
         const rows = document.querySelectorAll('#batchTableBody tr');
         const logDate = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
-        
+        if (!logDate) { alert("Please select a date"); return; }
         if (rows.length === 0) return;
         const confirmSave = confirm(`Submit records for ${rows.length} students?`);
         if (!confirmSave) return;
@@ -275,23 +287,20 @@
                     c2: parseInt(row.querySelector('.l2').value) || 0,
                     c3: parseInt(row.querySelector('.l3').value) || 0
                 };
-                
                 const p1 = row.querySelector('.p1').value;
                 const p2 = row.querySelector('.p2').value;
                 const p3 = row.querySelector('.p3').value;
                 const attn = row.querySelector('.attn').value;
                 const perf = row.querySelector('.perf').value;
 
-                // Important: logText now includes levels to ensure they can be retrieved historically
                 const logText = `[Attn: ${attn}] [${perf}] ${labels[0]}: Lvl ${lv.c1} Pg ${p1} | ${labels[1]}: Lvl ${lv.c2} Pg ${p2} | ${labels[2]}: Lvl ${lv.c3} Pg ${p3}`;
-                
                 const sRef = doc(db, "students", sid);
                 const sSnap = await getDoc(sRef);
                 const currentLogs = sSnap.data().logs || [];
 
                 await updateDoc(sRef, {
                     levels: lv,
-                    logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
+                    logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 100)
                 });
             }
             alert("🎉 Alhamdulillah! Records saved.");
@@ -311,10 +320,12 @@
         sel.innerHTML = '<option value="">-- Choose Student --</option>' + 
             snap.docs.map(d => `<option value="${d.id}">${d.data().name}</option>`).join('');
         sel.onchange = loadStudentHistory;
+        document.getElementById('historyMonthFilter').onchange = loadStudentHistory;
     }
 
     async function loadStudentHistory() {
         const sid = document.getElementById('historyStudentSelect').value;
+        const monthFilter = document.getElementById('historyMonthFilter').value;
         const res = document.getElementById('historyResult');
         if(!sid) {
             res.innerHTML = '<p style="color:#666;">Select a student to view the academic table.</p>';
@@ -322,50 +333,49 @@
         }
 
         const sDoc = await getDoc(doc(db, "students", sid));
-        const logs = sDoc.data().logs || [];
+        let logs = sDoc.data().logs || [];
         const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
 
+        if (monthFilter !== 'all') {
+            logs = logs.filter(log => log.date.split('-')[1] === monthFilter);
+        }
+
         if (!logs.length) {
-            res.innerHTML = "<p>No records found for this student.</p>";
+            res.innerHTML = "<p style='text-align:center; padding:20px;'>No records found for the selected criteria.</p>";
             return;
         }
 
         let tableHtml = `
-            <table class="hist-table" style="font-size: 0.8rem; border: 1px solid #ddd;">
+            <table class="hist-table" style="min-width:900px;">
                 <thead>
-                    <tr style="background:#004d40; color: white;">
-                        <th rowspan="2" style="color:white; width:100px;">Date</th>
-                        <th rowspan="2" style="color:white; width:50px;">Attn</th>
-                        <th colspan="2" style="background:#00695c; color:white;">${labels[0]}</th>
-                        <th colspan="2" style="background:#2e7d32; color:white;">${labels[1]}</th>
-                        <th colspan="2" style="background:#558b2f; color:white;">${labels[2]}</th>
-                        <th rowspan="2" style="color:white;">Performance</th>
+                    <tr style="background:#004d40;">
+                        <th rowspan="2" style="width:120px;">Date</th>
+                        <th rowspan="2" style="width:60px;">Attn</th>
+                        <th colspan="2" style="background:#00695c;">${labels[0]}</th>
+                        <th colspan="2" style="background:#2e7d32;">${labels[1]}</th>
+                        <th colspan="2" style="background:#558b2f;">${labels[2]}</th>
+                        <th rowspan="2" style="width:120px;">Perf.</th>
                     </tr>
-                    <tr style="background:#eee; font-size:0.7rem;">
-                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
-                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
-                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
+                    <tr style="background:#004d40; font-size:0.7rem;">
+                        <th style="width:50px; border-top:1px solid #005a4a;">Lvl</th><th style="width:50px; border-top:1px solid #005a4a;">Pg</th>
+                        <th style="width:50px; border-top:1px solid #005a4a;">Lvl</th><th style="width:50px; border-top:1px solid #005a4a;">Pg</th>
+                        <th style="width:50px; border-top:1px solid #005a4a;">Lvl</th><th style="width:50px; border-top:1px solid #005a4a;">Pg</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
         logs.forEach(log => {
-            // Parsing log format: [Attn: P] [Good] Label: Lvl 1 Pg 5 | Label: Lvl 2 Pg - ...
             const attnMatch = log.text.match(/\[Attn: (.*?)\]/);
             const perfMatch = log.text.match(/\] \[(.*?)\]/);
             const attn = attnMatch ? attnMatch[1] : "-";
             const perf = perfMatch ? perfMatch[1] : "-";
-            
             const progressParts = log.text.split('|');
             
             const extractData = (part) => {
                 if(!part) return { lvl: "-", pg: "-" };
                 const lMatch = part.match(/Lvl (.*?) /);
                 const pMatch = part.match(/Pg (.*?)$/);
-                return {
-                    lvl: lMatch ? lMatch[1] : "-",
-                    pg: pMatch ? pMatch[1] : "-"
-                };
+                return { lvl: lMatch ? lMatch[1] : "-", pg: pMatch ? pMatch[1] : "-" };
             };
 
             const s1 = extractData(progressParts[0]);
@@ -376,10 +386,10 @@
                 <tr>
                     <td style="font-weight:bold;">${log.date}</td>
                     <td><span class="attn-badge attn-${attn}">${attn}</span></td>
-                    <td style="background:#f0f7f7;">${s1.lvl}</td><td style="background:#f0f7f7; font-weight:bold;">${s1.pg}</td>
-                    <td style="background:#f1f8e9;">${s2.lvl}</td><td style="background:#f1f8e9; font-weight:bold;">${s2.pg}</td>
-                    <td style="background:#f9fbe7;">${s3.lvl}</td><td style="background:#f9fbe7; font-weight:bold;">${s3.pg}</td>
-                    <td style="font-style:italic;">${perf}</td>
+                    <td style="background:#f0f7f7;">${s1.lvl}</td><td style="background:#f0f7f7; font-weight:bold; color:var(--primary);">${s1.pg}</td>
+                    <td style="background:#f1f8e9;">${s2.lvl}</td><td style="background:#f1f8e9; font-weight:bold; color:var(--primary);">${s2.pg}</td>
+                    <td style="background:#f9fbe7;">${s3.lvl}</td><td style="background:#f9fbe7; font-weight:bold; color:var(--primary);">${s3.pg}</td>
+                    <td style="font-size:0.75rem; color:#555;">${perf}</td>
                 </tr>`;
         });
 
