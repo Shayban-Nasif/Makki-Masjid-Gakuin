@@ -27,6 +27,10 @@
         .btn-logout { background: #c62828; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
         .btn-submit { background: var(--primary); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; margin-top: 20px; }
         .batch-input { width: 100%; border: 1px solid #ddd; padding: 6px; border-radius: 4px; box-sizing: border-box; }
+
+
+        .cell-p { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; text-align: center; }
+        .cell-a { background-color: #ffebee; color: #c62828; font-weight: bold; text-align: center; }
         
         /* Progress Bars */
         .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 120px; display: inline-block; }
@@ -142,21 +146,42 @@
     </div>
 </div>
     <div id="historyTab" class="tab-content">
-        <div class="section">
-            <h3>📜 Individual Student History</h3>
-            <div style="margin-bottom:20px;">
-                <label>Select Student: </label>
-                <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px;">
-                    <option value="">-- Choose Student --</option>
-                </select>
+    <div class="section">
+        <h3>📜 Individual Student History</h3>
+        <div style="margin-bottom:20px;">
+            <label>Select Student: </label>
+            <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px; border-radius: 8px; border: 1px solid #ddd;">
+                <option value="">-- Choose Student --</option>
+            </select>
+        </div>
+
+        <div id="monthlyHistoryContainer" style="display:none; margin-top:20px;">
+            <h4 id="monthlyTableTitle" style="color: var(--primary); margin-bottom:10px;">📅 Monthly Detailed Report</h4>
+            <div class="table-wrapper" style="overflow-x: auto;">
+                <table style="min-width: 800px; font-size: 0.85rem; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background:#f8f9fa;">
+                            <th>Date</th>
+                            <th>Attn</th>
+                            <th id="th-s1">S1</th>
+                            <th id="th-s2">S2</th>
+                            <th id="th-s3">S3</th>
+                            <th>Perf.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyHistoryBody"></tbody>
+                </table>
             </div>
-            <div id="historyResult">
+        </div>
+
+        <div style="margin-top:30px;">
+            <h4 style="color: var(--primary); margin-bottom:10px;">📜 Raw Activity Logs (Scrollable)</h4>
+            <div id="historyResult" style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fff;">
                 <p style="color:#666;">Select a student to view logs.</p>
             </div>
         </div>
     </div>
 </div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -408,13 +433,59 @@ async function loadMonthlyReport(studentData) {
     }
 
     async function loadStudentHistory() {
-        const sid = document.getElementById('historyStudentSelect').value;
-        const res = document.getElementById('historyResult');
-        if(!sid) return;
-        const sDoc = await getDoc(doc(db, "students", sid));
-        const logs = sDoc.data().logs || [];
-        res.innerHTML = logs.length ? `<table><tr style="background:#eee;"><th>Date</th><th>Report</th></tr>${logs.map(l => `<tr><td>${l.date}</td><td>${l.text}</td></tr>`).join('')}</table>` : "<p>No logs found.</p>";
+    const sid = document.getElementById('historyStudentSelect').value;
+    const res = document.getElementById('historyResult');
+    const monthlyContainer = document.getElementById('monthlyHistoryContainer');
+    const monthlyBody = document.getElementById('monthlyHistoryBody');
+    
+    if(!sid) {
+        monthlyContainer.style.display = 'none';
+        res.innerHTML = "<p>Select a student to view logs.</p>";
+        return;
     }
+
+    const sDoc = await getDoc(doc(db, "students", sid));
+    const studentData = sDoc.data();
+    const logs = studentData.logs || [];
+    const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+
+    // Update Table Headers
+    document.getElementById('th-s1').innerText = labels[0];
+    document.getElementById('th-s2').innerText = labels[1];
+    document.getElementById('th-s3').innerText = labels[2];
+
+    if (logs.length > 0) {
+        monthlyContainer.style.display = 'block';
+        
+        // 1. Populate the Professional Monthly Table
+        monthlyBody.innerHTML = logs.map(log => {
+            const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+            const perf = log.text.match(/\[(Excellent|Good|Average|Poor)\]/)?.[1] || '-';
+            const parts = log.text.split('|');
+            const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
+            const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
+            const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
+
+            return `
+                <tr>
+                    <td>${log.date}</td>
+                    <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                    <td>${s1}</td>
+                    <td>${s2}</td>
+                    <td>${s3}</td>
+                    <td>${perf}</td>
+                </tr>`;
+        }).join('');
+
+        // 2. Populate the Raw Logs (Your original feature, now scrollable)
+        res.innerHTML = `<table><tr style="background:#eee;"><th>Date</th><th>Raw Text Report</th></tr>
+            ${logs.map(l => `<tr><td>${l.date}</td><td style="font-size:0.8rem;">${l.text}</td></tr>`).join('')}
+        </table>`;
+    } else {
+        monthlyContainer.style.display = 'none';
+        res.innerHTML = "<p>No logs found for this student.</p>";
+    }
+}
 
     async function loadNotice() {
         const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
