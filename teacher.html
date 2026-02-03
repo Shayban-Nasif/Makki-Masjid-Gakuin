@@ -37,6 +37,9 @@
         .attn-P { background: #e8f5e9; color: #2e7d32; }
         .attn-A { background: #ffebee; color: #c62828; }
         .attn-L { background: #fff3e0; color: #ef6c00; }
+        
+        .hist-table th { text-align: center; vertical-align: middle; }
+        .hist-table td { text-align: center; }
     </style>
 </head>
 <body>
@@ -279,7 +282,8 @@
                 const attn = row.querySelector('.attn').value;
                 const perf = row.querySelector('.perf').value;
 
-                const logText = `[Attn: ${attn}] [${perf}] ${labels[0]}: Pg ${p1} | ${labels[1]}: Pg ${p2} | ${labels[2]}: Pg ${p3}`;
+                // Important: logText now includes levels to ensure they can be retrieved historically
+                const logText = `[Attn: ${attn}] [${perf}] ${labels[0]}: Lvl ${lv.c1} Pg ${p1} | ${labels[1]}: Lvl ${lv.c2} Pg ${p2} | ${labels[2]}: Lvl ${lv.c3} Pg ${p3}`;
                 
                 const sRef = doc(db, "students", sid);
                 const sSnap = await getDoc(sRef);
@@ -327,39 +331,55 @@
         }
 
         let tableHtml = `
-            <table style="font-size: 0.85rem;">
-                <thead style="background:#f1f1f1;">
-                    <tr>
-                        <th>Date</th>
-                        <th>Attn</th>
-                        <th>Performance</th>
-                        <th>${labels[0]}</th>
-                        <th>${labels[1]}</th>
-                        <th>${labels[2]}</th>
+            <table class="hist-table" style="font-size: 0.8rem; border: 1px solid #ddd;">
+                <thead>
+                    <tr style="background:#004d40; color: white;">
+                        <th rowspan="2" style="color:white; width:100px;">Date</th>
+                        <th rowspan="2" style="color:white; width:50px;">Attn</th>
+                        <th colspan="2" style="background:#00695c; color:white;">${labels[0]}</th>
+                        <th colspan="2" style="background:#2e7d32; color:white;">${labels[1]}</th>
+                        <th colspan="2" style="background:#558b2f; color:white;">${labels[2]}</th>
+                        <th rowspan="2" style="color:white;">Performance</th>
+                    </tr>
+                    <tr style="background:#eee; font-size:0.7rem;">
+                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
+                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
+                        <th style="width:40px;">Lvl</th><th style="width:40px;">Pg</th>
                     </tr>
                 </thead>
                 <tbody>`;
 
         logs.forEach(log => {
-            // Parsing the log string: "[Attn: P] [Good] S1: Pg 5 | S2: Pg - | S3: Pg 10"
+            // Parsing log format: [Attn: P] [Good] Label: Lvl 1 Pg 5 | Label: Lvl 2 Pg - ...
             const attnMatch = log.text.match(/\[Attn: (.*?)\]/);
             const perfMatch = log.text.match(/\] \[(.*?)\]/);
-            
             const attn = attnMatch ? attnMatch[1] : "-";
             const perf = perfMatch ? perfMatch[1] : "-";
             
-            // Split progress by the pipe |
             const progressParts = log.text.split('|');
-            const getPage = (str) => str ? str.split('Pg')[1]?.trim() || "-" : "-";
+            
+            const extractData = (part) => {
+                if(!part) return { lvl: "-", pg: "-" };
+                const lMatch = part.match(/Lvl (.*?) /);
+                const pMatch = part.match(/Pg (.*?)$/);
+                return {
+                    lvl: lMatch ? lMatch[1] : "-",
+                    pg: pMatch ? pMatch[1] : "-"
+                };
+            };
+
+            const s1 = extractData(progressParts[0]);
+            const s2 = extractData(progressParts[1]);
+            const s3 = extractData(progressParts[2]);
 
             tableHtml += `
                 <tr>
                     <td style="font-weight:bold;">${log.date}</td>
-                    <td style="text-align:center;"><span class="attn-badge attn-${attn}">${attn}</span></td>
-                    <td>${perf}</td>
-                    <td>Pg ${getPage(progressParts[0])}</td>
-                    <td>Pg ${getPage(progressParts[1])}</td>
-                    <td>Pg ${getPage(progressParts[2])}</td>
+                    <td><span class="attn-badge attn-${attn}">${attn}</span></td>
+                    <td style="background:#f0f7f7;">${s1.lvl}</td><td style="background:#f0f7f7; font-weight:bold;">${s1.pg}</td>
+                    <td style="background:#f1f8e9;">${s2.lvl}</td><td style="background:#f1f8e9; font-weight:bold;">${s2.pg}</td>
+                    <td style="background:#f9fbe7;">${s3.lvl}</td><td style="background:#f9fbe7; font-weight:bold;">${s3.pg}</td>
+                    <td style="font-style:italic;">${perf}</td>
                 </tr>`;
         });
 
