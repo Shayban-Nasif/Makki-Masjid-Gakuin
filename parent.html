@@ -141,68 +141,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const parentEmail = localStorage.getItem('userEmail');
-const currentYear = 2026;
-const currentMonthName = "Jan"; // Match your Admin portal logic
 let studentsData = [];
-window.allPayments = [];
 
-async function loadMonthlyReport(studentData) {
-    const tbody = document.getElementById('monthlyTableBody');
-    const logs = studentData.logs || [];
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    // Filter logs for the current month
-    const monthLogs = logs.filter(log => {
-        const logDate = new Date(log.date);
-        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
-    });
-
-    if (monthLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6">No records found for this month.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = monthLogs.map(log => {
-        // Parsing the log string [Attn: P] [Good] S1: Pg 5 | S2: Pg 2 | S3: Pg 1
-        const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
-        const perf = log.text.match(/\[(.*?)\]/g)?.[1]?.replace(/[\[\]]/g, '') || '-';
-        
-        // Clean up the parts for the table
-        const parts = log.text.split('|').map(p => p.split(':').pop().trim());
-
-        return `
-            <tr>
-                <td>${log.date}</td>
-                <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                <td>${perf}</td>
-                <td>${parts[0] || '-'}</td>
-                <td>${parts[1] || '-'}</td>
-                <td>${parts[2] || '-'}</td>
-            </tr>
-        `;
-    }).join('');
-}
-        
-        async function init() {
+async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
-    
     try {
-        // 1. Fetch Students
         const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
         const studentSnap = await getDocs(q);
         studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Fetch Payments (All of them for history)
-        const paySnap = await getDocs(collection(db, "payments"));
-        window.allPayments = paySnap.docs.map(d => d.data());
-
-        // 3. Render Initial View
         renderView('report');
         displayNotices();
     } catch (e) {
         console.error("Initialization Error:", e);
-        document.getElementById('childrenContainer').innerHTML = "Error loading data. Please refresh.";
+        document.getElementById('childrenContainer').innerHTML = "Error loading data.";
     }
 }
 
@@ -211,7 +163,7 @@ window.renderView = (view) => {
     container.innerHTML = "";
     
     if (studentsData.length === 0) {
-        container.innerHTML = `<div class='child-card'>No students found linked to ${parentEmail}</div>`;
+        container.innerHTML = `<div class='child-card'>No students linked to ${parentEmail}</div>`;
         return;
     }
 
@@ -221,32 +173,30 @@ window.renderView = (view) => {
 
         if (view === 'report') {
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
-            const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
+            const gl = child.goals || { c1: 1, c2: 1, c3: 1 };
             const logs = child.logs || [];
             const labels = getDivisionLabels(child.division);
             
             // --- 1. BUILD SCROLLABLE DAILY LOGS ---
             let logsHtml = `
                 <div style="margin-top:20px;">
-                    <span class="log-title">📜 Daily Activity History (Scroll to view)</span>
-                    <div class="scroll-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; padding: 10px; background: #fff;">`;
+                    <span class="log-title">📜 Daily Summary (Recent)</span>
+                    <div class="scroll-container">`;
             
             if (logs.length > 0) {
-                logsHtml += logs.map(log => `
-                    <div class="log-entry" style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                        <span class="log-date" style="display:block; font-size: 0.75rem;">${log.date}:</span>
-                        <span style="font-size: 0.85rem; line-height: 1.4;">${log.text}</span>
+                logsHtml += logs.slice(0, 10).map(log => `
+                    <div class="log-entry">
+                        <span class="log-date">${log.date}:</span>
+                        <span>${log.text}</span>
                     </div>`).join('');
             } else {
-                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
+                logsHtml += `<div class="log-entry">No records yet.</div>`;
             }
             logsHtml += `</div></div>`;
 
-            // --- 2. BUILD MONTHLY SUMMARY TABLE (The 8-input Fix) ---
+            // --- 2. BUILD MONTHLY TABLE (Extracted from String) ---
             const currentMonth = new Date().getMonth();
             const currentYearNum = new Date().getFullYear();
-            
-            // Filter logs for the current month
             const monthLogs = logs.filter(log => {
                 const d = new Date(log.date);
                 return d.getMonth() === currentMonth && d.getFullYear() === currentYearNum;
@@ -254,16 +204,16 @@ window.renderView = (view) => {
 
             let monthlyTableHtml = `
                 <div style="margin-top:25px;">
-                    <span class="log-title">📅 Monthly Detailed Report</span>
+                    <span class="log-title">📅 ${new Date().toLocaleString('default', { month: 'long' })} Report</span>
                     <div class="monthly-table-wrapper">
                         <table class="monthly-table">
                             <thead>
                                 <tr>
                                     <th>Date</th>
                                     <th>Attn</th>
-                                    <th>${labels[0]} (L/P)</th>
-                                    <th>${labels[1]} (L/P)</th>
-                                    <th>${labels[2]} (L/P)</th>
+                                    <th>${labels[0]}</th>
+                                    <th>${labels[1]}</th>
+                                    <th>${labels[2]}</th>
                                     <th>Perf.</th>
                                 </tr>
                             </thead>
@@ -271,57 +221,49 @@ window.renderView = (view) => {
             
             if (monthLogs.length > 0) {
                 monthlyTableHtml += monthLogs.map(log => {
-                    // PARSING ENGINE: Extracts data from the teacher's string
-                    // String format: [Attn: P] [Good] Label1: Pg 5 | Label2: Pg 2...
+                    // Extracting using standard format [Attn: P] [Perf: Good] ...
                     const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
-                    const perf = log.text.match(/\[(Excellent|Good|Average|Poor)\]/)?.[1] || '-';
-                    
-                    // Split the string by the pipe symbol |
+                    const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
                     const parts = log.text.split('|');
                     
-                    // Extracting Level and Page for each subject
-                    // This assumes the teacher stored them as "Subject: Pg X"
-                    const s1Raw = parts[0] ? parts[0].split(':').pop().trim() : '-';
-                    const s2Raw = parts[1] ? parts[1].split(':').pop().trim() : '-';
-                    const s3Raw = parts[2] ? parts[2].split(':').pop().trim() : '-';
+                    const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
+                    const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
+                    const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
 
-                    return `
-                        <tr>
-                            <td style="font-weight:bold;">${log.date.split('-').slice(2)}/${log.date.split('-').slice(1,2)}</td>
-                            <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                            <td>${s1Raw}</td>
-                            <td>${s2Raw}</td>
-                            <td>${s3Raw}</td>
-                            <td style="font-size:0.7rem;">${perf}</td>
-                        </tr>`;
+                    return `<tr>
+                        <td>${log.date.split('-')[2]}/${log.date.split('-')[1]}</td>
+                        <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                        <td>${s1}</td><td>${s2}</td><td>${s3}</td>
+                        <td style="font-size:0.7rem;">${perf}</td>
+                    </tr>`;
                 }).join('');
             } else {
-                monthlyTableHtml += `<tr><td colspan="6">No detailed records found for this month.</td></tr>`;
+                monthlyTableHtml += `<tr><td colspan="6">No records for this month.</td></tr>`;
             }
             monthlyTableHtml += `</tbody></table></div></div>`;
 
-            // --- RENDER EVERYTHING ---
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3 style="margin:0;">${child.name}</h3>
-                    <span style="font-size:0.8rem; background:#eee; padding:2px 8px; border-radius:4px;">${child.division}</span>
+                    <span style="font-size:0.8rem; color:var(--primary); font-weight:bold;">${child.division}</span>
                 </div>
-                <div style="margin: 15px 0;">
+                <div style="margin: 20px 0;">
                     ${bar(labels[0], lv.c1, gl.c1)}
                     ${bar(labels[1], lv.c2, gl.c2)}
                     ${bar(labels[2], lv.c3, gl.c3)}
                 </div>
-                <p style="font-size:0.85rem; color:#666;">Target Completion: <strong>${child.eta || 'Calculating...'}</strong></p>
                 <hr style="border:0; border-top:1px solid #eee;">
                 ${logsHtml}
                 ${monthlyTableHtml}
             `;
         } else {
-            // ... (Keep your existing Finance logic here)
+            // Finance View - Keep this simplified for parents
+            card.innerHTML = `<h3>${child.name} - Billing</h3><p>Please check the Admin office for invoice details.</p>`;
         }
         container.appendChild(card);
     });
 };
+
 function bar(label, cur, goal) {
     const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
     return `
@@ -331,9 +273,10 @@ function bar(label, cur, goal) {
 }
 
 function getDivisionLabels(div) {
-    if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
-    if (div === "Hifz") return ["Daily Sabaq", "Sabaqi (Recent)", "Ammi (Revision)"];
-    return ["Qaida Lessons", "Masnoon Duas", "Islamic Etiquettes"];
+    if (div === "Maktab") return ["Qaida/Quran", "Dua", "Islamic Studies"];
+    if (div === "Nazera") return ["Quran Reading", "Tajweed Rule", "Memorization"];
+    if (div === "Hifz") return ["New Sabaq", "Sabaqi", "Manzil"];
+    return ["Subject 1", "Subject 2", "Subject 3"];
 }
 
 window.switchTab = (view) => {
@@ -346,30 +289,25 @@ window.logout = () => { localStorage.clear(); window.location.href = 'index.html
 
 window.displayNotices = async () => {
     try {
-        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+        const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(5));
         const snap = await getDocs(q);
         const noticeDiv = document.getElementById('parentNoticeDisplay');
         const historyList = document.getElementById('historyList');
-        noticeDiv.innerHTML = "";
-        historyList.innerHTML = "";
-        let count = 0;
+        noticeDiv.innerHTML = ""; historyList.innerHTML = "";
+        
+        let i = 0;
         snap.forEach(docSnap => {
             const data = docSnap.data();
-            if (count === 0) {
-                noticeDiv.innerHTML = `
-                    <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
-                        <span style="white-space: pre-wrap; flex: 1; font-family: inherit;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                        <button onclick="window.openHistory()" style="background:white; border:1px solid #fbc02d; cursor:pointer; font-size:0.7rem; padding:4px 8px; border-radius:4px; margin-left:10px; white-space: nowrap;">History</button>
-                    </div>`;
-            }
-            historyList.innerHTML += `
-                <div class="history-item">
-                    <div class="history-date">${data.date}</div>
-                    <div style="margin-top:5px;">${data.message}</div>
+            if (i === 0) {
+                noticeDiv.innerHTML = `<div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between;">
+                    <span style="white-space: pre-wrap;"><strong>Latest Notice:</strong>\n${data.message}</span>
+                    <button onclick="window.openHistory()" style="height:30px; cursor:pointer;">History</button>
                 </div>`;
-            count++;
+            }
+            historyList.innerHTML += `<div class="history-item"><b>${data.date}</b><br>${data.message}</div>`;
+            i++;
         });
-    } catch (e) { console.error("Notice Error:", e); }
+    } catch (e) { console.log(e); }
 };
 
 window.openHistory = () => { document.getElementById('historyModal').style.display = 'block'; };
@@ -377,5 +315,6 @@ window.closeHistory = () => { document.getElementById('historyModal').style.disp
 
 init();
 </script>
+
 </body>
 </html>
