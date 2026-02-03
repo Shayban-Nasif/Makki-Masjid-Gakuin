@@ -13,18 +13,16 @@
         .header h2 { margin: 0; font-size: 1.5rem; }
         
         .nav-tabs { display: flex; gap: 10px; margin: 25px 0; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; transition: 0.3s; border-radius: 6px; }
+        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; transition: 0.3s; border-radius: 6px; font-size: 0.85rem; }
         .tab.active { background: var(--primary); color: white; }
 
         .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
         .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
-        /* Log Styles */
-        .log-container { margin-top: 20px; background: #f9f9f9; border-radius: 8px; padding: 15px; }
-        .log-title { font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; display: block; border-bottom: 1px solid #ddd; }
-        .log-entry { font-size: 0.85rem; padding: 8px 0; border-bottom: 1px dashed #ccc; }
-        .log-entry:last-child { border-bottom: none; }
-        .log-date { color: var(--gold); font-weight: bold; margin-right: 8px; }
+        /* Table Styles */
+        .record-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        .record-table th { background: #f8f9fa; color: var(--primary); text-align: left; padding: 12px 8px; border-bottom: 2px solid #eee; }
+        .record-table td { padding: 10px 8px; border-bottom: 1px solid #eee; }
 
         /* Progress Bar Styles */
         .progress-item { margin: 15px 0; }
@@ -32,22 +30,16 @@
         .bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; }
         .bar-fill { background: var(--gold); height: 100%; transition: 0.5s; }
 
-         /* Notice History PoP Up Styles */    
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
         .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
-        .history-item { 
-            border-bottom: 1px solid #eee; 
-            padding: 15px 0; 
-            white-space: pre-wrap; /* This preserves your line breaks */
-        }
+        .history-item { border-bottom: 1px solid #eee; padding: 15px 0; white-space: pre-wrap; }
         .history-date { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
         
         /* Finance Styles */
         .finance-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .finance-table td { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .total-row { font-weight: bold; color: var(--primary); font-size: 1.1rem; }
         .status-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-top: 15px; }
         .paid { background: #e8f5e9; color: #2e7d32; }
         .unpaid { background: #ffebee; color: #c62828; }
@@ -68,16 +60,17 @@
 
         <div id="parentNoticeDisplay" style="margin-top: 20px;"></div>
 
-            <div id="historyModal" class="modal">
-                <div class="modal-content">
-                    <span class="close-modal" onclick="closeHistory()">&times;</span>
-                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
-                    <div id="historyList"></div>
-                </div>
+        <div id="historyModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeHistory()">&times;</span>
+                <h3 style="color: var(--primary); border-bottom: 2px solid var(--gold); padding-bottom: 10px;">Notice History</h3>
+                <div id="historyList"></div>
             </div>
+        </div>
         
         <div class="nav-tabs">
-            <button class="tab active" id="btnReport" onclick="switchTab('report')">Academic Progress</button>
+            <button class="tab active" id="btnReport" onclick="switchTab('report')">Overall Progress</button>
+            <button class="tab" id="btnRecords" onclick="switchTab('records')">Academic Records</button>
             <button class="tab" id="btnFinance" onclick="switchTab('finance')">Fees & Invoices</button>
         </div>
 
@@ -104,7 +97,7 @@ const db = getFirestore(app);
 
 const parentEmail = localStorage.getItem('userEmail');
 const currentYear = 2026;
-const currentMonthName = "Jan"; // Match your Admin portal logic
+const currentMonthName = "Jan";
 let studentsData = [];
 window.allPayments = [];
 
@@ -112,16 +105,13 @@ async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     
     try {
-        // 1. Fetch Students
         const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
         const studentSnap = await getDocs(q);
         studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 2. Fetch Payments (All of them for history)
         const paySnap = await getDocs(collection(db, "payments"));
         window.allPayments = paySnap.docs.map(d => d.data());
 
-        // 3. Render Initial View
         renderView('report');
         displayNotices();
     } catch (e) {
@@ -144,37 +134,45 @@ window.renderView = (view) => {
         card.className = 'child-card';
 
         if (view === 'report') {
-            // --- ACADEMIC REPORT VIEW ---
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
             const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
-            const logs = child.logs || [];
             const labels = getDivisionLabels(child.division);
             
-            let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
-            if (logs.length > 0) {
-                logsHtml += logs.slice(0, 5).map(log => `
-                    <div class="log-entry">
-                        <span class="log-date">${log.date || ''}:</span>
-                        <span>${log.text || ''}</span>
-                    </div>`).join('');
-            } else {
-                logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
-            }
-            logsHtml += `</div>`;
-
             card.innerHTML = `
                 <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
                 <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
                 <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
                 <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
                 <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
-                ${logsHtml}
+            `;
+        } else if (view === 'records') {
+            const logs = child.logs || [];
+            let rows = logs.map(log => `
+                <tr>
+                    <td>${log.date || '-'}</td>
+                    <td style="white-space: pre-wrap;">${log.text || '-'}</td>
+                </tr>
+            `).join('');
+
+            card.innerHTML = `
+                <h3>${child.name} - Monthly Academic Record</h3>
+                <div style="overflow-x:auto;">
+                    <table class="record-table">
+                        <thead>
+                            <tr>
+                                <th style="width:100px;">Date</th>
+                                <th>Teacher's Notes & Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows || '<tr><td colspan="2" style="text-align:center; padding:20px; color:#999;">No records found for this month.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
             `;
         } else {
-            // --- FINANCE VIEW ---
             const studentPayments = window.allPayments.filter(p => p.studentId === child.id);
             const isPaidThisMonth = studentPayments.some(p => p.monthName === currentMonthName && p.year === currentYear);
-            
             const mFee = Number(child.monthlyFee) || 0;
             const tFee = Number(child.transportFee) || 0;
             const totalDue = mFee + tFee;
@@ -186,7 +184,6 @@ window.renderView = (view) => {
                         ${isPaidThisMonth ? 'Current Month: Paid ✅' : 'Current Month: Due'}
                     </div>
                 </div>
-
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                     <div style="background:#f9f9f9; padding:15px; border-radius:8px; border-left:4px solid var(--primary);">
                         <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Monthly Commitment</label>
@@ -198,7 +195,6 @@ window.renderView = (view) => {
                         <div style="font-weight:bold; color:${isPaidThisMonth ? '#2e7d32' : '#c62828'};">¥${isPaidThisMonth ? '0' : totalDue.toLocaleString()}</div>
                     </div>
                 </div>
-
                 <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:10px;">Payment History</h4>
                 <div style="overflow-x:auto;">
                     <table class="finance-table" style="font-size:0.85rem;">
@@ -242,6 +238,7 @@ function getDivisionLabels(div) {
 
 window.switchTab = (view) => {
     document.getElementById('btnReport').classList.toggle('active', view === 'report');
+    document.getElementById('btnRecords').classList.toggle('active', view === 'records');
     document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
     renderView(view);
 };
