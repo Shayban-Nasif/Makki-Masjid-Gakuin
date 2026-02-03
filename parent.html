@@ -53,6 +53,44 @@
         .unpaid { background: #ffebee; color: #c62828; }
 
         .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
+                /* Scrollable Container for Daily Updates */
+        .scroll-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            background: #fff;
+        }
+        
+        /* Monthly Table Styling */
+        .monthly-table-wrapper {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        .monthly-table {
+            width: 100%;
+            font-size: 0.8rem;
+            border-collapse: collapse;
+        }
+        
+        .monthly-table th, .monthly-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .monthly-table th {
+            background-color: var(--primary);
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        /* Color coding for attendance in the table */
+        .cell-p { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
+        .cell-a { background-color: #ffebee; color: #c62828; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -108,7 +146,45 @@ const currentMonthName = "Jan"; // Match your Admin portal logic
 let studentsData = [];
 window.allPayments = [];
 
-async function init() {
+async function loadMonthlyReport(studentData) {
+    const tbody = document.getElementById('monthlyTableBody');
+    const logs = studentData.logs || [];
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Filter logs for the current month
+    const monthLogs = logs.filter(log => {
+        const logDate = new Date(log.date);
+        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
+    });
+
+    if (monthLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No records found for this month.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = monthLogs.map(log => {
+        // Parsing the log string [Attn: P] [Good] S1: Pg 5 | S2: Pg 2 | S3: Pg 1
+        const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+        const perf = log.text.match(/\[(.*?)\]/g)?.[1]?.replace(/[\[\]]/g, '') || '-';
+        
+        // Clean up the parts for the table
+        const parts = log.text.split('|').map(p => p.split(':').pop().trim());
+
+        return `
+            <tr>
+                <td>${log.date}</td>
+                <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                <td>${perf}</td>
+                <td>${parts[0] || '-'}</td>
+                <td>${parts[1] || '-'}</td>
+                <td>${parts[2] || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+}
+        
+        async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     
     try {
@@ -144,15 +220,19 @@ window.renderView = (view) => {
         card.className = 'child-card';
 
         if (view === 'report') {
-            // --- ACADEMIC REPORT VIEW ---
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
             const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
             const logs = child.logs || [];
             const labels = getDivisionLabels(child.division);
             
-            let logsHtml = `<div class="log-container"><span class="log-title">Latest Daily Updates</span>`;
+            // --- 1. BUILD SCROLLABLE DAILY LOGS ---
+            let logsHtml = `
+                <div style="margin-top:20px;">
+                    <span class="log-title">📜 Latest Daily Updates (Scroll to view history)</span>
+                    <div class="scroll-container">`;
+            
             if (logs.length > 0) {
-                logsHtml += logs.slice(0, 5).map(log => `
+                logsHtml += logs.map(log => `
                     <div class="log-entry">
                         <span class="log-date">${log.date || ''}:</span>
                         <span>${log.text || ''}</span>
@@ -160,21 +240,71 @@ window.renderView = (view) => {
             } else {
                 logsHtml += `<div class="log-entry">No updates recorded yet.</div>`;
             }
-            logsHtml += `</div>`;
+            logsHtml += `</div></div>`;
 
+            // --- 2. BUILD MONTHLY SUMMARY TABLE ---
+            const currentMonth = new Date().getMonth();
+            const currentYearNum = new Date().getFullYear();
+            const monthLogs = logs.filter(log => {
+                const d = new Date(log.date);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYearNum;
+            });
+
+            let monthlyTableHtml = `
+                <div style="margin-top:25px;">
+                    <span class="log-title">📅 Monthly Summary (${new Date().toLocaleString('default', { month: 'long' })})</span>
+                    <div class="monthly-table-wrapper">
+                        <table class="monthly-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th><th>Attn</th><th>Perf.</th>
+                                    <th>${labels[0]}</th><th>${labels[1]}</th><th>${labels[2]}</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+            
+            if (monthLogs.length > 0) {
+                monthlyTableHtml += monthLogs.map(log => {
+                    // Optimized parsing for the 8 teacher inputs
+                    const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+                    const perf = log.text.match(/\[Excellent|Good|Average|Poor\]/)?.[0] || '-';
+                    
+                    // Split the subject parts (S1, S2, S3)
+                    const parts = log.text.split('|');
+                    const s1Data = parts[0] ? parts[0].split(':').pop().trim() : '-';
+                    const s2Data = parts[1] ? parts[1].split(':').pop().trim() : '-';
+                    const s3Data = parts[2] ? parts[2].split(':').pop().trim() : '-';
+
+                    return `
+                        <tr>
+                            <td>${log.date.split('-').slice(1).join('/')}</td>
+                            <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                            <td style="font-size:0.7rem;">${perf}</td>
+                            <td>${s1Data}</td>
+                            <td>${s2Data}</td>
+                            <td>${s3Data}</td>
+                        </tr>`;
+                }).join('');
+            } else {
+                monthlyTableHtml += `<tr><td colspan="6">No records for this month.</td></tr>`;
+            }
+            monthlyTableHtml += `</tbody></table></div></div>`;
+
+            // --- COMBINE EVERYTHING INTO THE CARD ---
             card.innerHTML = `
                 <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
                 <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
                 <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
                 <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
                 <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
                 ${logsHtml}
+                ${monthlyTableHtml}
             `;
         } else {
-            // --- FINANCE VIEW ---
+            // --- FINANCE VIEW (Keep your existing logic) ---
             const studentPayments = window.allPayments.filter(p => p.studentId === child.id);
             const isPaidThisMonth = studentPayments.some(p => p.monthName === currentMonthName && p.year === currentYear);
-            
             const mFee = Number(child.monthlyFee) || 0;
             const tFee = Number(child.transportFee) || 0;
             const totalDue = mFee + tFee;
@@ -186,27 +316,22 @@ window.renderView = (view) => {
                         ${isPaidThisMonth ? 'Current Month: Paid ✅' : 'Current Month: Due'}
                     </div>
                 </div>
-
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                     <div style="background:#f9f9f9; padding:15px; border-radius:8px; border-left:4px solid var(--primary);">
-                        <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Monthly Commitment</label>
+                        <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Commitment</label>
                         <div style="font-weight:bold; color:var(--primary);">¥${totalDue.toLocaleString()}</div>
-                        <div style="font-size:0.7rem; color:#888;">(Tuition: ¥${mFee} + Transport: ¥${tFee})</div>
                     </div>
                     <div style="background:#f9f9f9; padding:15px; border-radius:8px; border-left:4px solid ${isPaidThisMonth ? '#2e7d32' : '#c62828'};">
                         <label style="font-size:0.7rem; color:#666; text-transform:uppercase;">Balance Due</label>
                         <div style="font-weight:bold; color:${isPaidThisMonth ? '#2e7d32' : '#c62828'};">¥${isPaidThisMonth ? '0' : totalDue.toLocaleString()}</div>
                     </div>
                 </div>
-
                 <h4 style="font-size:0.9rem; color:var(--primary); margin-bottom:10px;">Payment History</h4>
                 <div style="overflow-x:auto;">
                     <table class="finance-table" style="font-size:0.85rem;">
                         <thead>
                             <tr style="text-align:left; background:#eee;">
-                                <th style="padding:8px;">Month</th>
-                                <th style="padding:8px;">Date Paid</th>
-                                <th style="padding:8px; text-align:right;">Amount</th>
+                                <th style="padding:8px;">Month</th><th style="padding:8px;">Date Paid</th><th style="padding:8px; text-align:right;">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -216,7 +341,7 @@ window.renderView = (view) => {
                                     <td style="padding:8px;">${p.datePaid || '—'}</td>
                                     <td style="padding:8px; text-align:right; font-weight:bold;">¥${(p.amount || 0).toLocaleString()}</td>
                                 </tr>
-                            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#999;">No payment records found.</td></tr>'}
+                            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#999;">No records found.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
