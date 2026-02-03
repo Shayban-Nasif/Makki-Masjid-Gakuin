@@ -307,6 +307,22 @@
         container.innerHTML = "<p style='padding:20px; color:red;'>Error loading history. Ensure 'daily_logs' collection exists.</p>";
     }
 };
+
+    window.searchStudents = () => {
+    const term = document.getElementById('studentSearch').value.toLowerCase();
+    const showOnlyTransport = document.getElementById('transportFilter').checked;
+    const rows = document.querySelectorAll('.student-row');
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const hasTransport = row.getAttribute('data-transport') === "true";
+        
+        const matchesSearch = text.includes(term);
+        const matchesFilter = !showOnlyTransport || hasTransport;
+
+        row.style.display = (matchesSearch && matchesFilter) ? "" : "none";
+    });
+};
         
     window.openTab = (evt, tabId) => {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -547,34 +563,58 @@ window.deleteUser = async (email) => {
 };
 
     window.togglePayment = async (monthIndex, currentlyPaid, monthName) => {
-    if(currentlyPaid) return alert("This month is already marked as Paid.");
+    const year = parseInt(document.getElementById('hubYear').value);
     
-    if(confirm(`Confirm payment for ${monthName}?`)) {
-        const year = parseInt(document.getElementById('hubYear').value);
-        const sSnap = await getDocs(collection(db, "students"));
-        const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
-        
-        const mFee = parseInt(s.monthlyFee) || 0;
-        const tFee = parseInt(s.transportFee) || 0;
-        const totalPaid = mFee + tFee;
+    if (currentlyPaid) {
+        // REVISE RECORD: If already paid, clicking again deletes it
+        if (confirm(`Do you want to REMOVE the payment record for ${monthName} ${year}?`)) {
+            try {
+                const q = query(
+                    collection(db, "payments"), 
+                    where("studentId", "==", currentHubStudentId),
+                    where("monthIndex", "==", monthIndex),
+                    where("year", "==", year)
+                );
+                const snap = await getDocs(q);
+                
+                // Delete the found record(s)
+                const deletePromises = snap.docs.map(d => deleteDoc(doc(db, "payments", d.id)));
+                await Promise.all(deletePromises);
+                
+                await addLog(`REVISED: Payment for ${monthName} was removed by Admin.`);
+                loadHubPayments();
+                loadStudents();
+            } catch (e) {
+                alert("Error removing record.");
+            }
+        }
+    } else {
+        // ADD RECORD: Standard payment entry
+        if (confirm(`Confirm payment for ${monthName}?`)) {
+            const sSnap = await getDocs(collection(db, "students"));
+            const s = sSnap.docs.find(d => d.id === currentHubStudentId).data();
+            
+            const mFee = parseInt(s.monthlyFee) || 0;
+            const tFee = parseInt(s.transportFee) || 0;
+            const totalPaid = mFee + tFee;
 
-        try {
-            await addDoc(collection(db, "payments"), { 
-                studentId: currentHubStudentId, 
-                monthIndex, 
-                monthName, 
-                year, 
-                amount: totalPaid, 
-                datePaid: new Date().toLocaleDateString(),
-                timestamp: new Date() 
-            });
-            await addLog(`Payment of ¥${totalPaid} recorded for ${monthName} ${year}`);
-            loadHubPayments(); 
-            loadStudents();
-        } catch (e) { alert("Error recording payment"); }
+            try {
+                await addDoc(collection(db, "payments"), { 
+                    studentId: currentHubStudentId, 
+                    monthIndex, 
+                    monthName, 
+                    year, 
+                    amount: totalPaid, 
+                    datePaid: new Date().toLocaleDateString(),
+                    timestamp: new Date() 
+                });
+                await addLog(`Payment of ¥${totalPaid} recorded for ${monthName}`);
+                loadHubPayments(); 
+                loadStudents();
+            } catch (e) { alert("Error recording payment"); }
+        }
     }
 };
-
     window.addStudent = async () => {
     const fields = {
         name: document.getElementById('sName'),
