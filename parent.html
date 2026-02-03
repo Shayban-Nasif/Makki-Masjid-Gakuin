@@ -75,7 +75,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAdA02h0pqEEQunobeSM4emZfPW1EjMKu4",
@@ -95,102 +95,117 @@ let studentsData = [];
 async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('ja-JP');
+    
     try {
-        const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail));
+        // Find students linked to this parent email
+        const q = query(collection(db, "students"), where("parentEmail", "==", parentEmail.toLowerCase().trim()));
         const studentSnap = await getDocs(q);
-        studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (studentSnap.empty) {
+            document.getElementById('childrenContainer').innerHTML = `
+                <div class='child-card' style="text-align:center;">
+                    <p>No students found for <b>${parentEmail}</b>.</p>
+                    <small>Please contact Admin to link your email to your child's record.</small>
+                </div>`;
+            return;
+        }
 
+        studentsData = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderView('report');
         displayNotices();
     } catch (e) {
-        console.error(e);
-        document.getElementById('childrenContainer').innerHTML = "Error loading data.";
+        console.error("Portal Init Error:", e);
+        document.getElementById('childrenContainer').innerHTML = "Error connecting to database.";
     }
 }
 
 window.renderView = async (view) => {
     const container = document.getElementById('childrenContainer');
-    container.innerHTML = "";
+    container.innerHTML = "<div style='text-align:center; padding:20px;'>Loading " + view + "...</div>";
     
-    if (studentsData.length === 0) {
-        container.innerHTML = `<div class='child-card'>No students linked to ${parentEmail}</div>`;
-        return;
-    }
+    let htmlContent = "";
 
     for (const child of studentsData) {
-        const card = document.createElement('div');
-        card.className = 'child-card';
+        let childHtml = `<div class="child-card">
+            <h3>${child.name} <small style="float:right; color:#666; font-size:0.8rem;">${child.division}</small></h3>`;
 
         if (view === 'report') {
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
             const gl = child.goals || { c1: 1, c2: 1, c3: 1 };
             const labels = getDivisionLabels(child.division);
             
-            // FILTER ONLY ACADEMIC LOGS
-            const academicLogs = (child.logs || []).filter(l => l.type === "academic");
+            // Progress Bars
+            childHtml += bar(labels[0], lv.c1, gl.c1);
+            childHtml += bar(labels[1], lv.c2, gl.c2);
+            childHtml += bar(labels[2], lv.c3, gl.c3);
 
+            // Academic Log Table
+            const academicLogs = (child.logs || []).filter(l => l.type === "academic");
             let tableRows = academicLogs.length > 0 ? academicLogs.map(log => {
-                const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+                const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || 'P';
                 const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
                 const parts = log.text.split('|');
-                const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
-                const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
-                const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
-
+                
+                // Safety parse: extract data after the colon
+                const getVal = (str) => str && str.includes(':') ? str.split(':').pop().trim() : (str || '-');
+                
                 return `<tr>
                     <td>${log.date}</td>
                     <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                    <td>${s1}</td><td>${s2}</td><td>${s3}</td>
+                    <td>${getVal(parts[0])}</td>
+                    <td>${getVal(parts[1])}</td>
+                    <td>${getVal(parts[2])}</td>
                     <td>${perf}</td>
                 </tr>`;
-            }).join('') : `<tr><td colspan="6">No academic records found.</td></tr>`;
+            }).join('') : `<tr><td colspan="6" style="padding:20px; color:#999;">No daily study logs found yet.</td></tr>`;
 
-            card.innerHTML = `
-                <h3>${child.name} <small style="float:right; color:#666; font-size:0.8rem;">${child.division}</small></h3>
-                ${bar(labels[0], lv.c1, gl.c1)}
-                ${bar(labels[1], lv.c2, gl.c2)}
-                ${bar(labels[2], lv.c3, gl.c3)}
+            childHtml += `
                 <div class="monthly-table-wrapper">
-                    <span class="log-title">📅 Academic Record Table</span>
+                    <span class="log-title">📅 Academic Record History</span>
                     <table class="monthly-table">
                         <thead><tr><th>Date</th><th>Attn</th><th>${labels[0]}</th><th>${labels[1]}</th><th>${labels[2]}</th><th>Perf.</th></tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>`;
-        } else {
-            // FINANCE VIEW - Fetching from 'payments' collection
+
+        } else if (view === 'finance') {
+            // Querying the "payments" collection for records matching this specific student
             const payQuery = query(collection(db, "payments"), where("studentId", "==", child.id), orderBy("timestamp", "desc"));
             const paySnap = await getDocs(payQuery);
             
-            let payHtml = `<span class="log-title">💳 Payment History</span>`;
+            childHtml += `<span class="log-title">💳 Tuition Payment History</span>`;
+            
             if (paySnap.empty) {
-                payHtml += `<p style="color:#666;">No payment records found.</p>`;
+                childHtml += `<p style="color:#999; padding:10px;">No payment records found for this student.</p>`;
             } else {
                 paySnap.forEach(pDoc => {
                     const p = pDoc.data();
-                    payHtml += `
+                    childHtml += `
                         <div class="invoice-card">
                             <div>
                                 <strong>${p.monthName} ${p.year}</strong><br>
-                                <small>Paid on: ${p.datePaid || p.date || '-'}</small>
+                                <small>Receipt Date: ${p.date || '-'}</small>
                             </div>
                             <div>
-                                <span style="font-weight:bold; margin-right:10px;">¥${p.amount}</span>
+                                <span style="font-weight:bold; margin-right:10px;">¥${p.amount.toLocaleString()}</span>
                                 <span class="paid-badge">PAID</span>
                             </div>
                         </div>`;
                 });
             }
-            card.innerHTML = `<h3>${child.name} - Invoices</h3>${payHtml}`;
         }
-        container.appendChild(card);
+        childHtml += `</div>`;
+        htmlContent += childHtml;
     }
+    container.innerHTML = htmlContent;
 };
+
+// ... Rest of your helper functions (bar, getDivisionLabels, displayNotices, etc.) remain the same ...
 
 function bar(label, cur, goal) {
     const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
     return `
-        <div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div>
+        <div class="progress-label"><span>${label}</span><span>Level ${cur || 0} / ${goal || 0}</span></div>
         <div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>
     `;
 }
@@ -201,12 +216,12 @@ function getDivisionLabels(div) {
         "Nazera": ["Quran Reading", "Tajweed Rule", "Memorization"],
         "Hifz": ["New Sabaq", "Sabaqi", "Manzil"]
     };
-    return labels[div] || ["S1", "S2", "S3"];
+    return labels[div] || ["Subject 1", "Subject 2", "Subject 3"];
 }
 
 window.switchTab = (view) => {
-    document.getElementById('btnReport').classList.toggle('active', view === 'report');
-    document.getElementById('btnFinance').classList.toggle('active', view === 'finance');
+    document.getElementById('btnReport').className = (view === 'report') ? 'tab active' : 'tab';
+    document.getElementById('btnFinance').className = (view === 'finance') ? 'tab active' : 'tab';
     renderView(view);
 };
 
@@ -218,21 +233,23 @@ window.displayNotices = async () => {
         const snap = await getDocs(q);
         const noticeDiv = document.getElementById('parentNoticeDisplay');
         const historyList = document.getElementById('historyList');
-        noticeDiv.innerHTML = ""; historyList.innerHTML = "";
         
+        if (snap.empty) return;
+
         let i = 0;
         snap.forEach(docSnap => {
             const data = docSnap.data();
             if (i === 0) {
-                noticeDiv.innerHTML = `<div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="white-space: pre-wrap;"><strong>Latest Notice:</strong>\n${data.message}</span>
-                    <button onclick="window.openHistory()" style="padding:5px 10px; cursor:pointer;">History</button>
+                noticeDiv.innerHTML = `
+                <div style="background:#fff9c4; border-left:5px solid #fbc02d; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="white-space: pre-wrap; font-size:0.9rem;"><strong>Announcement:</strong>\n${data.message}</span>
+                    <button onclick="window.openHistory()" style="padding:5px 10px; cursor:pointer; background:white; border:1px solid #ccc; border-radius:4px;">History</button>
                 </div>`;
             }
             historyList.innerHTML += `<div class="history-item"><b>${data.date}</b><br>${data.message}</div>`;
             i++;
         });
-    } catch (e) { console.log(e); }
+    } catch (e) { console.error("Notice Error:", e); }
 };
 
 window.openHistory = () => { document.getElementById('historyModal').style.display = 'block'; };
@@ -240,5 +257,6 @@ window.closeHistory = () => { document.getElementById('historyModal').style.disp
 
 init();
 </script>
+    
 </body>
 </html>
