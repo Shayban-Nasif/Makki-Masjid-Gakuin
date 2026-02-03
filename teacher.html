@@ -208,10 +208,7 @@
     let teacherData = null;
 
     async function init() {
-        if (!teacherEmail) { 
-            window.location.href = 'index.html'; 
-            return; 
-        }
+        if (!teacherEmail) { window.location.href = 'index.html'; return; }
         try {
             const tDoc = await getDoc(doc(db, "users", teacherEmail));
             if (tDoc.exists()) {
@@ -223,21 +220,11 @@
             } else {
                 alert("Teacher profile not found.");
             }
-        } catch (err) {
-            console.error("Init Error:", err);
-        }
+        } catch (err) { console.error("Init Error:", err); }
     }
 
-    // Function to quickly mark all students as Present
     window.markAllPresent = () => {
-        const selects = document.querySelectorAll('.attn');
-        if (selects.length === 0) {
-            console.warn("No attendance dropdowns found. Is the table loaded?");
-            return;
-        }
-        selects.forEach(select => {
-            select.value = 'P';
-        });
+        document.querySelectorAll('.attn').forEach(select => { select.value = 'P'; });
     };
     
     window.switchTab = (tabId) => {
@@ -275,7 +262,6 @@
         });
     }
 
-// --- BATCH INPUT RENDERING WITH PAGE DROPDOWNS ---
     async function renderBatchTable() {
         const tbody = document.getElementById('batchTableBody');
         document.getElementById('batchDate').valueAsDate = new Date();
@@ -287,11 +273,8 @@
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
         
-        // Helper to create page dropdown options 1-20
         let pageOptions = `<option value="-">-</option>`;
-        for(let p=1; p<=20; p++) {
-            pageOptions += `<option value="${p}">${p}</option>`;
-        }
+        for(let p=1; p<=30; p++) { pageOptions += `<option value="${p}">${p}</option>`; }
 
         let html = "";
         let i = 1;
@@ -301,22 +284,13 @@
             html += `<tr data-sid="${doc.id}" data-name="${s.name}">
                 <td>${i++}</td>
                 <td><b>${s.name}</b></td>
-                <td>
-                    <select class="batch-input attn" style="width:50px;">
-                        <option value="P">P</option>
-                        <option value="A">A</option>
-                        <option value="L">L</option>
-                    </select>
-                </td>
+                <td><select class="batch-input attn" style="width:55px;"><option value="P">P</option><option value="A">A</option><option value="L">L</option></select></td>
                 <td><input type="number" class="batch-input l1" value="${lv.c1}" style="width:55px;"></td>
                 <td><select class="batch-input p1" style="width:70px;">${pageOptions}</select></td>
-                
                 <td><input type="number" class="batch-input l2" value="${lv.c2}" style="width:55px;"></td>
                 <td><select class="batch-input p2" style="width:70px;">${pageOptions}</select></td>
-                
                 <td><input type="number" class="batch-input l3" value="${lv.c3}" style="width:55px;"></td>
                 <td><select class="batch-input p3" style="width:70px;">${pageOptions}</select></td>
-                
                 <td>
                     <select class="batch-input perf">
                         <option value="Excellent">Excellent</option>
@@ -330,23 +304,17 @@
         tbody.innerHTML = html;
     }
 
-    // --- SUBMIT ALL RECORDS ---
     window.saveAllBatch = async () => {
         const rows = document.querySelectorAll('#batchTableBody tr');
         const logDate = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
-        
         if (rows.length === 0) return;
+        if (!confirm(`Submit records for ${rows.length} students?`)) return;
 
-        const confirmSave = confirm(`Submit records for ${rows.length} students?`);
-        if (!confirmSave) return;
-
-        btn.disabled = true;
-        btn.innerText = "Saving...";
+        btn.disabled = true; btn.innerText = "Saving...";
 
         try {
             const labels = divisionLabels[teacherData.division];
-
             for (let row of rows) {
                 const sid = row.dataset.sid;
                 const lv = {
@@ -354,15 +322,14 @@
                     c2: parseInt(row.querySelector('.l2').value) || 0,
                     c3: parseInt(row.querySelector('.l3').value) || 0
                 };
-                
-                // Reading values from dropdowns instead of text inputs
                 const p1 = row.querySelector('.p1').value;
                 const p2 = row.querySelector('.p2').value;
                 const p3 = row.querySelector('.p3').value;
                 const attn = row.querySelector('.attn').value;
                 const perf = row.querySelector('.perf').value;
 
-                const logText = `[Attn: ${attn}] [${perf}] ${labels[0]}: Pg ${p1} | ${labels[1]}: Pg ${p2} | ${labels[2]}: Pg ${p3}`;
+                // Standardized log string for perfect parsing
+                const logText = `[Attn: ${attn}] [Perf: ${perf}] ${labels[0]}: Lv ${lv.c1} Pg ${p1} | ${labels[1]}: Lv ${lv.c2} Pg ${p2} | ${labels[2]}: Lv ${lv.c3} Pg ${p3}`;
                 
                 const sRef = doc(db, "students", sid);
                 const sSnap = await getDoc(sRef);
@@ -373,56 +340,12 @@
                     logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
                 });
             }
-            
             alert("🎉 Alhamdulillah! Records saved.");
             window.switchTab('dashboard');
-            
-        } catch (e) { 
-            alert("Error: " + e.message); 
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Submit All Records";
-        }
+        } catch (e) { alert("Error: " + e.message); } 
+        finally { btn.disabled = false; btn.innerText = "Submit All Records"; }
     };
 
-async function loadMonthlyReport(studentData) {
-    const tbody = document.getElementById('monthlyTableBody');
-    const logs = studentData.logs || [];
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    // Filter logs for the current month
-    const monthLogs = logs.filter(log => {
-        const logDate = new Date(log.date);
-        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
-    });
-
-    if (monthLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6">No records found for this month.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = monthLogs.map(log => {
-        // Parsing the log string [Attn: P] [Good] S1: Pg 5 | S2: Pg 2 | S3: Pg 1
-        const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
-        const perf = log.text.match(/\[(.*?)\]/g)?.[1]?.replace(/[\[\]]/g, '') || '-';
-        
-        // Clean up the parts for the table
-        const parts = log.text.split('|').map(p => p.split(':').pop().trim());
-
-        return `
-            <tr>
-                <td>${log.date}</td>
-                <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                <td>${perf}</td>
-                <td>${parts[0] || '-'}</td>
-                <td>${parts[1] || '-'}</td>
-                <td>${parts[2] || '-'}</td>
-            </tr>
-        `;
-    }).join('');
-}
-    
     async function populateHistoryDropdown() {
         const sel = document.getElementById('historyStudentSelect');
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
@@ -433,59 +356,49 @@ async function loadMonthlyReport(studentData) {
     }
 
     async function loadStudentHistory() {
-    const sid = document.getElementById('historyStudentSelect').value;
-    const res = document.getElementById('historyResult');
-    const monthlyContainer = document.getElementById('monthlyHistoryContainer');
-    const monthlyBody = document.getElementById('monthlyHistoryBody');
-    
-    if(!sid) {
-        monthlyContainer.style.display = 'none';
-        res.innerHTML = "<p>Select a student to view logs.</p>";
-        return;
-    }
-
-    const sDoc = await getDoc(doc(db, "students", sid));
-    const studentData = sDoc.data();
-    const logs = studentData.logs || [];
-    const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
-
-    // Update Table Headers
-    document.getElementById('th-s1').innerText = labels[0];
-    document.getElementById('th-s2').innerText = labels[1];
-    document.getElementById('th-s3').innerText = labels[2];
-
-    if (logs.length > 0) {
-        monthlyContainer.style.display = 'block';
+        const sid = document.getElementById('historyStudentSelect').value;
+        const res = document.getElementById('historyResult');
+        const monthlyContainer = document.getElementById('monthlyHistoryContainer');
+        const monthlyBody = document.getElementById('monthlyHistoryBody');
         
-        // 1. Populate the Professional Monthly Table
-        monthlyBody.innerHTML = logs.map(log => {
-            const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
-            const perf = log.text.match(/\[(Excellent|Good|Average|Poor)\]/)?.[1] || '-';
-            const parts = log.text.split('|');
-            const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
-            const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
-            const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
+        if(!sid) { monthlyContainer.style.display = 'none'; res.innerHTML = "<p>Select a student.</p>"; return; }
 
-            return `
-                <tr>
+        const sDoc = await getDoc(doc(db, "students", sid));
+        const logs = sDoc.data().logs || [];
+        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+
+        document.getElementById('th-s1').innerText = labels[0];
+        document.getElementById('th-s2').innerText = labels[1];
+        document.getElementById('th-s3').innerText = labels[2];
+
+        if (logs.length > 0) {
+            monthlyContainer.style.display = 'block';
+            monthlyBody.innerHTML = logs.map(log => {
+                const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+                const perf = log.text.match(/\[Perf: (.*?)\]/)?.[1] || '-';
+                const parts = log.text.split('|');
+                
+                // Extracting specifically what comes after the labels
+                const s1 = parts[0] ? parts[0].split(':').pop().trim() : '-';
+                const s2 = parts[1] ? parts[1].split(':').pop().trim() : '-';
+                const s3 = parts[2] ? parts[2].split(':').pop().trim() : '-';
+
+                return `<tr>
                     <td>${log.date}</td>
                     <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
-                    <td>${s1}</td>
-                    <td>${s2}</td>
-                    <td>${s3}</td>
+                    <td>${s1}</td><td>${s2}</td><td>${s3}</td>
                     <td>${perf}</td>
                 </tr>`;
-        }).join('');
+            }).join('');
 
-        // 2. Populate the Raw Logs (Your original feature, now scrollable)
-        res.innerHTML = `<table><tr style="background:#eee;"><th>Date</th><th>Raw Text Report</th></tr>
-            ${logs.map(l => `<tr><td>${l.date}</td><td style="font-size:0.8rem;">${l.text}</td></tr>`).join('')}
-        </table>`;
-    } else {
-        monthlyContainer.style.display = 'none';
-        res.innerHTML = "<p>No logs found for this student.</p>";
+            res.innerHTML = `<table><tr style="background:#eee;"><th>Date</th><th>Full Summary</th></tr>
+                ${logs.map(l => `<tr><td>${l.date}</td><td style="font-size:0.8rem;">${l.text}</td></tr>`).join('')}
+            </table>`;
+        } else {
+            monthlyContainer.style.display = 'none';
+            res.innerHTML = "<p>No logs found.</p>";
+        }
     }
-}
 
     async function loadNotice() {
         const q = query(collection(db, "notices"), orderBy("timestamp", "desc"), limit(1));
@@ -497,8 +410,8 @@ async function loadMonthlyReport(studentData) {
     }
 
     window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-    
     init();
 </script>
+
 </body>
 </html>
