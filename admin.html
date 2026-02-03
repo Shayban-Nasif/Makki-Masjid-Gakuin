@@ -9,6 +9,8 @@
         .admin-container { max-width: 1150px; margin: 20px auto; padding: 20px; font-family: sans-serif; }
         .header { background: var(--primary); color: white; padding: 15px 25px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; }
+
+        .division-content { display: block; } /* Show content by default or manage via JS */
         
         /* Stats */
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
@@ -293,94 +295,100 @@ window.deleteUser = async (email) => {
         document.getElementById('count-teachers').innerText = snap.size;
     };
 
-    window.loadStudents = async () => {
-        const studentSnap = await getDocs(collection(db, "students"));
-        const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
+   window.loadStudents = async () => {
+    const studentSnap = await getDocs(collection(db, "students"));
+    const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
+    
+    const container = document.getElementById('divisionContainer');
+    const academicContainer = document.getElementById('academicContainer');
+    
+    container.innerHTML = "";
+    academicContainer.innerHTML = "";
+
+    let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+    const groups = { Maktab: [], Nazera: [], Hifz: [] };
+
+    studentSnap.forEach(docSnap => {
+        const s = { id: docSnap.id, ...docSnap.data() };
+        if(groups[s.division]) groups[s.division].push(s);
+        if(stats[s.division] !== undefined) stats[s.division]++;
+    });
+
+    for (const [divName, students] of Object.entries(groups)) {
+        if(students.length === 0) continue;
         
-        const container = document.getElementById('divisionContainer');
-        const academicContainer = document.getElementById('academicContainer');
-        container.innerHTML = "";
-        academicContainer.innerHTML = "";
-
-        let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-        const groups = { Maktab: [], Nazera: [], Hifz: [] };
-
-        studentSnap.forEach(docSnap => {
-            const s = { id: docSnap.id, ...docSnap.data() };
-            if(groups[s.division]) groups[s.division].push(s);
-            if(stats[s.division] !== undefined) stats[s.division]++;
-        });
-
-        for (const [divName, students] of Object.entries(groups)) {
-            if(students.length === 0) continue;
-            const divId = `div-${divName}`;
-            
-            // Generate Academic View
-            const academicTable = `
-                <div class="division-card">
-                    <div class="division-header">📊 ${divName} Progress</div>
-                    <table>
-                        <thead><tr><th>Name</th><th>Progress (Goal vs Current)</th><th>Status</th></tr></thead>
-                        <tbody>
-                            ${students.map(s => {
-                                const cur = (s.levels.c1 || 0) + (s.levels.c2 || 0) + (s.levels.c3 || 0);
-                                const goal = (s.goals.c1 || 0) + (s.goals.c2 || 0) + (s.goals.c3 || 0);
-                                const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
-                                return `<tr>
-                                    <td>${s.name}</td>
-                                    <td>
-                                        <div style="font-size:0.75rem">${cur} / ${goal} Units</div>
-                                        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
-                                    </td>
-                                    <td>${perc >= 100 ? '✅ Completed' : '📖 In Progress'}</td>
-                                </tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
-            academicContainer.innerHTML += academicTable;
-
-            // Generate Directory View
-            const card = document.createElement('div');
-            card.className = 'division-card';
-            card.innerHTML = `
+        const dirDivId = `dir-${divName}`;
+        const acadDivId = `acad-${divName}`;
+        
+        const generateTableHTML = (divId, titlePrefix) => {
+            return `
+            <div class="division-card">
                 <div class="division-header" onclick="toggleDivision('${divId}')">
-                    <span>📂 ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
+                    <span>${titlePrefix} ${divName} (${students.length})</span><span id="icon-${divId}">▼</span>
                 </div>
                 <div class="division-content" id="${divId}">
                     <table>
-                        <thead><tr><th>Name</th><th>Gender</th><th>Parent Email</th><th>Fee</th><th>Transport</th><th>Balance</th><th>Actions</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Progress (%)</th>
+                                <th>Fee Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             ${students.map(s => {
+                                // Academic Progress Calculation
+                                const cur = (s.levels.c1 || 0) + (s.levels.c2 || 0) + (s.levels.c3 || 0);
+                                const goal = (s.goals.c1 || 0) + (s.goals.c2 || 0) + (s.goals.c3 || 0);
+                                const perc = goal > 0 ? Math.round(Math.min((cur / goal) * 100, 100)) : 0;
+
+                                // Payment Calculation
                                 const mFee = parseInt(s.monthlyFee) || 0;
                                 const tFee = parseInt(s.transportFee) || 0;
                                 const hasPaidThisMonth = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
                                 const balance = hasPaidThisMonth ? 0 : (mFee + tFee);
 
                                 return `<tr class="student-row" data-transport="${tFee > 0}">
-                                    <td><strong>${s.name}</strong></td>
-                                    <td>${s.gender || '—'}</td>
-                                    <td>${s.parentEmail}</td>
-                                    <td>¥${mFee}</td>
-                                    <td>¥${tFee}</td>
-                                    <td style="color:${balance > 0 ? 'red' : 'green'}; font-weight:bold">¥${balance}</td>
+                                    <td>
+                                        <strong>${s.name}</strong><br>
+                                        <small style="color:#666">${s.parentEmail}</small>
+                                    </td>
+                                    <td style="width: 200px;">
+                                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:3px;">
+                                            <span>${cur}/${goal} Units</span>
+                                            <span>${perc}%</span>
+                                        </div>
+                                        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:bold; color:${balance > 0 ? '#c62828' : '#2e7d32'}">
+                                            ${balance > 0 ? '¥' + balance + ' Due' : '✅ Paid'}
+                                        </div>
+                                    </td>
                                     <td>
                                         <button class="action-btn" onclick="openHub('${s.id}')" title="Profile & Payments">📂</button>
-                                        <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})" title="Edit Name/Fee">✏️</button>
+                                        <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})" title="Edit Profile">✏️</button>
                                         <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
                                     </td>
                                 </tr>`;
                             }).join('')}
                         </tbody>
                     </table>
-                </div>`;
-            container.appendChild(card);
-        }
-        document.getElementById('count-maktab').innerText = stats.Maktab;
-        document.getElementById('count-nazera').innerText = stats.Nazera;
-        document.getElementById('count-hifz').innerText = stats.Hifz;
-    };
+                </div>
+            </div>`;
+        };
 
+        container.innerHTML += generateTableHTML(dirDivId, "📂");
+        academicContainer.innerHTML += generateTableHTML(acadDivId, "📊 Academic:");
+    }
+
+    document.getElementById('count-maktab').innerText = stats.Maktab;
+    document.getElementById('count-nazera').innerText = stats.Nazera;
+    document.getElementById('count-hifz').innerText = stats.Hifz;
+};
+
+        
     window.updateGoalLabels = () => {
         const div = document.getElementById('sDivision').value;
         const l1 = document.getElementById('lblG1');
