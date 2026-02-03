@@ -359,6 +359,44 @@
             btn.innerText = "Submit All Records";
         }
     };
+
+async function loadMonthlyReport(studentData) {
+    const tbody = document.getElementById('monthlyTableBody');
+    const logs = studentData.logs || [];
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Filter logs for the current month
+    const monthLogs = logs.filter(log => {
+        const logDate = new Date(log.date);
+        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
+    });
+
+    if (monthLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No records found for this month.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = monthLogs.map(log => {
+        // Parsing the log string [Attn: P] [Good] S1: Pg 5 | S2: Pg 2 | S3: Pg 1
+        const attn = log.text.match(/\[Attn: (.*?)\]/)?.[1] || '-';
+        const perf = log.text.match(/\[(.*?)\]/g)?.[1]?.replace(/[\[\]]/g, '') || '-';
+        
+        // Clean up the parts for the table
+        const parts = log.text.split('|').map(p => p.split(':').pop().trim());
+
+        return `
+            <tr>
+                <td>${log.date}</td>
+                <td class="${attn === 'P' ? 'cell-p' : 'cell-a'}">${attn}</td>
+                <td>${perf}</td>
+                <td>${parts[0] || '-'}</td>
+                <td>${parts[1] || '-'}</td>
+                <td>${parts[2] || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+}
     
     async function populateHistoryDropdown() {
         const sel = document.getElementById('historyStudentSelect');
