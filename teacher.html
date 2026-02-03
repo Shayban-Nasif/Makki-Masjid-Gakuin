@@ -31,6 +31,12 @@
         /* Progress Bars */
         .progress-bar-bg { background: #eee; height: 6px; border-radius: 3px; width: 120px; display: inline-block; }
         .progress-fill { background: var(--gold); height: 100%; border-radius: 3px; }
+
+        /* Monthly Record Specific Styles */
+        .attn-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
+        .attn-P { background: #e8f5e9; color: #2e7d32; }
+        .attn-A { background: #ffebee; color: #c62828; }
+        .attn-L { background: #fff3e0; color: #ef6c00; }
     </style>
 </head>
 <body>
@@ -51,7 +57,7 @@
     <div style="margin-top:25px; display:flex; gap:10px; border-bottom:2px solid #ddd; padding-bottom:0;">
         <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">📊 Progress List</button>
         <button class="tab-btn" id="btn-inputTab" onclick="switchTab('inputTab')">✍️ Daily Input</button>
-        <button class="tab-btn" id="btn-historyTab" onclick="switchTab('historyTab')">📜 Daily Records</button>
+        <button class="tab-btn" id="btn-historyTab" onclick="switchTab('historyTab')">📜 Monthly Records</button>
     </div>
 
     <div id="dashboard" class="tab-content active">
@@ -97,15 +103,15 @@
 
     <div id="historyTab" class="tab-content">
         <div class="section">
-            <h3>📜 Individual Student History</h3>
+            <h3>📜 Monthly Academic Record</h3>
             <div style="margin-bottom:20px;">
                 <label>Select Student: </label>
                 <select id="historyStudentSelect" style="padding:10px; width:100%; max-width:300px;">
                     <option value="">-- Choose Student --</option>
                 </select>
             </div>
-            <div id="historyResult">
-                <p style="color:#666;">Select a student to view logs.</p>
+            <div id="historyResult" style="overflow-x: auto;">
+                <p style="color:#666;">Select a student to view the academic table.</p>
             </div>
         </div>
     </div>
@@ -192,7 +198,6 @@
         });
     }
 
-// --- BATCH INPUT RENDERING WITH PAGE DROPDOWNS ---
     async function renderBatchTable() {
         const tbody = document.getElementById('batchTableBody');
         document.getElementById('batchDate').valueAsDate = new Date();
@@ -204,7 +209,6 @@
         const q = query(collection(db, "students"), where("division", "==", teacherData.division));
         const snap = await getDocs(q);
         
-        // Helper to create page dropdown options 1-20
         let pageOptions = `<option value="-">-</option>`;
         for(let p=1; p<=20; p++) {
             pageOptions += `<option value="${p}">${p}</option>`;
@@ -247,14 +251,12 @@
         tbody.innerHTML = html;
     }
 
-    // --- SUBMIT ALL RECORDS ---
     window.saveAllBatch = async () => {
         const rows = document.querySelectorAll('#batchTableBody tr');
         const logDate = document.getElementById('batchDate').value;
         const btn = document.getElementById('saveAllBtn');
         
         if (rows.length === 0) return;
-
         const confirmSave = confirm(`Submit records for ${rows.length} students?`);
         if (!confirmSave) return;
 
@@ -263,7 +265,6 @@
 
         try {
             const labels = divisionLabels[teacherData.division];
-
             for (let row of rows) {
                 const sid = row.dataset.sid;
                 const lv = {
@@ -272,7 +273,6 @@
                     c3: parseInt(row.querySelector('.l3').value) || 0
                 };
                 
-                // Reading values from dropdowns instead of text inputs
                 const p1 = row.querySelector('.p1').value;
                 const p2 = row.querySelector('.p2').value;
                 const p3 = row.querySelector('.p3').value;
@@ -290,10 +290,8 @@
                     logs: [{ date: logDate, text: logText, timestamp: new Date() }, ...currentLogs].slice(0, 50)
                 });
             }
-            
             alert("🎉 Alhamdulillah! Records saved.");
             window.switchTab('dashboard');
-            
         } catch (e) { 
             alert("Error: " + e.message); 
         } finally {
@@ -314,10 +312,59 @@
     async function loadStudentHistory() {
         const sid = document.getElementById('historyStudentSelect').value;
         const res = document.getElementById('historyResult');
-        if(!sid) return;
+        if(!sid) {
+            res.innerHTML = '<p style="color:#666;">Select a student to view the academic table.</p>';
+            return;
+        }
+
         const sDoc = await getDoc(doc(db, "students", sid));
         const logs = sDoc.data().logs || [];
-        res.innerHTML = logs.length ? `<table><tr style="background:#eee;"><th>Date</th><th>Report</th></tr>${logs.map(l => `<tr><td>${l.date}</td><td>${l.text}</td></tr>`).join('')}</table>` : "<p>No logs found.</p>";
+        const labels = divisionLabels[teacherData.division] || ["S1", "S2", "S3"];
+
+        if (!logs.length) {
+            res.innerHTML = "<p>No records found for this student.</p>";
+            return;
+        }
+
+        let tableHtml = `
+            <table style="font-size: 0.85rem;">
+                <thead style="background:#f1f1f1;">
+                    <tr>
+                        <th>Date</th>
+                        <th>Attn</th>
+                        <th>Performance</th>
+                        <th>${labels[0]}</th>
+                        <th>${labels[1]}</th>
+                        <th>${labels[2]}</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        logs.forEach(log => {
+            // Parsing the log string: "[Attn: P] [Good] S1: Pg 5 | S2: Pg - | S3: Pg 10"
+            const attnMatch = log.text.match(/\[Attn: (.*?)\]/);
+            const perfMatch = log.text.match(/\] \[(.*?)\]/);
+            
+            const attn = attnMatch ? attnMatch[1] : "-";
+            const perf = perfMatch ? perfMatch[1] : "-";
+            
+            // Split progress by the pipe |
+            const progressParts = log.text.split('|');
+            const getPage = (str) => str ? str.split('Pg')[1]?.trim() || "-" : "-";
+
+            tableHtml += `
+                <tr>
+                    <td style="font-weight:bold;">${log.date}</td>
+                    <td style="text-align:center;"><span class="attn-badge attn-${attn}">${attn}</span></td>
+                    <td>${perf}</td>
+                    <td>Pg ${getPage(progressParts[0])}</td>
+                    <td>Pg ${getPage(progressParts[1])}</td>
+                    <td>Pg ${getPage(progressParts[2])}</td>
+                </tr>`;
+        });
+
+        tableHtml += `</tbody></table>`;
+        res.innerHTML = tableHtml;
     }
 
     async function loadNotice() {
@@ -330,7 +377,6 @@
     }
 
     window.logout = () => { localStorage.clear(); window.location.href = 'index.html'; };
-    
     init();
 </script>
 </body>
