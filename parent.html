@@ -8,32 +8,46 @@
         :root { --primary: #004d40; --gold: #d4af37; --bg: #f4f7f6; }
         body { background: var(--bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
         .parent-container { max-width: 1000px; margin: 20px auto; padding: 20px; }
-        
+
         .header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .header h2 { margin: 0; font-size: 1.5rem; }
-        
+
         .nav-tabs { display: flex; gap: 10px; margin: 25px 0; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; transition: 0.3s; border-radius: 6px; font-size: 0.85rem; }
         .tab.active { background: var(--primary); color: white; }
 
         .child-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 25px; border-top: 5px solid var(--gold); }
         .child-card h3 { color: var(--primary); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        
+
         /* Academic History Table Styles */
         .hist-table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; min-width: 850px; }
         .hist-table th { text-align: center; padding: 10px; font-size: 0.75rem; text-transform: uppercase; border: 1px solid #ddd; color: #ffffff !important; }
         .hist-table td { padding: 10px; border: 1px solid #eee; text-align: center; font-size: 0.85rem; }
-        
+
         .attn-badge { padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; display: block; text-align: center; }
         .attn-P { background: #e8f5e9; color: #2e7d32; }
         .attn-A { background: #ffebee; color: #c62828; }
         .attn-L { background: #fff3e0; color: #ef6c00; }
 
-        /* Progress Bar Styles */
-        .progress-item { margin: 15px 0; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
-        .bar-bg { background: #eee; height: 10px; border-radius: 5px; overflow: hidden; }
-        .bar-fill { background: var(--gold); height: 100%; transition: 0.5s; }
+        /* Progress (UPGRADED) */
+        .progress-item { margin: 16px 0; padding: 12px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; }
+        .progress-label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+        .progress-title { font-size: 0.9rem; font-weight: 700; color: #1f2937; }
+        .progress-meta { font-size: 0.82rem; color: #6b7280; white-space: nowrap; }
+        .progress-meta b { color: var(--primary); }
+
+        /* Smooth bar (fallback & overall) */
+        .bar-bg { background: #e5e7eb; height: 10px; border-radius: 999px; overflow: hidden; }
+        .bar-fill { height: 100%; transition: 0.5s; border-radius: 999px; }
+
+        /* Segmented levels bar */
+        .seg-wrap { margin-top: 10px; }
+        .seg-bar { display: grid; gap: 4px; }
+        .seg { height: 10px; border-radius: 3px; background: #e5e7eb; }
+        .seg.done { background: #2e7d32; }
+        .seg.partial { background: #d4af37; } /* optional (not used now) */
+
+        .hint-small { font-size: 0.78rem; color: #6b7280; margin-top: 8px; }
 
         /* Filter Style */
         .filter-box { margin-bottom: 15px; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; }
@@ -48,7 +62,7 @@
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
         .modal-content { background: white; margin: 10% auto; padding: 25px; border-radius: 12px; width: 80%; max-width: 600px; max-height: 70vh; overflow-y: auto; position: relative; }
         .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; color: #666; }
-        
+
         .btn-logout { background: rgba(255,255,255,0.2); color: white; border: 1px solid white; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
@@ -72,7 +86,7 @@
                 <div id="historyList"></div>
             </div>
         </div>
-        
+
         <div class="nav-tabs">
             <button class="tab active" id="btnReport" onclick="switchTab('report')">Overall Progress</button>
             <button class="tab" id="btnRecords" onclick="switchTab('records')">Academic Records</button>
@@ -107,6 +121,13 @@ let studentsData = [];
 window.allPayments = [];
 let currentFilterMonth = 'all';
 
+/**
+ * SETTINGS for progress UI
+ * - If goal <= SEGMENT_MAX, show blocks (each block = 1 level)
+ * - If goal > SEGMENT_MAX, show smooth bar
+ */
+const SEGMENT_MAX = 40;
+
 async function init() {
     if (!parentEmail) { window.location.href = 'index.html'; return; }
     try {
@@ -128,7 +149,7 @@ async function init() {
 window.renderView = (view) => {
     const container = document.getElementById('childrenContainer');
     container.innerHTML = "";
-    
+
     if (studentsData.length === 0) {
         container.innerHTML = `<div class='child-card'>No students found linked to ${parentEmail}</div>`;
         return;
@@ -140,22 +161,39 @@ window.renderView = (view) => {
 
         if (view === 'report') {
             const lv = child.levels || { c1: 0, c2: 0, c3: 0 };
-            const gl = child.goals || { c1: 1, c2: 1, c3: 1 };
+            const gl = child.goals || { c1: 0, c2: 0, c3: 0 };
             const labels = getDivisionLabels(child.division);
+
+            // overall (combined)
+            const curTotal = (toNum(lv.c1) + toNum(lv.c2) + toNum(lv.c3));
+            const goalTotal = (toNum(gl.c1) + toNum(gl.c2) + toNum(gl.c3));
+
             card.innerHTML = `
                 <h3>${child.name} <small style="color:#666; font-weight:normal;">| ${child.division}</small></h3>
-                <div class="progress-item">${bar(labels[0], lv.c1, gl.c1)}</div>
-                <div class="progress-item">${bar(labels[1], lv.c2, gl.c2)}</div>
-                <div class="progress-item">${bar(labels[2], lv.c3, gl.c3)}</div>
+
+                ${progressBar("⭐ Overall Completion", curTotal, goalTotal, { forceSmooth: true })}
+
+                <div class="progress-item" style="border-left:4px solid #2e7d32;">
+                    ${progressBar(labels[0], lv.c1, gl.c1)}
+                </div>
+
+                <div class="progress-item" style="border-left:4px solid #d4af37;">
+                    ${progressBar(labels[1], lv.c2, gl.c2)}
+                </div>
+
+                <div class="progress-item" style="border-left:4px solid #00695c;">
+                    ${progressBar(labels[2], lv.c3, gl.c3)}
+                </div>
+
                 <p style="margin-top:20px; font-size:0.9rem; color:#888;">Expected Completion: <strong>${child.eta || 'TBD'}</strong></p>
             `;
         } else if (view === 'records') {
             const labels = getDivisionLabels(child.division);
             let logs = child.logs || [];
-            
+
             // Filter logic
             if (currentFilterMonth !== 'all') {
-                logs = logs.filter(log => log.date.split('-')[1] === currentFilterMonth);
+                logs = logs.filter(log => (log.date || "").split('-')[1] === currentFilterMonth);
             }
 
             let rowsHtml = logs.length > 0 ? logs.map(log => {
@@ -164,7 +202,7 @@ window.renderView = (view) => {
                 const attn = attnMatch ? attnMatch[1] : "-";
                 const perf = perfMatch ? perfMatch[1] : "-";
                 const progressParts = log.text.split('|');
-                
+
                 const extractData = (part) => {
                     if(!part) return { lvl: "-", pg: "-" };
                     const lMatch = part.match(/Lvl (.*?) /);
@@ -264,6 +302,7 @@ window.renderView = (view) => {
                 </div>
             `;
         }
+
         container.appendChild(card);
     });
 };
@@ -273,13 +312,90 @@ window.filterMonth = (val) => {
     renderView('records');
 };
 
-function bar(label, cur, goal) {
-    const perc = goal > 0 ? Math.min((cur / goal) * 100, 100) : 0;
+/* ------------------- PROGRESS UI (UPGRADED) ------------------- */
+
+function toNum(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+}
+
+function progressBar(label, curRaw, goalRaw, opts = {}) {
+    const cur = clamp(toNum(curRaw), 0, 999999);
+    const goal = clamp(toNum(goalRaw), 0, 999999);
+
+    // If no goal set, show simple message
+    if (!goal) {
+        return `
+            <div class="progress-label">
+                <span class="progress-title">${escapeHtml(label)}</span>
+                <span class="progress-meta"><b>Goal not set</b></span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:0%; background:#cbd5e1;"></div></div>
+            <div class="hint-small">Admin needs to set enrollment goals to show level progress.</div>
+        `;
+    }
+
+    const safeCur = clamp(cur, 0, goal);
+    const perc = Math.round((safeCur / goal) * 100);
+
+    // Color scale: red -> gold -> green
+    const fillColor = perc >= 80 ? "#2e7d32" : (perc >= 40 ? "var(--gold)" : "#c62828");
+
+    const meta = `<span class="progress-meta"><b>${safeCur}</b> / ${goal} &nbsp;•&nbsp; <b>${perc}%</b></span>`;
+
+    // Decide segmented vs smooth
+    const useSmooth = opts.forceSmooth === true || goal > SEGMENT_MAX;
+
+    if (useSmooth) {
+        return `
+            <div class="progress-label">
+                <span class="progress-title">${escapeHtml(label)}</span>
+                ${meta}
+            </div>
+            <div class="bar-bg">
+                <div class="bar-fill" style="width:${perc}%; background:${fillColor};"></div>
+            </div>
+        `;
+    }
+
+    // Segmented bar (each segment = 1 level)
+    const cols = goal <= 20 ? goal : 20; // max 20 columns; more rows automatically
+    const segs = Array.from({ length: goal }, (_, i) => {
+        const done = i < safeCur;
+        return `<div class="seg ${done ? "done" : ""}" title="Level ${i+1}"></div>`;
+    }).join("");
+
     return `
-        <div class="progress-label"><span>${label}</span><span>${cur || 0} / ${goal || 0}</span></div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${perc}%"></div></div>
+        <div class="progress-label">
+            <span class="progress-title">${escapeHtml(label)}</span>
+            ${meta}
+        </div>
+        <div class="bar-bg" style="height:10px; margin-bottom:10px;">
+            <div class="bar-fill" style="width:${perc}%; background:${fillColor};"></div>
+        </div>
+        <div class="seg-wrap">
+            <div class="seg-bar" style="grid-template-columns: repeat(${cols}, 1fr);">
+                ${segs}
+            </div>
+            <div class="hint-small">✅ Green blocks = completed levels &nbsp;&nbsp;⬜ Grey blocks = remaining</div>
+        </div>
     `;
 }
+
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+/* ------------------- ORIGINAL HELPERS (UNCHANGED) ------------------- */
 
 function getDivisionLabels(div) {
     if (div === "Nazera") return ["Nazera Juzu", "Tajweed Rules", "Duas & IS"];
