@@ -367,52 +367,76 @@ window.deleteUser = async (email) => {
     };
 
    window.loadStudents = async () => {
-    const studentSnap = await getDocs(collection(db, "students"));
-    const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
-    
-    const container = document.getElementById('divisionContainer');
-    const academicContainer = document.getElementById('academicContainer');
-    
-    container.innerHTML = "";
-    academicContainer.innerHTML = "";
-
-    let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
-    const groups = { Maktab: [], Nazera: [], Hifz: [] };
-
-    studentSnap.forEach(docSnap => {
-        const s = { id: docSnap.id, ...docSnap.data() };
-        if(groups[s.division]) groups[s.division].push(s);
-        if(stats[s.division] !== undefined) stats[s.division]++;
-    });
-
-    for (const [divName, students] of Object.entries(groups)) {
-        if(students.length === 0) continue;
+    try {
+        const studentSnap = await getDocs(collection(db, "students"));
+        const paySnap = await getDocs(query(collection(db, "payments"), where("year", "==", currentYear)));
         
-        // --- 1. DIRECTORY TAB HTML ---
-        const dirDivId = `dir-${divName}`;
-        container.innerHTML += `
+        const container = document.getElementById('divisionContainer');
+        // We clear both, but focus on the main directory
+        container.innerHTML = "";
+        const academicContainer = document.getElementById('academicContainer');
+        if(academicContainer) academicContainer.innerHTML = "<p style='padding:20px; color:#666;'>Academic overview is currently disabled.</p>";
+
+        let stats = { Maktab: 0, Nazera: 0, Hifz: 0 };
+        const groups = { Maktab: [], Nazera: [], Hifz: [] };
+
+        studentSnap.forEach(docSnap => {
+            const s = { id: docSnap.id, ...docSnap.data() };
+            if(groups[s.division]) groups[s.division].push(s);
+            if(stats[s.division] !== undefined) stats[s.division]++;
+        });
+
+        for (const [divName, students] of Object.entries(groups)) {
+            if(students.length === 0) continue;
+            
+            const divId = `div-${divName}`;
+            
+            container.innerHTML += `
             <div class="division-card">
-                <div class="division-header" onclick="document.getElementById('${dirDivId}').style.display === 'none' ? document.getElementById('${dirDivId}').style.display = 'block' : document.getElementById('${dirDivId}').style.display = 'none'">
-                    <span>📂 ${divName} (${students.length})</span><span>▼</span>
+                <div class="division-header" onclick="toggleDivision('${divId}')">
+                    <span>📂 ${divName} (${students.length} Students)</span>
+                    <span id="icon-${divId}">▼</span>
                 </div>
-                <div class="division-content" id="${dirDivId}">
+                <div class="division-content" id="${divId}" style="display:block;">
                     <table>
                         <thead>
-                            <tr><th>Name</th><th>Progress</th><th>Status</th><th>Actions</th></tr>
+                            <tr>
+                                <th>Student Details</th>
+                                <th>Progress</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
+                            </tr>
                         </thead>
                         <tbody>
                             ${students.map(s => {
+                                // Calculate Progress
                                 const cur = (s.levels?.c1 || 0) + (s.levels?.c2 || 0) + (s.levels?.c3 || 0);
                                 const goal = (s.goals?.c1 || 0) + (s.goals?.c2 || 0) + (s.goals?.c3 || 0);
                                 const perc = goal > 0 ? Math.round(Math.min((cur / goal) * 100, 100)) : 0;
-                                const hasPaid = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
-                                
-                                return `<tr>
-                                    <td><strong>${s.name}</strong><br><small>${s.parentEmail}</small></td>
-                                    <td><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div></td>
-                                    <td>${hasPaid ? '✅' : '❌ Due'}</td>
+
+                                // Calculate Fees
+                                const mFee = parseInt(s.monthlyFee) || 0;
+                                const tFee = parseInt(s.transportFee) || 0;
+                                const isPaid = paySnap.docs.some(d => d.data().studentId === s.id && d.data().monthIndex === currentMonthIndex);
+
+                                return `
+                                <tr class="student-row">
+                                    <td>
+                                        <strong>${s.name}</strong><br>
+                                        <small style="color:#666">${s.parentEmail}</small>
+                                    </td>
+                                    <td style="width: 180px;">
+                                        <div style="font-size:0.7rem; margin-bottom:2px;">${perc}% (${cur}/${goal})</div>
+                                        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
+                                    </td>
+                                    <td>
+                                        <span style="color:${isPaid ? '#2e7d32' : '#c62828'}; font-weight:bold;">
+                                            ${isPaid ? '✅ Paid' : '¥' + (mFee + tFee) + ' Due'}
+                                        </span>
+                                    </td>
                                     <td>
                                         <button class="action-btn" onclick="openHub('${s.id}')">📂</button>
+                                        <button class="action-btn" onclick="editAll('${s.id}', '${s.name}', ${mFee})">✏️</button>
                                         <button class="action-btn" onclick="deleteStudent('${s.id}')" style="color:red">🗑️</button>
                                     </td>
                                 </tr>`;
@@ -421,51 +445,17 @@ window.deleteUser = async (email) => {
                     </table>
                 </div>
             </div>`;
+        }
 
-        // --- 2. ACADEMIC TAB HTML (THE NEW PART YOU REQUESTED) ---
-        const academicTable = `
-            <div class="division-card">
-                <div class="division-header">📊 ${divName} Academic Records</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Overall Progress</th>
-                            <th>History</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${students.map(s => {
-                            const cur = (s.levels?.c1 || 0) + (s.levels?.c2 || 0) + (s.levels?.c3 || 0);
-                            const goal = (s.goals?.c1 || 0) + (s.goals?.c2 || 0) + (s.goals?.c3 || 0);
-                            const perc = goal > 0 ? Math.round((cur / goal) * 100) : 0;
-                            
-                            return `
-                            <tr>
-                                <td style="width:200px;"><strong>${s.name}</strong></td>
-                                <td>
-                                    <div style="font-size:0.7rem;">${perc}% (${cur}/${goal} Units)</div>
-                                    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${perc}%"></div></div>
-                                </td>
-                                <td>
-                                    <button class="action-btn" onclick="loadAcademicHistory('${s.id}', '${s.division}')">View Logs ▼</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" id="hist-${s.id}" style="padding:0; background:#f9f9f9;"></td>
-                            </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        academicContainer.innerHTML += academicTable;
+        // Update Stats Cards
+        document.getElementById('count-maktab').innerText = stats.Maktab;
+        document.getElementById('count-nazera').innerText = stats.Nazera;
+        document.getElementById('count-hifz').innerText = stats.Hifz;
+
+    } catch (error) {
+        console.error("Error loading students:", error);
     }
-
-    document.getElementById('count-maktab').innerText = stats.Maktab;
-    document.getElementById('count-nazera').innerText = stats.Nazera;
-    document.getElementById('count-hifz').innerText = stats.Hifz;
 };
-
         
     window.updateGoalLabels = () => {
         const div = document.getElementById('sDivision').value;
